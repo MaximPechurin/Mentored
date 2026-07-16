@@ -1,0 +1,42 @@
+from django.urls import path
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
+
+from .views import GetProductListView, GetCourseListView, CourseDetailView, GetBookListView, BookDetailView, \
+    GetConsultationListView, ConsultationDetailView, GetMembershipListView, MembershipDetailView, RegisterView, \
+    ProfileView, GetProductBySlugView, BlogPostListView, BlogPostDetailView
+
+
+urlpatterns = [
+    # JWT
+    path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('token/verify/', TokenVerifyView.as_view(), name='token_verify'),
+
+    # Регистрация и профиль
+    path('register/', RegisterView.as_view(), name='register'),
+    path('profile/', ProfileView.as_view(), name='profile'),
+
+    # Все товары
+    path('products/', GetProductListView.as_view(), name='product-list'),
+    path('products/<slug:slug>/', GetProductBySlugView.as_view(), name='product-detail'),
+
+    #Блог и посты
+    path('blog/posts/', BlogPostListView.as_view(), name='blog-posts'),
+    path('blog/posts/<slug:slug>/', BlogPostDetailView.as_view(), name='blog-post-detail'),
+
+    # Курсы
+    #path('courses/', GetCourseListView.as_view(), name='course-list'),
+    #path('courses/<slug:slug>/', CourseDetailView.as_view(), name='course-detail'),
+    #
+    # Книги
+    #path('books/', GetBookListView.as_view(), name='book-list'),
+    #path('books/<slug:slug>/', BookDetailView.as_view(), name='book-detail'),
+    #
+    # Консультации
+    #path('consultations/', GetConsultationListView.as_view(), name='consultation-list'),
+    #path('consultations/<slug:slug>/', ConsultationDetailView.as_view(), name='consultation-detail'),
+    #
+    # Мембершипы
+    #path('memberships/', GetMembershipListView.as_view(), name='membership-list'),
+    #path('memberships/<slug:slug>/', MembershipDetailView.as_view(), name='membership-detail'),
+]
