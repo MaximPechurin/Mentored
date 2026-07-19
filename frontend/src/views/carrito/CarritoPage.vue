@@ -17,47 +17,51 @@ import { ref, onMounted } from 'vue'
 import CarritoHero from './CarritoHero.vue'
 import CarritoEmpty from './CarritoEmpty.vue'
 import CarritoContent from './CarritoContent.vue'
-
+import { cartApi } from '../../api/cart'
 const items = ref([])
+const loading = ref(true)
 
-const loadCart = () => {
+
+const loadCart = async () => {
+  loading.value = true
   try {
-    const saved = localStorage.getItem('mentored_cart')
-    if (saved) {
-      items.value = JSON.parse(saved)
+    const response = await cartApi.getCart()
+    items.value = response.data.items || []
+  } catch (error) {
+    console.error('Ошибка загрузки корзины:', error)
+    items.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+const updateQuantity = async (itemId, quantity) => {
+  try {
+    await cartApi.updateItem(itemId, quantity)
+    await loadCart()
+  } catch (error) {
+    console.error('Ошибка обновления:', error)
+  }
+}
+
+const removeItem = async (itemId) => {
+  try {
+    await cartApi.removeItem(itemId)
+    await loadCart()
+  } catch (error) {
+    console.error('Ошибка удаления:', error)
+  }
+}
+
+const clearCart = async () => {
+  if (confirm('¿Estás seguro de que quieres vaciar el carrito?')) {
+    try {
+      await cartApi.clearCart()
+      await loadCart()
+    } catch (error) {
+      console.error('Ошибка очистки:', error)
     }
-  } catch (e) {
-    console.error('Ошибка загрузки корзины:', e)
   }
-}
-
-const saveCart = (data) => {
-  try {
-    localStorage.setItem('mentored_cart', JSON.stringify(data))
-  } catch (e) {
-    console.error('Ошибка сохранения корзины:', e)
-  }
-}
-
-const updateQuantity = (id, qty) => {
-  const item = items.value.find(i => i.id === id)
-  if (!item) return
-  if (qty <= 0) {
-    removeItem(id)
-    return
-  }
-  item.qty = qty
-  saveCart(items.value)
-}
-
-const removeItem = (id) => {
-  items.value = items.value.filter(i => i.id !== id)
-  saveCart(items.value)
-}
-
-const clearCart = () => {
-  items.value = []
-  saveCart(items.value)
 }
 
 onMounted(() => {

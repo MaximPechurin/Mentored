@@ -3,10 +3,11 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from django.shortcuts import get_object_or_404
+from django.contrib.contenttypes.models import ContentType
 
-from .models import Course, Book, Consultation, Membership, BlogCategory, BlogPost
+from .models import Course, Book, Consultation, Membership, BlogCategory, BlogPost, Cart, CartItem, Order, FAQ, OrderItem
 from .serializers import UserSerializer, CourseSerializer, BookSerializer, ConsultationSerializer, MembershipSerializer, \
-    BlogCategorySerializer, BlogPostSerializer
+    BlogCategorySerializer, BlogPostSerializer, CartSerializer, CartItemSerializer, OrderSerializer, FAQSerializer
 
 
 class RegisterView(APIView):
@@ -468,3 +469,206 @@ class BlogPostDetailView(APIView):
         serializer = BlogPostSerializer(post, context={'request': request})
         return Response(serializer.data)
 
+class CartView(APIView):
+    """GET /cart/ — получить текущую корзину пользователя"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        cart, _ = Cart.objects.get_or_create(user=request.user)
+        serializer = CartSerializer(cart, context={'request': request})
+        return Response(serializer.data)
+
+
+class CartAddItemView(APIView):
+    """POST /cart/add/ — добавить товар в корзину"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        product_type = request.data.get('product_type')
+        product_id = request.data.get('product_id')
+        quantity = request.data.get('quantity', 1)
+
+        if not product_type or not product_id:
+            return Response(
+                {'error': 'product_type и product_id обязательны'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Маппинг типов
+        model_map = {
+            'course': Course,
+            'book': Book,
+            'consultation': Consultation,
+            'membership': Membership,
+        }
+
+        model = model_map.get(product_type)
+        if not model:
+            return Response(
+                {'error': f'Неизвестный тип товара: {product_type}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            product = model.objects.get(id=product_id, is_active=True)
+        except model.DoesNotExist:
+            return Response(
+                {'error': 'Товар не найден'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Получаем или создаём корзину
+        cart, _ = Cart.objects.get_or_create(user=request.user)
+
+        # Получаем ContentType для товара
+        content_type = ContentType.objects.get_for_model(model)
+
+        # Ищем существующий элемент
+        cart_item, created = CartItem.objects.get_or_create(
+            cart=cart,
+            content_type=content_type,
+            object_id=product_id,
+            defaults={'quantity': quantity}
+        )
+
+        if not created:
+            cart_item.quantity += quantity
+            cart_item.save()
+
+        serializer = CartItemSerializer(cart_item, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class CartUpdateItemView(APIView):
+    """PUT /cart/update/<item_id>/ — обновить количество товара"""
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, item_id):
+        try:
+            cart_item = CartItem.objects.get(id=item_id, cart__user=request.user)
+        except CartItem.DoesNotExist:
+            return Response(
+                {'error': 'Товар не найден в корзине'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        quantity = request.data.get('quantity')
+        if quantity is None or quantity < 0:
+            return Response(
+                {'error': 'quantity должно быть >= 0'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if quantity == 0:
+            cart_item.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        cart_item.quantity = quantity
+        cart_item.save()
+        serializer = CartItemSerializer(cart_item, context={'request': request})
+        return Response(serializer.data)
+
+
+class CartRemoveItemView(APIView):
+    """DELETE /cart/remove/<item_id>/ — удалить товар из корзины"""
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, item_id):
+        try:
+            cart_item = CartItem.objects.get(id=item_id, cart__user=request.user)
+        except CartItem.DoesNotExist:
+            return Response(
+                {'error': 'Товар не найден в корзине'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        cart_item.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CartClearView(APIView):
+    """DELETE /cart/clear/ — очистить корзину"""
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request):
+        CartItem.objects.filter(cart__user=request.user).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CreateOrderView(APIView):
+    """POST /orders/create/ — создать заказ из активной корзины"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        cart = Cart.objects.filter(user=request.user).first()
+        if not cart or cart.items.count() == 0:
+            return Response(
+                {'error': 'Корзина пуста'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Создаём заказ
+        subtotal = cart.total_price
+        tax = subtotal * 0.1  # 10%
+        shipping = 0  # для цифровых товаров
+        total = subtotal + tax + shipping
+
+        order = Order.objects.create(
+            user=request.user,
+            cart=cart,
+            subtotal=subtotal,
+            tax=tax,
+            shipping=shipping,
+            total=total,
+            is_digital=True,  # или проверять по товарам
+            status='pending',
+        )
+
+        # Переносим товары из корзины в OrderItem
+        for cart_item in cart.items.all():
+            product = cart_item.product
+            OrderItem.objects.create(
+                order=order,
+                product_type=cart_item.content_type.model,
+                product_id=cart_item.object_id,
+                product_name=product.name,
+                product_price=product.price,
+                quantity=cart_item.quantity,
+                total=product.price * cart_item.quantity,
+                is_digital=True,
+            )
+
+        # Очищаем корзину (но сохраняем ссылку в заказе)
+        cart.items.all().delete()
+
+        serializer = OrderSerializer(order)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class OrderHistoryView(APIView):
+    """GET /orders/ — получить историю заказов пользователя"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        orders = Order.objects.filter(user=request.user).order_by('-created_at')
+        serializer = OrderSerializer(orders, many=True)
+        return Response(serializer.data)
+
+
+class OrderDetailView(APIView):
+    """GET /orders/<order_number>/ — детали заказа"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, order_number):
+        order = get_object_or_404(Order, order_number=order_number, user=request.user)
+        serializer = OrderSerializer(order)
+        return Response(serializer.data)
+
+
+class FAQView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        faq = FAQ.objects.filter(is_active=True)
+        serializer = FAQSerializer(faq, many=True)
+        return Response(serializer.data)

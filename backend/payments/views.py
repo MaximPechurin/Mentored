@@ -1,42 +1,81 @@
-#import mercadopago УСТАНОВИТЬ
+import mercadopago
 from django.conf import settings
 from django.shortcuts import redirect
-from django.views import View
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from rest_framework.response import Response
+from mentored.models import Cart, CartItem, Order
 
-# Инициализируем SDK с твоим ACCESS_TOKEN
-#sdk = mercadopago.SDK(settings.MERCADOPAGO_ACCESS_TOKEN)
+# Инициализируем SDK с ACCESS_TOKEN
+sdk = mercadopago.SDK(settings.MERCADOPAGO_ACCESS_TOKEN)
 
 
-class CreatePreferenceView(View):
-    """Создаёт предпочтение (Preference) для Checkout Pro"""
+class CreatePaymentPreferenceView(APIView):
+    """POST /payment/create/ — создать предпочтение для оплаты"""
+    permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-        # Данные о товаре (в будущем ты будешь брать их из корзины)
-        preference_data = {
-            "items": [
-                {
-                    "title": "Mi producto",  # Название товара
-                    "quantity": 1,
-                    "unit_price": 100,  # Цена в местной валюте
-                }
-            ],
-            # Куда вернуть пользователя после успешной оплаты
-            "back_urls": {
-                "success": "http://localhost:8000/payment/success/",
-                "failure": "http://localhost:8000/payment/failure/",
-                "pending": "http://localhost:8000/payment/pending/",
-            },
-            "auto_return": "approved",  # Автоматически возвращать после успеха
-            "notification_url": "https://tu-сайт.ру/payment/webhook/"  # URL для уведомлений от MP
+    def post(self, request):
+        cart = Cart.objects.filter(user=request.user).first()
+        if not cart or cart.items.count() == 0:
+            return Response(
+                {'error': 'Корзина пуста'},
+                status=400
+            )
+
+        # Создаём заказ
+        #from backend.mentored.views import CreateOrderView
+        #order_view = CreateOrderView()
+        #order_response = order_view.post(request)
+        #if order_response.status_code != 201:
+        #    return order_response
+
+        order = Order.objects.get(
+            user=request.user,
+            cart=cart,
+            status='pending'
+        )
+
+        # Формируем данные для Mercado Pago
+        items = []
+        for item in cart.items.all():
+            product = item.product
+            items.append({
+                "id": str(product.id),
+                "title": product.name[:255],
+                "quantity": item.quantity,
+                "unit_price": float(product.price),
+                "currency_id": "BRL",
+            })
+
+        # Ссылки для возврата
+        frontend_url = request.build_absolute_uri('/').replace('api.', '').replace(':8000', ':5173')
+        back_urls = {
+            "success": f"{frontend_url}/payment/success?order={order.order_number}",
+            "failure": f"{frontend_url}/payment/failure",
+            "pending": f"{frontend_url}/payment/pending",
         }
 
-        # Отправляем запрос в Mercado Pago
-        preference_response = '1'#sdk.preference().create(preference_data)
+        preference_data = {
+            "items": items,
+            "back_urls": back_urls,
+            "auto_return": "approved",
+            "notification_url": request.build_absolute_uri('/payment/webhook/'),
+            "external_reference": order.order_number,
+        }
+
+        preference_response = sdk.preference().create(preference_data)
         preference = preference_response["response"]
-        # У пользователя будет кнопка "Оплатить", которая ведёт на init_point
-        return JsonResponse({"init_point": preference["init_point"]})
+
+        # Сохраняем transaction_id в заказ
+        order.transaction_id = preference.get("id")
+        order.save()
+
+        return Response({
+            "init_point": preference["init_point"],
+            "order_number": order.order_number,
+        })
 
 
 @csrf_exempt  # Отключаем CSRF для внешних запросов от Mercado Pago

@@ -370,6 +370,12 @@ class Book(Product):
         null=True,
         verbose_name='Файл книги'
     )
+    acceso = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name='Доступ'
+    )
 
     class Meta:
         verbose_name = 'Книга'
@@ -416,6 +422,18 @@ class Course(Product):
         default=False,
         verbose_name='Есть сертификат'
     )
+    format_course = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name='Формат'
+    )
+    acceso = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name='Доступ'
+    )
 
     class Meta:
         verbose_name = 'Курс'
@@ -458,6 +476,18 @@ class Consultation(Product):
         null=True,
         verbose_name='Языки (через запятую)'
     )
+    format_consultation = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name='Формат'
+    )
+    agenda = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name='Повестка дня'
+    )
 
     class Meta:
         verbose_name = 'Консультация'
@@ -486,6 +516,18 @@ class Membership(Product):
     cancel_anytime = models.BooleanField(
         default=True,
         verbose_name='Можно отменить в любое время'
+    )
+    format_membership = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name='Формат'
+    )
+    permanencia = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name='Постоянство (для вывода в membership)'
     )
 
     class Meta:
@@ -592,3 +634,171 @@ class CartItem(models.Model):
         if hasattr(self.product, 'price'):
             return self.product.price * self.quantity
         return 0
+
+
+# ============================================
+# 7. Модель заказа
+# ============================================
+
+class Order(models.Model):
+    """ Основная модель заказа """
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('paid', 'Paid'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+        ('refunded', 'Refunded'),
+    ]
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='orders',
+        verbose_name='Пользователь'
+    )
+    cart = models.OneToOneField(
+        Cart,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='order',
+        verbose_name='Корзина'
+    )
+    #payment = models.OneToOneField(
+    #    'payments.Payment',
+    #    on_delete=models.SET_NULL,
+    #    null=True,
+    #    blank=True,
+    #    related_name='order',
+    #    verbose_name='Платёж'
+    #)
+    order_number = models.CharField(
+        max_length=50,
+        unique=True,
+        verbose_name='Номер заказа'
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        verbose_name='Статус'
+    )
+    subtotal = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name='Сумма без налогов'
+    )
+    tax = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name='Налоги'
+    )
+    shipping = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name='Доставка'
+    )
+    total = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name='Итоговая сумма'
+    )
+
+    is_digital = models.BooleanField(
+        default=False,
+        verbose_name='Цифровой заказ (без доставки)'
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    paid_at = models.DateTimeField(blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        if not self.order_number:
+            self.order_number = self.generate_order_number()
+        super().save(*args, **kwargs)
+
+    def generate_order_number(self):
+        import random
+        import string
+        from django.utils import timezone
+        prefix = 'ORD'
+        timestamp = timezone.now().strftime('%Y%m%d')
+        random_part = ''.join(random.choices(string.digits, k=6))
+        return f"{prefix}-{timestamp}-{random_part}"
+
+
+# ============================================================
+# ЭЛЕМЕНТ ЗАКАЗА (OrderItem)
+# ============================================================
+class OrderItem(models.Model):
+    """
+    Элемент заказа — товары, которые были куплены.
+    Хранит замороженную информацию на момент покупки.
+    """
+    order = models.ForeignKey(
+        'Order',
+        on_delete=models.CASCADE,
+        related_name='items',
+        verbose_name='Заказ'
+    )
+    # === СВЯЗЬ С ТОВАРОМ ===
+    product_type = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name='Тип товара (course, book, consultation, membership)'
+    )
+    product_id = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name='ID товара'
+    )
+    # === ЗАМОРОЖЕННЫЕ ДАННЫЕ ===
+    product_name = models.CharField(
+        max_length=255,
+        verbose_name='Название товара'
+    )
+    product_sku = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name='Артикул'
+    )
+    product_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name='Цена товара'
+    )
+    quantity = models.PositiveIntegerField(
+        default=1,
+        verbose_name='Количество'
+    )
+    total = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name='Итоговая сумма'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата создания'
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Дата обновления'
+    )
+
+    class Meta:
+        verbose_name = 'Элемент заказа'
+        verbose_name_plural = 'Элементы заказа'
+        ordering = ['id']
+
+    def __str__(self):
+        return f"{self.quantity}x {self.product_name} (Заказ #{self.order.order_number})"
+
+    def save(self, *args, **kwargs):
+        if not self.total:
+            self.total = self.product_price * self.quantity
+        super().save(*args, **kwargs)

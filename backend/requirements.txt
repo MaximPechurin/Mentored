@@ -6,3 +6,4 @@ python-decouple
 psycopg2-binary
 Pillow
 gunicorn
+mercadopago

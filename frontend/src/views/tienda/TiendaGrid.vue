@@ -213,7 +213,6 @@ const addToCart = async (product) => {
   try {
     await cartApi.addItem(productType, product.id)
     addedItems.value = { ...addedItems.value, [product.id]: true }
-
     setTimeout(() => {
       const newAdded = { ...addedItems.value }
       delete newAdded[product.id]
@@ -221,13 +220,7 @@ const addToCart = async (product) => {
     }, 1500)
   } catch (error) {
     console.error('Ошибка добавления в корзину:', error)
-    // Если бэк не доступен — эмулируем
-    addedItems.value = { ...addedItems.value, [product.id]: true }
-    setTimeout(() => {
-      const newAdded = { ...addedItems.value }
-      delete newAdded[product.id]
-      addedItems.value = newAdded
-    }, 1500)
+    alert('Error al agregar al carrito')
   }
 }
 

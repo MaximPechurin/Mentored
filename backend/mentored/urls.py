@@ -3,7 +3,8 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .views import GetProductListView, GetCourseListView, CourseDetailView, GetBookListView, BookDetailView, \
     GetConsultationListView, ConsultationDetailView, GetMembershipListView, MembershipDetailView, RegisterView, \
-    ProfileView, GetProductBySlugView, BlogPostListView, BlogPostDetailView
+    ProfileView, GetProductBySlugView, BlogPostListView, BlogPostDetailView, CartView, CartAddItemView, \
+    CartUpdateItemView, CartRemoveItemView, CartClearView
 
 
 urlpatterns = [
@@ -24,6 +25,12 @@ urlpatterns = [
     path('blog/posts/', BlogPostListView.as_view(), name='blog-posts'),
     path('blog/posts/<slug:slug>/', BlogPostDetailView.as_view(), name='blog-post-detail'),
 
+    # ===== КОРЗИНА =====
+    path('cart/', CartView.as_view(), name='cart'),
+    path('cart/add/', CartAddItemView.as_view(), name='cart-add'),
+    path('cart/update/<int:item_id>/', CartUpdateItemView.as_view(), name='cart-update'),
+    path('cart/remove/<int:item_id>/', CartRemoveItemView.as_view(), name='cart-remove'),
+    path('cart/clear/', CartClearView.as_view(), name='cart-clear'),
     # Курсы
     #path('courses/', GetCourseListView.as_view(), name='course-list'),
     #path('courses/<slug:slug>/', CourseDetailView.as_view(), name='course-detail'),

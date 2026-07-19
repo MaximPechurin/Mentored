@@ -3,7 +3,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import User, BlogCategory, BlogPost, FAQ, Testimonial, Product, Book, Course, Consultation, Membership, \
-    Cart, CartItem
+    Cart, CartItem, Order
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -95,16 +95,74 @@ class MembershipSerializer(serializers.ModelSerializer):
 
 
 class CartItemSerializer(serializers.ModelSerializer):
+    product_type = serializers.SerializerMethodField()
+    product_name = serializers.SerializerMethodField()
+    product_price = serializers.SerializerMethodField()
+    product_image = serializers.SerializerMethodField()
+    total_price = serializers.SerializerMethodField()
+
     class Meta:
         model = CartItem
-        fields = '__all__'
+        fields = [
+            'id',
+            'cart',
+            'quantity',
+            'product_type',
+            'product_name',
+            'product_price',
+            'product_image',
+            'total_price',
+            'created_at',
+        ]
+
+    def get_product_type(self, obj):
+        return obj.content_type.model
+
+    def get_product_name(self, obj):
+        if obj.product:
+            return obj.product.name
+        return None
+
+    def get_product_price(self, obj):
+        if obj.product and hasattr(obj.product, 'price'):
+            return float(obj.product.price)
+        return None
+
+    def get_product_image(self, obj):
+        if obj.product and hasattr(obj.product, 'image'):
+            request = self.context.get('request')
+            if request and obj.product.image:
+                return request.build_absolute_uri(obj.product.image.url)
+        return None
+
+    def get_total_price(self, obj):
+        if obj.product and hasattr(obj.product, 'price'):
+            return float(obj.product.price * obj.quantity)
+        return 0
 
 
 class CartSerializer(serializers.ModelSerializer):
+    items = CartItemSerializer(many=True, read_only=True)
+    total_items = serializers.SerializerMethodField()
+    total_price = serializers.SerializerMethodField()
+
     class Meta:
         model = Cart
-        fields = '__all__'
+        fields = [
+            'id',
+            'user',
+            'items',
+            'total_items',
+            'total_price',
+            'created_at',
+            'updated_at',
+        ]
 
+    def get_total_items(self, obj):
+        return obj.total_items
+
+    def get_total_price(self, obj):
+        return float(obj.total_price)
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -128,3 +186,9 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             raise AuthenticationFailed('Email and password are required')
 
         return super().validate(attrs)
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Order
+        fields = '__all__'
