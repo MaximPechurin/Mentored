@@ -93,11 +93,11 @@ REST_FRAMEWORK = {
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('POSTGRES_DB', 'mentored'),
-        'USER': os.environ.get('POSTGRES_USER', 'mentored_user'),
-        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', ''),
-        'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
-        'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+        'NAME': 'mentored_db',
+        'USER': 'mentored_user',
+        'PASSWORD': '1qkn?!D/h&dk!2~',
+        'HOST': 'db',
+        'PORT': '5432',
     }
 }
 
