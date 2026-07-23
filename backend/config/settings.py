@@ -68,6 +68,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5174",
     "http://localhost:5175",
     "http://127.0.0.1:5175",
+    #"",
+    #""
 ]
 CORS_ALLOW_CREDENTIALS = True
 
@@ -93,7 +95,7 @@ REST_FRAMEWORK = {
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'mentored_db',
+        'NAME': 'mentored',
         'USER': 'mentored_user',
         'PASSWORD': '1qkn?!D/h&dk!2~',
         'HOST': 'db',
@@ -144,8 +146,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'mentored.User'
 
 # .env
-MERCADOPAGO_ACCESS_TOKEN=''
-MERCADOPAGO_PUBLIC_KEY=''
+MERCADOPAGO_ACCESS_TOKEN='APP_USR-7066829830739681-072315-12ad7a60f5f5ba46bcc93fda71ed4eac-356409555'
+MERCADOPAGO_PUBLIC_KEY='APP_USR-07bc2e7d-e8af-4f60-bedf-6964510d8b99'
 # На бою использовать ->
 #MERCADOPAGO_ACCESS_TOKEN = config('MERCADOPAGO_ACCESS_TOKEN')
 #MERCADOPAGO_PUBLIC_KEY = config('MERCADOPAGO_PUBLIC_KEY')
