@@ -5,16 +5,14 @@ services:
     image: postgres:16
     container_name: mentored_db
     restart: always
-    env_file:
-      - .env
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: mentored
+      POSTGRES_USER: mentored_user
+      POSTGRES_PASSWORD: 1qkn?!D/h&dk!2~
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: [ "CMD-SHELL", "pg_isready -U mentored_user -d mentored" ]
       interval: 5s
       timeout: 5s
       retries: 5
