@@ -7,6 +7,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Собираем статику
+RUN python manage.py collectstatic --noinput
+
 # Для SQLite ничего дополнительно ставить не нужно
 
 EXPOSE 8000
