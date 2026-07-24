@@ -57,9 +57,10 @@
           <span class="total-label">Total</span>
           <span class="total-price">{{ subtotal }}</span>
         </div>
-        <button @click="checkout" class="checkout-btn">
-          Finalizar compra
-          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <button @click="handleCheckout" class="checkout-btn" :disabled="loading">
+          <span v-if="!loading">Finalizar compra</span>
+          <span v-else>Cargando...</span>
+          <svg v-if="!loading" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="5" y1="12" x2="19" y2="12"/>
             <polyline points="12 5 19 12 12 19"/>
           </svg>
@@ -71,7 +72,11 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { orderApi } from '../../api/orders'
+
+const router = useRouter()
 
 const props = defineProps({
   items: {
@@ -81,6 +86,8 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update-quantity', 'remove-item', 'clear-cart'])
+
+const loading = ref(false)
 
 const totalItems = computed(() => {
   return props.items.reduce((sum, item) => sum + item.qty, 0)
@@ -104,13 +111,29 @@ const removeItem = (id) => {
 }
 
 const clearCart = () => {
-  if (confirm('¿Estás seguro de que quieres vaciar el carrito?')) {
-    emit('clear-cart')
-  }
+  emit('clear-cart')
 }
 
-const checkout = () => {
-  alert('¡Gracias por tu compra! 🎉 Esta función estará disponible pronto.')
+// ===== ОСНОВНАЯ ЛОГИКА =====
+const handleCheckout = async () => {
+  if (loading.value) return
+
+  loading.value = true
+  try {
+    const response = await orderApi.createOrder()
+    const orderNumber = response.data.order_number
+
+    // Очищаем корзину (без confirm)
+    emit('clear-cart')
+
+    // Редирект на страницу заказа
+    router.push(`/order/${orderNumber}`)
+  } catch (error) {
+    console.error('Ошибка создания заказа:', error)
+    alert('Error al crear el pedido. Inténtalo de nuevo.')
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
