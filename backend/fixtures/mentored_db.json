@@ -1,0 +1,175 @@
+[
+{
+  "model": "mentored.user",
+  "fields": {
+    "password": "1234",
+    "last_login": "2026-07-12T19:10:56Z",
+    "is_superuser": true,
+    "username": "max",
+    "first_name": "Pechurin",
+    "last_name": "Maxim",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-07-12T19:09:28Z",
+    "email": "mdorfand@mail.ru",
+    "phone": "",
+    "avatar": "",
+    "created_at": "2026-07-12T19:09:29.102Z",
+    "updated_at": "2026-07-13T08:28:29.598Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "mentored.user",
+  "fields": {
+    "password": "123",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "Maxim",
+    "first_name": "",
+    "last_name": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-07-13T08:47:28.819Z",
+    "email": "mdaorfand@mail.ru",
+    "phone": "",
+    "avatar": "",
+    "created_at": "2026-07-13T08:47:28.820Z",
+    "updated_at": "2026-07-13T08:47:28.820Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "mentored.blogcategory",
+  "pk": 1,
+  "fields": {
+    "name": "Energía",
+    "slug": "energia",
+    "order": 0
+  }
+},
+{
+  "model": "mentored.blogcategory",
+  "pk": 2,
+  "fields": {
+    "name": "Hábitos",
+    "slug": "habitos",
+    "order": 0
+  }
+},
+{
+  "model": "mentored.blogcategory",
+  "pk": 3,
+  "fields": {
+    "name": "Propósito",
+    "slug": "proposito",
+    "order": 0
+  }
+},
+{
+  "model": "mentored.blogcategory",
+  "pk": 4,
+  "fields": {
+    "name": "Carrera",
+    "slug": "carrera",
+    "order": 0
+  }
+},
+{
+  "model": "mentored.blogpost",
+  "pk": 1,
+  "fields": {
+    "category": 4,
+    "author": [
+      "mdorfand@mail.ru"
+    ],
+    "image": "blog/images/2026/07/13/33c95f4d-a5ee-410f-8360-b561d1d43385/curso-energia.png",
+    "title": "test post one",
+    "slug": "test-post-one",
+    "short_description": "test opisanie",
+    "content": "test polnoe opisanie",
+    "file": "",
+    "is_published": true,
+    "created_at": "2026-07-12T23:03:49.632Z",
+    "updated_at": "2026-07-13T07:54:58.612Z"
+  }
+},
+{
+  "model": "mentored.book",
+  "pk": 1,
+  "fields": {
+    "name": "Libro Digital: El Camino del Propósito",
+    "slug": "libro-digital-el-camino-del-proposito",
+    "short_description": "Comprende tu propósito y crea la vida que deseas. Una guía práctica y transformadora.",
+    "description": "Una guía para reconectar con lo que de verdad quieres",
+    "long_description": "El Camino del Propósito te acompaña a través de preguntas, historias y ejercicios para clarificar lo que de verdad importa en tu vida y traducirlo en decisiones concretas.\r\n\r\nCada capítulo combina reflexión y práctica para que avances a tu ritmo, sin fórmulas mágicas: solo un método honesto para escucharte y actuar con dirección.",
+    "price": "27.00",
+    "old_price": "47.00",
+    "includes": "Versión digital en PDF y EPUB\r\nEjercicios y plantillas descargables\r\nAcceso inmediato tras la compra\r\nActualizaciones gratuitas de por vida",
+    "is_active": true,
+    "is_featured": false,
+    "created_at": "2026-07-12T22:57:33.851Z",
+    "updated_at": "2026-07-12T22:57:33.851Z",
+    "image": "",
+    "book_format": "PDF + EPUB",
+    "pages": 180,
+    "book_language": null,
+    "year": null,
+    "book_file": "",
+    "acceso": null
+  }
+},
+{
+  "model": "mentored.course",
+  "pk": 1,
+  "fields": {
+    "name": "Curso: Recupera tu Energía",
+    "slug": "curso-recupera-tu-energia",
+    "short_description": "Activa tu vitalidad y toma el control de tu día, tu energía y tu enfoque.",
+    "description": "Recupera el control de tu energía día a día",
+    "long_description": "Este curso te da un sistema sencillo para entender de dónde se escapa tu energía y cómo recuperarla, sin depender de la fuerza de voluntad.\r\n\r\nAvanzarás módulo a módulo con prácticas aplicables desde el primer día, para sostener tu enfoque y tu vitalidad a lo largo del tiempo.",
+    "price": "97.00",
+    "old_price": "147.00",
+    "includes": "6 módulos en vídeo de alta calidad\r\nMás de 4 horas de contenido\r\nCuaderno de trabajo descargable\r\nAcceso de por vida desde tu cuenta",
+    "is_active": true,
+    "is_featured": true,
+    "created_at": "2026-07-12T19:19:17.130Z",
+    "updated_at": "2026-07-12T22:40:41.855Z",
+    "image": "courses/images/2026/07/12/13c55eaf-e82c-4b12-9cb6-7cba54197fad/curso-energia.png",
+    "duration": "6 semanas",
+    "lessons": 24,
+    "video_hours": "4+",
+    "level": "Principiante",
+    "certificate": true,
+    "format_course": null,
+    "acceso": null
+  }
+},
+{
+  "model": "mentored.consultation",
+  "pk": 1,
+  "fields": {
+    "name": "Consulta 1:1 con Irina Karbonova",
+    "slug": "consulta-11-con-irina-karbonova",
+    "short_description": "Acompañamiento personalizado con la fundadora de Mentored. Una sesión de claridad.",
+    "description": "Una mirada personal para tu momento actual",
+    "long_description": "Una sesión individual con Irina Karbonova para mirar tu situación con perspectiva, ordenar lo importante y salir con claridad sobre tus próximos pasos.\r\n\r\nTras reservar, acordaremos día y hora y recibirás el enlace para conectarte desde donde prefieras.",
+    "price": "297.00",
+    "old_price": null,
+    "includes": "Sesión individual de 60 minutos por videollamada\r\nAnálisis personalizado de tu situación\r\nPlan de acción con próximos pasos\r\nResumen y recursos tras la sesión",
+    "is_active": true,
+    "is_featured": false,
+    "created_at": "2026-07-12T22:59:26.624Z",
+    "updated_at": "2026-07-12T22:59:26.624Z",
+    "image": "",
+    "duration_minutes": 60,
+    "expert": null,
+    "platform": null,
+    "languages": null,
+    "format_consultation": null,
+    "agenda": null
+  }
+}
+]
