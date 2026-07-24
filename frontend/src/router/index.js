@@ -14,6 +14,7 @@ import ProductoPage from "../views/producto/ProductoPage.vue";
 import LoginPage from "../views/auth/LoginPage.vue";
 import RegisterPage from "../views/auth/RegisterPage.vue";
 import BlogPostPage from "../views/blog/BlogPostPage.vue";
+import OrderPage from "../views/order/OrderPage.vue";
 
 const routes = [
   {
@@ -82,6 +83,11 @@ const routes = [
     path: '/blog/:slug',
     name: 'BlogPost',
     component: BlogPostPage,
+  },
+  {
+    path: '/order/:orderNumber',
+    name: 'Order',
+    component: OrderPage,
   },
 ]
 

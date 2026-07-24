@@ -32,9 +32,9 @@
           <button
             @click="addToCart(product)"
             class="t-product-btn"
-            :class="{ added: isAdded(product.id) }"
+            :class="{ added: isAdded(product) }"
           >
-            <template v-if="isAdded(product.id)">
+            <template v-if="isAdded(product)">
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="20 6 9 17 4 12"/>
               </svg>
@@ -210,12 +210,15 @@ const addToCart = async (product) => {
   }
   const productType = typeMap[product.category_key] || 'course'
 
+  // УНИКАЛЬНЫЙ КЛЮЧ ЧТОБЫ ТОВАРЫ С ОДИНАКОВЫМ АЙДИ НЕ ПОДСВЕЧИВАЛИСЬ КАК БУДТО ДОБАВЛЕНЫ ВСЕ СРАЗУ
+  const uniqueKey = `${product.category_key}-${product.id}`
+
   try {
     await cartApi.addItem(productType, product.id)
-    addedItems.value = { ...addedItems.value, [product.id]: true }
+    addedItems.value = { ...addedItems.value, [uniqueKey]: true }
     setTimeout(() => {
       const newAdded = { ...addedItems.value }
-      delete newAdded[product.id]
+      delete newAdded[uniqueKey]
       addedItems.value = newAdded
     }, 1500)
   } catch (error) {
@@ -225,8 +228,9 @@ const addToCart = async (product) => {
 }
 
 // ===== ПРОВЕРКА ДОБАВЛЕНИЯ =====
-const isAdded = (id) => {
-  return !!addedItems.value[id]
+const isAdded = (product) => {
+  const uniqueKey = `${product.category_key}-${product.id}`
+  return !!addedItems.value[uniqueKey]
 }
 
 // ===== МОНТИРОВАНИЕ =====

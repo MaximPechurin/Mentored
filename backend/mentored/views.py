@@ -608,19 +608,20 @@ class CreateOrderView(APIView):
             )
 
         # Создаём заказ
-        subtotal = cart.total_price
-        tax = subtotal * 0.1  # 10%
-        shipping = 0  # для цифровых товаров
-        total = subtotal + tax + shipping
+        total = cart.total_price
+        #tax = subtotal * 0.1  # 10%
+        #shipping = 0  # для цифровых товаров
+        #total = subtotal + tax + shipping
 
         order = Order.objects.create(
             user=request.user,
             cart=cart,
-            subtotal=subtotal,
-            tax=tax,
-            shipping=shipping,
+            #subtotal=subtotal,
+            #tax=tax,
+            #shipping=shipping,
             total=total,
-            is_digital=True,  # или проверять по товарам
+            is_digital=True,
+            is_active=True,
             status='pending',
         )
 
@@ -635,7 +636,7 @@ class CreateOrderView(APIView):
                 product_price=product.price,
                 quantity=cart_item.quantity,
                 total=product.price * cart_item.quantity,
-                is_digital=True,
+                #is_digital=True,
             )
 
         # Очищаем корзину (но сохраняем ссылку в заказе)
@@ -671,4 +672,20 @@ class FAQView(APIView):
     def get(self, request):
         faq = FAQ.objects.filter(is_active=True)
         serializer = FAQSerializer(faq, many=True)
+        return Response(serializer.data)
+
+
+class GetOrderByNumberView(APIView):
+    """GET /orders/<order_number>/ — получить заказ по номеру"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, order_number):
+        try:
+            order = Order.objects.get(order_number=order_number, user=request.user)
+        except Order.DoesNotExist:
+            return Response(
+                {'error': 'Заказ не найден'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        serializer = OrderSerializer(order)
         return Response(serializer.data)

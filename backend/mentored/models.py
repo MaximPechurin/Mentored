@@ -656,7 +656,7 @@ class Order(models.Model):
         related_name='orders',
         verbose_name='Пользователь'
     )
-    cart = models.OneToOneField(
+    cart = models.ForeignKey(
         Cart,
         on_delete=models.SET_NULL,
         null=True,
@@ -686,19 +686,25 @@ class Order(models.Model):
     subtotal = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        verbose_name='Сумма без налогов'
+        verbose_name='Сумма без налогов',
+        null=True,
+        blank=True
     )
     tax = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         default=0,
-        verbose_name='Налоги'
+        verbose_name='Налоги',
+        null = True,
+        blank = True
     )
     shipping = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         default=0,
-        verbose_name='Доставка'
+        verbose_name='Доставка',
+        null = True,
+        blank = True
     )
     total = models.DecimalField(
         max_digits=10,
@@ -710,6 +716,11 @@ class Order(models.Model):
         default=False,
         verbose_name='Цифровой заказ (без доставки)'
     )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='Активный заказ'
+    )
+
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
