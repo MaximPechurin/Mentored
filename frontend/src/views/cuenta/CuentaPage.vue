@@ -6,7 +6,7 @@
       <main class="ac-main">
         <CuentaPerfil v-if="activeTab === 'perfil'" />
         <CuentaPedidos v-else-if="activeTab === 'pedidos'" />
-        <CuentaCursos v-else-if="activeTab === 'cursos'" />
+        <!-- <CuentaCursos v-else-if="activeTab === 'cursos'" /> МБ ВЕРНУТЬ В ДАЛЬНЕЙШЕМ -->
         <CuentaConfig v-else-if="activeTab === 'config'" />
       </main>
     </div>
@@ -21,7 +21,7 @@ import CuentaHero from './CuentaHero.vue'
 import CuentaSidebar from './CuentaSidebar.vue'
 import CuentaPerfil from './CuentaPerfil.vue'
 import CuentaPedidos from './CuentaPedidos.vue'
-import CuentaCursos from './CuentaCursos.vue'
+//import CuentaCursos from './CuentaCursos.vue'
 import CuentaConfig from './CuentaConfig.vue'
 
 const router = useRouter()

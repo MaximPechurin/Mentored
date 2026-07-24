@@ -46,8 +46,8 @@ services:
     command: sh -c "npm run build && sleep infinity"
     # ИЛИ для однократной сборки:
     # command: npm run build
-    profiles:
-      - build
+    #profiles:
+    #  - build
 
   nginx:
     image: nginx:alpine
@@ -62,7 +62,7 @@ services:
       - ./backend/static:/static
     depends_on:
       - backend
-      - frontend  # 👈 Ждём фронт
+    #  - frontend
 
 volumes:
   pgdata:

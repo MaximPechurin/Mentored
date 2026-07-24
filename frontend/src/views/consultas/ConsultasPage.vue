@@ -2,7 +2,7 @@
   <div class="consultas-page">
     <ConsultasHero />
     <ConsultasCategories />
-    <ConsultasFeatured />
+    <!-- <ConsultasFeatured /> МБ ВЕРНУТЬ В ДАЛЬНЕЙШЕМ -->
     <ConsultasHowItWorks />
     <ConsultasResults />
     <ConsultasCta />
@@ -12,7 +12,7 @@
 <script setup>
 import ConsultasHero from './ConsultasHero.vue'
 import ConsultasCategories from './ConsultasCategories.vue'
-import ConsultasFeatured from './ConsultasFeatured.vue'
+//import ConsultasFeatured from './ConsultasFeatured.vue'
 import ConsultasHowItWorks from './ConsultasHowItWorks.vue'
 import ConsultasResults from './ConsultasResults.vue'
 import ConsultasCta from './ConsultasCta.vue'

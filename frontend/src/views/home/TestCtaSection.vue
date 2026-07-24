@@ -9,13 +9,13 @@
       </div>
       <h2 class="section-title">¿No sabes por dónde empezar?</h2>
       <p class="section-subtitle">Responde 5 preguntas y descubre tu punto de partida ideal para comenzar tu transformación.</p>
-      <a href="#" class="btn-primary">
+      <!-- <a href="#" class="btn-primary">
         Hacer el test gratis
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="5" y1="12" x2="19" y2="12"/>
           <polyline points="12 5 19 12 12 19"/>
         </svg>
-      </a>
+      </a> МБ ВЕРНУТЬ В ДАЛЬНЕЙШЕМ -->
     </div>
   </section>
 </template>
