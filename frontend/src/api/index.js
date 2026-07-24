@@ -1,6 +1,12 @@
 import axios from 'axios'
 
-const API_URL = 'http://localhost:8000'
+// Определяем базовый URL динамически
+const API_URL = process.env.NODE_ENV === 'production'
+    ? '' // Пустая строка означает "тот же домен, где открыт сайт"
+    : 'http://localhost:8000';
+
+// Или явно:
+// const API_URL = window.location.origin;
 
 const api = axios.create({
   baseURL: API_URL,
