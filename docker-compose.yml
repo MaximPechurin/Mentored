@@ -55,11 +55,14 @@ services:
     restart: always
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./frontend/dist:/usr/share/nginx/html
       - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf
       - ./backend/media:/media
       - ./backend/static:/static
+      - /root/certbot/www:/var/www/certbot
+      - /root/certbot/conf:/etc/letsencrypt
     depends_on:
       - backend
     #  - frontend
