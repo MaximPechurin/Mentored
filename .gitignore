@@ -75,6 +75,10 @@ coverage/
 # === DOCKER ===
 docker-compose.override.yml
 
+# === CLAUDE CODE ===
+# Локальный скилл доступа к боевому серверу (IP + пароль root) - не для репозитория
+/.claude/skills/mentored-server/
+
 # === OS ===
 .DS_Store
 Thumbs.db
