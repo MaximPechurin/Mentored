@@ -6,7 +6,65 @@ from .models import User, BlogCategory, BlogPost, FAQ, Testimonial, Product, Boo
     Cart, CartItem, Order
 
 
+class RegisterSerializer(serializers.ModelSerializer):
+    """
+    Регистрация нового пользователя.
+
+    Раньше RegisterView использовал UserSerializer(fields='__all__') -
+    из-за этого пароль сохранялся как есть, БЕЗ хеширования (ModelSerializer.
+    create() просто делает Model.objects.create(**validated_data), не зовёт
+    set_password()) - зарегистрированным пользователем невозможно было
+    залогиниться (Django сравнивает с хешем, а в базе лежал plain text).
+    Заодно '__all__' пускал в тело запроса is_staff/is_superuser/is_active -
+    можно было выдать себе права администратора прямо при регистрации.
+    Здесь - только безопасный набор полей + пароль хешируется через
+    set_password() в create().
+    """
+    password = serializers.CharField(write_only=True)
+    confirm_password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'phone', 'password', 'confirm_password']
+
+    def validate(self, attrs):
+        if attrs['password'] != attrs.pop('confirm_password'):
+            raise serializers.ValidationError({'confirm_password': 'Пароли не совпадают'})
+        return attrs
+
+    def create(self, validated_data):
+        password = validated_data.pop('password')
+        user = User(**validated_data)
+        user.set_password(password)
+        user.save()
+        return user
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+    """
+    Просмотр/редактирование профиля текущего пользователя.
+
+    Раньше ProfileView использовал тот же дырявый UserSerializer
+    (fields='__all__') - GET отдавал во фронт в т.ч. хеш пароля, а PUT
+    позволял залогиненному пользователю прописать себе is_staff/is_superuser
+    (mass assignment). Здесь - только поля, которые реально нужны профилю;
+    пароль и права доступа сюда не попадают вообще (смена пароля - отдельная
+    задача с проверкой старого пароля, тут не реализована).
+    """
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'phone', 'avatar', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
 class UserSerializer(serializers.ModelSerializer):
+    """
+    ВНИМАНИЕ: fields='__all__' на модели User - НЕ использовать напрямую для
+    регистрации/редактирования профиля (утечка хеша пароля, mass assignment
+    is_staff/is_superuser). Для этого - RegisterSerializer/ProfileSerializer
+    выше. Оставлен только на случай, если где-то нужен полный дамп юзера для
+    служебных/админских целей (сейчас нигде в проекте не используется).
+    """
     class Meta:
         model = User
         fields = '__all__'

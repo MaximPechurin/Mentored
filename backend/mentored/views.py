@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404
 from django.contrib.contenttypes.models import ContentType
 
 from .models import Course, Book, Consultation, Membership, BlogCategory, BlogPost, Cart, CartItem, Order, FAQ, OrderItem
-from .serializers import UserSerializer, CourseSerializer, BookSerializer, ConsultationSerializer, MembershipSerializer, \
+from .serializers import RegisterSerializer, ProfileSerializer, CourseSerializer, BookSerializer, ConsultationSerializer, MembershipSerializer, \
     BlogCategorySerializer, BlogPostSerializer, CartSerializer, CartItemSerializer, OrderSerializer, FAQSerializer
 
 
@@ -15,7 +15,7 @@ class RegisterView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        serializer = UserSerializer(data=request.data)
+        serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
             return Response({
@@ -33,12 +33,12 @@ class ProfileView(APIView):
 
     def get(self, request):
         user = request.user
-        serializer = UserSerializer(user)
+        serializer = ProfileSerializer(user)
         return Response(serializer.data)
 
     def put(self, request):
         user = request.user
-        serializer = UserSerializer(user, data=request.data, partial=True)
+        serializer = ProfileSerializer(user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
