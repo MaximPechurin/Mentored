@@ -15,7 +15,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '../../composables/useAuth'
 import CuentaHero from './CuentaHero.vue'
 import CuentaSidebar from './CuentaSidebar.vue'
@@ -24,9 +24,11 @@ import CuentaPedidos from './CuentaPedidos.vue'
 //import CuentaCursos from './CuentaCursos.vue'
 import CuentaConfig from './CuentaConfig.vue'
 
+const route = useRoute()
 const router = useRouter()
 const { user, refreshUser, logout } = useAuth()
-const activeTab = ref('perfil')
+const VALID_TABS = ['perfil', 'pedidos', 'config']
+const activeTab = ref(VALID_TABS.includes(route.query.tab) ? route.query.tab : 'perfil')
 
 const handleLogout = () => {
   logout()

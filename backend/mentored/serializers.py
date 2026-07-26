@@ -3,7 +3,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import User, BlogCategory, BlogPost, FAQ, Testimonial, Product, Book, Course, Consultation, Membership, \
-    Cart, CartItem, Order
+    Cart, CartItem, Order, OrderItem
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -246,7 +246,17 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return super().validate(attrs)
 
 
+class OrderItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderItem
+        fields = '__all__'
+
+
 class OrderSerializer(serializers.ModelSerializer):
+    # related_name='items' на OrderItem.order - без явного объявления DRF его
+    # не подставит, и order.items во фронте (OrderPage.vue) всегда был пуст.
+    items = OrderItemSerializer(many=True, read_only=True)
+
     class Meta:
         model = Order
         fields = '__all__'

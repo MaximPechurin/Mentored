@@ -16,6 +16,10 @@
             Número de pedido: <strong>#{{ order.order_number }}</strong>
           </p>
 
+          <div v-if="paymentBanner" :class="['order-payment-banner', paymentBanner.type]">
+            {{ paymentBanner.text }}
+          </div>
+
           <div class="order-details">
             <div class="order-summary">
               <div class="order-row">
@@ -47,14 +51,14 @@
           </div>
 
           <div class="order-actions">
-            <button class="order-btn-primary" @click="goToPayment">
+            <button v-if="order.status === 'pending'" class="order-btn-primary" @click="goToPayment" :disabled="paying">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
                 <circle cx="12" cy="12" r="4"/>
               </svg>
-              Ir a pagar
+              {{ paying ? 'Redirigiendo...' : 'Ir a pagar' }}
             </button>
-            <router-link to="/cuenta/pedidos" class="order-btn-secondary">
+            <router-link to="/cuenta?tab=pedidos" class="order-btn-secondary">
               Ver mis pedidos
             </router-link>
             <router-link to="/tienda" class="order-btn-text">
@@ -78,15 +82,29 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { orderApi } from '../../api/orders'
+import { paymentApi } from '../../api/payments'
 
 const route = useRoute()
 const router = useRouter()
 
 const order = ref(null)
 const loading = ref(true)
+const paying = ref(false)
+
+// Баннер о результате оплаты. Mercado Pago возвращает сюда же
+// (/order/:orderNumber?payment=success|failure|pending) после Checkout Pro -
+// см. back_urls в backend/payments/views.py::CreatePaymentPreferenceView.
+const paymentBanner = computed(() => {
+  const map = {
+    success: { type: 'success', text: 'Pago recibido. Estamos confirmando el estado con Mercado Pago.' },
+    pending: { type: 'pending', text: 'Tu pago está pendiente de confirmación.' },
+    failure: { type: 'failure', text: 'El pago no se pudo completar. Podés intentarlo de nuevo.' },
+  }
+  return map[route.query.payment] || null
+})
 
 const formatPrice = (amount) => {
   if (!amount) return '$0.00'
@@ -136,8 +154,19 @@ const loadOrder = async () => {
   }
 }
 
-const goToPayment = () => {
-  router.push(`/payment/${order.value.order_number}`)
+const goToPayment = async () => {
+  if (paying.value || !order.value) return
+  paying.value = true
+  try {
+    const response = await paymentApi.createPreference(order.value.order_number)
+    // init_point - внешний домен Mercado Pago, поэтому обычный редирект,
+    // а не router.push (SPA-роутер тут не при делах).
+    window.location.href = response.data.init_point
+  } catch (error) {
+    console.error('Ошибка создания платежа:', error)
+    alert('No se pudo iniciar el pago. Inténtalo de nuevo.')
+    paying.value = false
+  }
 }
 
 onMounted(() => {
@@ -212,6 +241,29 @@ onMounted(() => {
 }
 
 .order-number strong {
+  color: #8e1519;
+}
+
+.order-payment-banner {
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 20px;
+}
+
+.order-payment-banner.success {
+  background: #e6f4ea;
+  color: #1f7a3d;
+}
+
+.order-payment-banner.pending {
+  background: #fdf3e0;
+  color: #9a6a00;
+}
+
+.order-payment-banner.failure {
+  background: #fbe7e8;
   color: #8e1519;
 }
 

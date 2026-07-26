@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from datetime import timedelta
+from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -77,6 +78,19 @@ CORS_ALLOWED_ORIGINS = [
 ]
 CORS_ALLOW_CREDENTIALS = True
 
+# Мы за nginx-прокси: TLS обрывается на nginx, до Django долетает обычный HTTP.
+# Без этой строки request.is_secure() всегда False, и Origin/scheme у Django
+# и у браузера расходятся (http vs https).
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Django 4+ на "secure"-запросах сверяет заголовок Origin со списком доверенных
+# origin'ов. Без этой настройки POST /admin/login/ с https://mentoredgroup.com
+# падает 403 "Origin checking failed - ... does not match any trusted origins."
+CSRF_TRUSTED_ORIGINS = [
+    'https://mentoredgroup.com',
+    'https://www.mentoredgroup.com',
+]
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -91,21 +105,22 @@ REST_FRAMEWORK = {
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': config('POSTGRES_DB'),
+        'USER': config('POSTGRES_USER'),
+        'PASSWORD': config('POSTGRES_PASSWORD'),
+        'HOST': config('POSTGRES_HOST', default='db'),
+        'PORT': config('POSTGRES_PORT', default='5432'),
     }
 }
 
-#DATABASES = {
-#    'default': {
-#        'ENGINE': 'django.db.backends.postgresql',
-#        'NAME': 'mentored',
-#        'USER': 'mentored_user',
-#        'PASSWORD': '1qkn?!D/h&dk!2~',
-#        'HOST': 'db',
-#        'PORT': '5432',
-#    }
-#}
+# Старый sqlite - НЕ удалять файл backend/db.sqlite3, оставлен для отката/справки.
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
@@ -155,3 +170,16 @@ MERCADOPAGO_PUBLIC_KEY='APP_USR-07bc2e7d-e8af-4f60-bedf-6964510d8b99'
 # На бою использовать ->
 #MERCADOPAGO_ACCESS_TOKEN = config('MERCADOPAGO_ACCESS_TOKEN')
 #MERCADOPAGO_PUBLIC_KEY = config('MERCADOPAGO_PUBLIC_KEY')
+
+# Секрет для проверки заголовка x-signature на вебхуках (Your integrations ->
+# приложение -> Webhooks -> Configure notifications -> Secret key). Пока не
+# выдан - оставляем пустым, тогда подпись просто не проверяется (см.
+# payments/views.py::_verify_mp_signature), но пишется warning в лог.
+MERCADOPAGO_WEBHOOK_SECRET = config('MERCADOPAGO_WEBHOOK_SECRET', default='')
+
+# Валюта позиций в preference. ВАЖНО: должна совпадать со страной аккаунта
+# Mercado Pago (PEN - Перу), иначе sdk.preference().create() падает с
+# ошибкой валидации валюты на стороне Mercado Pago. Покупатель эту валюту
+# не выбирает и не может поменять на чекауте - она жёстко привязана к
+# стране/валюте продавца в Mercado Pago.
+MERCADOPAGO_CURRENCY = config('MERCADOPAGO_CURRENCY', default='PEN')
