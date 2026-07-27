@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.html import format_html
 
 from .models import User, BlogCategory, BlogPost, FAQ, Testimonial, Book, Course, Consultation, Membership, \
-    Cart, CartItem, ContactMessage
+    Cart, CartItem, ContactMessage, Order, OrderItem
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
@@ -371,3 +371,20 @@ class ContactMessageAdmin(admin.ModelAdmin):
     search_fields = ('name', 'email', 'message')
     readonly_fields = ('name', 'email', 'motivo', 'message', 'created_at')
     list_editable = ('is_read',)
+
+
+class OrderItemInline(admin.TabularInline):
+    model = OrderItem
+    extra = 0
+    readonly_fields = ('product_type', 'product_id', 'product_name', 'product_price', 'quantity', 'total')
+    can_delete = False
+
+
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    list_display = ('order_number', 'user', 'status', 'total', 'is_active', 'created_at', 'paid_at')
+    list_filter = ('status', 'is_active', 'is_digital', 'created_at')
+    search_fields = ('order_number', 'user__email', 'user__username')
+    date_hierarchy = 'created_at'
+    inlines = [OrderItemInline]
+    readonly_fields = ('order_number', 'created_at', 'updated_at')
