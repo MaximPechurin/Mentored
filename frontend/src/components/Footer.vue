@@ -8,7 +8,7 @@
         </div>
         <p class="brand-desc">Crecimiento personal y profesional con propósito.</p>
         <div class="social-links">
-          <a href="https://instagram.com/mentored" aria-label="Instagram">
+          <a href="https://www.instagram.com/irina.karbonova?utm_source=qr" aria-label="Instagram">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
               <rect x="2" y="2" width="20" height="20" rx="5"/>
               <circle cx="12" cy="12" r="4"/>
@@ -26,7 +26,7 @@
               <polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="currentColor"/>
             </svg>
           </a>
-          <a href="https://linkedin.com/company/mentored" aria-label="LinkedIn">
+          <a href="https://www.linkedin.com/in/irina-karbonova-3a4763101?utm_source=share_via&utm_content=profile&utm_medium=member_ios" aria-label="LinkedIn">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM10 9h3.8v1.7h.05a4.2 4.2 0 0 1 3.75-2c4 0 4.75 2.6 4.75 6V21h-4v-5.3c0-1.3 0-2.9-1.8-2.9s-2 1.4-2 2.8V21h-4z"/>
             </svg>
@@ -63,7 +63,7 @@
         <h4>Contacto</h4>
         <ul>
           <li>
-            <a href="https://wa.me/0000000000" class="contact-link">
+            <a href="https://wa.me/51940304595" class="contact-link">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
               </svg>

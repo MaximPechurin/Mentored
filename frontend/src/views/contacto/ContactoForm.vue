@@ -80,7 +80,7 @@
     <!-- Блоки контактов -->
     <div class="ct-contact-blocks">
       <!-- WhatsApp -->
-      <a href="https://wa.me/0000000000" class="ct-block ct-block-whatsapp">
+      <a href="https://wa.me/51940304595" class="ct-block ct-block-whatsapp">
         <div class="ct-block-header">
           <span class="ct-block-icon ct-icon-whatsapp">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -92,7 +92,7 @@
             <span class="ct-block-sub">Respuesta más rápida</span>
           </div>
         </div>
-        <span class="ct-block-value">+00 000 000 000</span>
+        <span class="ct-block-value">+51 940 304 595</span>
       </a>
 
       <!-- Email -->
@@ -127,7 +127,7 @@
           Lunes a viernes, 9:00 – 18:00<br>Respondemos en 24-48 h hábiles.
         </p>
         <div class="ct-social-links">
-          <a href="https://instagram.com/mentored" aria-label="Instagram">
+          <a href="https://www.instagram.com/irina.karbonova?utm_source=qr" aria-label="Instagram">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
               <rect x="2" y="2" width="20" height="20" rx="5"/>
               <circle cx="12" cy="12" r="4"/>
