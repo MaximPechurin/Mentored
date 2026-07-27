@@ -17,6 +17,7 @@
                 placeholder="usuario"
                 required
               >
+              <span class="auth-field-hint">Sin espacios: solo letras, números y . _ + -</span>
             </div>
 
             <div class="auth-field">
@@ -137,8 +138,29 @@ const form = ref({
   confirmPassword: '',
 })
 
+// Тот же формат, что и стандартный UnicodeUsernameValidator в Django -
+// без этой проверки на фронте люди вписывают в "Nombre de usuario" своё
+// обычное имя с пробелом (например "Frank Maqui"), бэк отвечает 400, а
+// раньше на фронте показывался только глухой "Error al crear la cuenta."
+// без объяснения, что именно не так.
+const USERNAME_RE = /^[\w.@+-]+$/
+
+const extractErrorMessage = (error) => {
+  const data = error.response?.data
+  if (!data) return 'Error al crear la cuenta. Inténtalo de nuevo.'
+  if (typeof data === 'string') return data
+  const messages = Object.entries(data).map(([field, value]) => {
+    const text = Array.isArray(value) ? value.join(' ') : value
+    return `${field}: ${text}`
+  })
+  return messages.join('\n') || 'Error al crear la cuenta. Inténtalo de nuevo.'
+}
+
 const handleRegister = async () => {
-  // ... валидация ...
+  if (!USERNAME_RE.test(form.value.username)) {
+    alert('El nombre de usuario no puede tener espacios. Usa solo letras, números y . _ + -')
+    return
+  }
 
   loading.value = true
   try {
@@ -154,7 +176,7 @@ const handleRegister = async () => {
     router.push('/login')
   } catch (error) {
     console.error('Error de registro:', error)
-    alert('Error al crear la cuenta.')
+    alert(extractErrorMessage(error))
   } finally {
     loading.value = false
   }
@@ -227,6 +249,13 @@ const handleRegister = async () => {
   font-weight: 500;
   color: #15110f;
   margin-bottom: 6px;
+}
+
+.auth-field-hint {
+  display: block;
+  font-size: 12.5px;
+  color: #a89f93;
+  margin-top: 6px;
 }
 
 .auth-field input,
