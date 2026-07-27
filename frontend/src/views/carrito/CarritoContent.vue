@@ -99,7 +99,7 @@ const subtotal = computed(() => {
 })
 
 const formatPrice = (amount) => {
-  return '$' + amount.toFixed(2)
+  return 'S/ ' + amount.toFixed(2)
 }
 
 const updateQuantity = (id, qty) => {

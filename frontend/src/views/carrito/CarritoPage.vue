@@ -46,7 +46,7 @@ const loadCart = async () => {
                 item.product_type === 'consultation' ? 'Consultas' :
                 item.product_type === 'membership' ? 'Comunidad' : 'Producto',
       title: item.product_name || 'Producto',
-      price: `$${Number(item.product_price).toFixed(2)}`,
+      price: `S/ ${Number(item.product_price).toFixed(2)}`,
       priceNum: Number(item.product_price),
       qty: item.quantity || 1,
       img: item.product_image || '/images/placeholder.png',

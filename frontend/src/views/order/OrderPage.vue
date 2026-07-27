@@ -107,8 +107,8 @@ const paymentBanner = computed(() => {
 })
 
 const formatPrice = (amount) => {
-  if (!amount) return '$0.00'
-  return `$${Number(amount).toFixed(2)}`
+  if (!amount) return 'S/ 0.00'
+  return `S/ ${Number(amount).toFixed(2)}`
 }
 
 const formatDate = (dateString) => {

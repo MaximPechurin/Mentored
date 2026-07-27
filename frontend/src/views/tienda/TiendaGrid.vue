@@ -122,8 +122,8 @@ const filteredProducts = computed(() => {
 
 // ===== ФОРМАТИРОВАНИЕ ЦЕНЫ =====
 const formatPrice = (price) => {
-  if (!price) return '$0.00'
-  return `$${Number(price).toFixed(2)}`
+  if (!price) return 'S/ 0.00'
+  return `S/ ${Number(price).toFixed(2)}`
 }
 
 // ===== ЗАГРУЗКА ТОВАРОВ =====

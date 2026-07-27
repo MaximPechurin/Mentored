@@ -47,10 +47,10 @@
 
 <script setup>
 const consultas = [
-  { title: 'Consulta con Irina', duration: '60 minutos', price: '$297', img: '/images/consulta-card.png' },
-  { title: 'Consulta psicológica', duration: '50 minutos', price: '$120', img: '/images/consulta-card.png' },
-  { title: 'Consulta de coaching', duration: '60 minutos', price: '$150', img: '/images/consulta-card.png' },
-  { title: 'Consulta financiera', duration: '60 minutos', price: '$130', img: '/images/consulta-card.png' }
+  { title: 'Consulta con Irina', duration: '60 minutos', price: 'S/ 297', img: '/images/consulta-card.png' },
+  { title: 'Consulta psicológica', duration: '50 minutos', price: 'S/ 120', img: '/images/consulta-card.png' },
+  { title: 'Consulta de coaching', duration: '60 minutos', price: 'S/ 150', img: '/images/consulta-card.png' },
+  { title: 'Consulta financiera', duration: '60 minutos', price: 'S/ 130', img: '/images/consulta-card.png' }
 ]
 </script>
 
