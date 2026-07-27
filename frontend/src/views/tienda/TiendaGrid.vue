@@ -223,7 +223,13 @@ const addToCart = async (product) => {
     }, 1500)
   } catch (error) {
     console.error('Ошибка добавления в корзину:', error)
-    alert('Error al agregar al carrito')
+    // 401 уже обрабатывается глобальным interceptor'ом в api/index.js (редирект
+    // на /login) - если ещё показать тут blocking alert(), он перехватывает поток
+    // выполнения и сбивает/маскирует этот редирект (пользователь видит зависший
+    // диалог "Error al agregar al carrito" вместо перехода на страницу входа).
+    if (error.response?.status !== 401) {
+      alert('Error al agregar al carrito')
+    }
   }
 }
 

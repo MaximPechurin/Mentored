@@ -130,7 +130,12 @@ const handleCheckout = async () => {
     router.push(`/order/${orderNumber}`)
   } catch (error) {
     console.error('Ошибка создания заказа:', error)
-    alert('Error al crear el pedido. Inténtalo de nuevo.')
+    // 401 обрабатывает глобальный interceptor в api/index.js (редирект на
+    // /login) - blocking alert() тут сбивал бы этот редирект, см. аналогичный
+    // фикс в TiendaGrid.vue/ProductoPage.vue.
+    if (error.response?.status !== 401) {
+      alert('Error al crear el pedido. Inténtalo de nuevo.')
+    }
   } finally {
     loading.value = false
   }

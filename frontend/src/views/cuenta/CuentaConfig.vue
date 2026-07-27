@@ -89,7 +89,11 @@ const saveSettings = async () => {
     formData.new_password = ''
   } catch (error) {
     console.error('Ошибка сохранения:', error)
-    alert('Error al guardar los cambios. Inténtalo de nuevo.')
+    // 401 обрабатывает глобальный interceptor в api/index.js (редирект на
+    // /login) - blocking alert() тут сбивал бы этот редирект.
+    if (error.response?.status !== 401) {
+      alert('Error al guardar los cambios. Inténtalo de nuevo.')
+    }
   } finally {
     loading.value = false
   }
