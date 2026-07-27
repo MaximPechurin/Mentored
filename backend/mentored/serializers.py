@@ -3,7 +3,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import User, BlogCategory, BlogPost, FAQ, Testimonial, Product, Book, Course, Consultation, Membership, \
-    Cart, CartItem, Order, OrderItem
+    Cart, CartItem, Order, OrderItem, ContactMessage
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -260,3 +260,10 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = '__all__'
+
+
+class ContactMessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ContactMessage
+        fields = ['id', 'name', 'email', 'motivo', 'message', 'created_at']
+        read_only_fields = ['id', 'created_at']

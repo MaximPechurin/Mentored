@@ -4,10 +4,15 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from django.shortcuts import get_object_or_404
 from django.contrib.contenttypes.models import ContentType
+from django.core.mail import send_mail
+from django.conf import settings
+import logging
 
-from .models import Course, Book, Consultation, Membership, BlogCategory, BlogPost, Cart, CartItem, Order, FAQ, OrderItem
+logger = logging.getLogger(__name__)
+
+from .models import Course, Book, Consultation, Membership, BlogCategory, BlogPost, Cart, CartItem, Order, FAQ, OrderItem, ContactMessage
 from .serializers import RegisterSerializer, ProfileSerializer, CourseSerializer, BookSerializer, ConsultationSerializer, MembershipSerializer, \
-    BlogCategorySerializer, BlogPostSerializer, CartSerializer, CartItemSerializer, OrderSerializer, FAQSerializer
+    BlogCategorySerializer, BlogPostSerializer, CartSerializer, CartItemSerializer, OrderSerializer, FAQSerializer, ContactMessageSerializer
 
 
 class RegisterView(APIView):
@@ -689,3 +694,43 @@ class GetOrderByNumberView(APIView):
             )
         serializer = OrderSerializer(order)
         return Response(serializer.data)
+
+
+class ContactMessageView(APIView):
+    """POST /contact/ — приём сообщений с формы обратной связи (страница Contacto)"""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = ContactMessageSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        contact_message = serializer.save()
+
+        # Уведомление на почту - best-effort: если SMTP не настроен или упал,
+        # заявка всё равно уже сохранена в БД и видна в /admin/.
+        if settings.EMAIL_HOST_USER and settings.CONTACT_NOTIFICATION_EMAIL:
+            try:
+                send_mail(
+                    subject=f'Nuevo mensaje de contacto: {contact_message.motivo}',
+                    message=(
+                        f'Nombre: {contact_message.name}\n'
+                        f'Email: {contact_message.email}\n'
+                        f'Motivo: {contact_message.motivo}\n\n'
+                        f'{contact_message.message}'
+                    ),
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[settings.CONTACT_NOTIFICATION_EMAIL],
+                    fail_silently=False,
+                )
+            except Exception:
+                logger.exception(
+                    "Не удалось отправить email-уведомление о заявке #%s с формы контактов",
+                    contact_message.id,
+                )
+        else:
+            logger.warning(
+                "EMAIL_HOST_USER/CONTACT_NOTIFICATION_EMAIL не настроены - "
+                "заявка #%s сохранена в БД, но email не отправлен.",
+                contact_message.id,
+            )
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

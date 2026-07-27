@@ -813,3 +813,38 @@ class OrderItem(models.Model):
         if not self.total:
             self.total = self.product_price * self.quantity
         super().save(*args, **kwargs)
+
+
+# ============================================================
+# СООБЩЕНИЕ С ФОРМЫ КОНТАКТОВ (страница /contacto)
+# ============================================================
+class ContactMessage(models.Model):
+    """ Заявка с формы обратной связи на странице контактов """
+    MOTIVO_CHOICES = [
+        ('Consulta sobre cursos', 'Consulta sobre cursos'),
+        ('Reservar una consulta 1:1', 'Reservar una consulta 1:1'),
+        ('Mi pedido o pago', 'Mi pedido o pago'),
+        ('Devoluciones', 'Devoluciones'),
+        ('Colaboraciones', 'Colaboraciones'),
+        ('Otro', 'Otro'),
+    ]
+
+    name = models.CharField(max_length=150, verbose_name='Имя')
+    email = models.EmailField(verbose_name='Email')
+    motivo = models.CharField(
+        max_length=50,
+        choices=MOTIVO_CHOICES,
+        default='Otro',
+        verbose_name='Тема обращения',
+    )
+    message = models.TextField(verbose_name='Сообщение')
+    is_read = models.BooleanField(default=False, verbose_name='Прочитано')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата отправки')
+
+    class Meta:
+        verbose_name = 'Сообщение с формы контактов'
+        verbose_name_plural = 'Сообщения с формы контактов'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.name} <{self.email}> - {self.motivo}"

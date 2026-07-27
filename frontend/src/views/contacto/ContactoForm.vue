@@ -50,8 +50,8 @@
 
           <p v-if="error" class="ct-error">{{ error }}</p>
 
-          <button type="submit" class="ct-submit-btn">
-            Enviar mensaje
+          <button type="submit" class="ct-submit-btn" :disabled="sending">
+            {{ sending ? 'Enviando...' : 'Enviar mensaje' }}
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="22" y1="2" x2="11" y2="13"/>
               <polygon points="22 2 15 22 11 13 2 9 22 2"/>
@@ -153,8 +153,10 @@
 
 <script setup>
 import { ref } from 'vue'
+import { contactApi } from '../../api/contact'
 
 const sent = ref(false)
+const sending = ref(false)
 const error = ref('')
 const form = ref({
   name: '',
@@ -163,14 +165,24 @@ const form = ref({
   message: ''
 })
 
-const onSubmit = () => {
+const onSubmit = async () => {
+  if (sending.value) return
   if (!form.value.name || !form.value.email || !form.value.message) {
     error.value = 'Por favor completa tu nombre, email y mensaje.'
     return
   }
   error.value = ''
-  sent.value = true
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+  sending.value = true
+  try {
+    await contactApi.sendMessage(form.value)
+    sent.value = true
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  } catch (err) {
+    console.error('Ошибка отправки формы контактов:', err)
+    error.value = 'No se pudo enviar el mensaje. Inténtalo de nuevo en unos minutos.'
+  } finally {
+    sending.value = false
+  }
 }
 
 const resetForm = () => {

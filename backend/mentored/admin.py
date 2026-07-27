@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.html import format_html
 
 from .models import User, BlogCategory, BlogPost, FAQ, Testimonial, Book, Course, Consultation, Membership, \
-    Cart, CartItem
+    Cart, CartItem, ContactMessage
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
@@ -362,3 +362,12 @@ class CartItemAdmin(admin.ModelAdmin):
     def total_price(self, obj):
         return f"${obj.total_price:.2f}"
     total_price.short_description = 'Сумма'
+
+
+@admin.register(ContactMessage)
+class ContactMessageAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'email', 'motivo', 'is_read', 'created_at')
+    list_filter = ('motivo', 'is_read', 'created_at')
+    search_fields = ('name', 'email', 'message')
+    readonly_fields = ('name', 'email', 'motivo', 'message', 'created_at')
+    list_editable = ('is_read',)
