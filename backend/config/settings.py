@@ -165,11 +165,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'mentored.User'
 
 # .env
-MERCADOPAGO_ACCESS_TOKEN='APP_USR-7066829830739681-072315-12ad7a60f5f5ba46bcc93fda71ed4eac-356409555'
-MERCADOPAGO_PUBLIC_KEY='APP_USR-07bc2e7d-e8af-4f60-bedf-6964510d8b99'
-# На бою использовать ->
-#MERCADOPAGO_ACCESS_TOKEN = config('MERCADOPAGO_ACCESS_TOKEN')
-#MERCADOPAGO_PUBLIC_KEY = config('MERCADOPAGO_PUBLIC_KEY')
+# Боевые креды Mercado Pago - только через .env, в гит не попадают.
+MERCADOPAGO_ACCESS_TOKEN = config('MERCADOPAGO_ACCESS_TOKEN')
+MERCADOPAGO_PUBLIC_KEY = config('MERCADOPAGO_PUBLIC_KEY')
 
 # Секрет для проверки заголовка x-signature на вебхуках (Your integrations ->
 # приложение -> Webhooks -> Configure notifications -> Secret key). Пока не
