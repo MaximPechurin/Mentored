@@ -40,6 +40,19 @@ class User(AbstractUser):
         verbose_name='Дата обновления'
     )
 
+    # Логин у нас идёт по email (см. USERNAME_FIELD ниже), а не по username -
+    # значит нет технической причины требовать от username ASCII-формат без
+    # пробелов, как того по умолчанию хочет Django (UnicodeUsernameValidator).
+    # Люди естественно вписывают сюда имя и фамилию через пробел ("Frank
+    # Maqui") - раньше это давало 400 с малопонятной причиной. Переопределяем
+    # поле без ограничивающего валидатора - оставляем только уникальность.
+    username = models.CharField(
+        max_length=150,
+        unique=True,
+        verbose_name='Имя пользователя',
+        help_text='Имя и фамилия',
+    )
+
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
 

@@ -17,7 +17,7 @@
                 placeholder="usuario"
                 required
               >
-              <span class="auth-field-hint">Sin espacios: solo letras, números y . _ + -</span>
+              <span class="auth-field-hint">Tu nombre y apellido</span>
             </div>
 
             <div class="auth-field">
@@ -138,13 +138,10 @@ const form = ref({
   confirmPassword: '',
 })
 
-// Тот же формат, что и стандартный UnicodeUsernameValidator в Django -
-// без этой проверки на фронте люди вписывают в "Nombre de usuario" своё
-// обычное имя с пробелом (например "Frank Maqui"), бэк отвечает 400, а
-// раньше на фронте показывался только глухой "Error al crear la cuenta."
-// без объяснения, что именно не так.
-const USERNAME_RE = /^[\w.@+-]+$/
-
+// backend/mentored/models.py::User.username больше не требует ASCII-формат
+// без пробелов (логин у нас всё равно по email) - можно спокойно вписывать
+// имя и фамилию через пробел. Раньше тут была блокирующая проверка формата,
+// из-за которой "Frank Maqui" не проходил - теперь бэк такое принимает.
 const extractErrorMessage = (error) => {
   const data = error.response?.data
   if (!data) return 'Error al crear la cuenta. Inténtalo de nuevo.'
@@ -157,11 +154,6 @@ const extractErrorMessage = (error) => {
 }
 
 const handleRegister = async () => {
-  if (!USERNAME_RE.test(form.value.username)) {
-    alert('El nombre de usuario no puede tener espacios. Usa solo letras, números y . _ + -')
-    return
-  }
-
   loading.value = true
   try {
     await authApi.register({
