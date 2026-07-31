@@ -12,6 +12,44 @@ from .utils import get_upload_path
 # 1. Пользователь и всё что с ним связано
 # ============================================
 
+class Role(models.Model):
+    """
+    Роль пользователя в системе (студент, преподаватель и т.д.).
+
+    Сделана отдельной моделью, а не полем с `choices`, чтобы новые роли
+    можно было заводить из админки без миграций и правки кода. Но для
+    ролей, от которых зависит реальная логика доступа (кто может вести
+    курсы, кто учится), код опирается на фиксированный `codename` -
+    см. константы ниже и `User.has_role()`. Роль с новым `codename`,
+    которую ещё не знает код, просто не даёт никаких прав, пока под
+    неё не написана своя проверка - завести её из админки безопасно.
+
+    Пользователь может иметь несколько ролей одновременно (например,
+    ментор, который сам проходит чужой курс как студент) - см.
+    `User.roles` (ManyToMany).
+    """
+    STUDENT = 'student'
+    TEACHER = 'teacher'
+
+    codename = models.SlugField(
+        max_length=50,
+        unique=True,
+        verbose_name='Код роли',
+        help_text="Технический код на латинице, используется в проверках доступа "
+                   "(например 'student', 'teacher')",
+    )
+    name = models.CharField(max_length=100, verbose_name='Название')
+    description = models.TextField(blank=True, verbose_name='Описание')
+
+    class Meta:
+        verbose_name = 'Роль'
+        verbose_name_plural = 'Роли'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
 class User(AbstractUser):
     """ Расширенная модель пользователя """
 
@@ -68,6 +106,13 @@ class User(AbstractUser):
         blank=True,
         verbose_name='Права доступа'
     )
+    roles = models.ManyToManyField(
+        Role,
+        blank=True,
+        related_name='users',
+        verbose_name='Роли',
+        help_text='Студент, преподаватель и т.д. Можно совмещать несколько ролей.',
+    )
 
     class Meta:
         verbose_name = 'Пользователь'
@@ -76,6 +121,18 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email or self.username
+
+    def has_role(self, codename):
+        """ Есть ли у пользователя роль с данным технически кодом """
+        return self.roles.filter(codename=codename).exists()
+
+    @property
+    def is_teacher(self):
+        return self.has_role(Role.TEACHER)
+
+    @property
+    def is_student(self):
+        return self.has_role(Role.STUDENT)
 
 # ============================================
 # 2. Блог и всё что с ним связано

@@ -2,8 +2,15 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.html import format_html
 
-from .models import User, BlogCategory, BlogPost, FAQ, Testimonial, Book, Course, Consultation, Membership, \
+from .models import User, Role, BlogCategory, BlogPost, FAQ, Testimonial, Book, Course, Consultation, Membership, \
     Cart, CartItem, ContactMessage, Order, OrderItem
+
+@admin.register(Role)
+class RoleAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'codename')
+    search_fields = ('name', 'codename')
+    prepopulated_fields = {'codename': ('name',)}
+
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
@@ -12,15 +19,17 @@ class UserAdmin(BaseUserAdmin):
         'email',
         'username',
         'phone',
+        'roles_list',
         'avatar_preview',
         'is_active',
         'is_staff',
         'date_joined'
     )
-    list_filter = ('is_active', 'is_staff', 'is_superuser', 'date_joined')
+    list_filter = ('is_active', 'is_staff', 'is_superuser', 'roles', 'date_joined')
     search_fields = ('email', 'username', 'phone', 'first_name', 'last_name')
     ordering = ('-date_joined',)
     readonly_fields = ('created_at', 'updated_at', 'avatar_preview')
+    filter_horizontal = ('groups', 'user_permissions', 'roles')
 
     fieldsets = (
         ('Основное', {
@@ -28,6 +37,9 @@ class UserAdmin(BaseUserAdmin):
         }),
         ('Персональные данные', {
             'fields': ('first_name', 'last_name', 'phone', 'avatar', 'avatar_preview')
+        }),
+        ('Роли', {
+            'fields': ('roles',)
         }),
         ('Права доступа', {
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')
@@ -37,6 +49,10 @@ class UserAdmin(BaseUserAdmin):
             'classes': ('collapse',)
         }),
     )
+
+    def roles_list(self, obj):
+        return ', '.join(r.name for r in obj.roles.all())
+    roles_list.short_description = 'Роли'
 
     add_fieldsets = (
         (None, {

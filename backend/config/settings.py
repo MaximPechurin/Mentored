@@ -25,7 +25,8 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'corsheaders',
     'mentored',
-    'payments'
+    'payments',
+    'school',
 ]
 
 MIDDLEWARE = [
