@@ -51,9 +51,16 @@ class ProfileSerializer(serializers.ModelSerializer):
     пароль и права доступа сюда не попадают вообще (смена пароля - отдельная
     задача с проверкой старого пароля, тут не реализована).
     """
+    # Только для чтения: список кодов ролей (['student'], ['teacher'] или
+    # обе сразу) - фронту нужно решать, показывать ли ссылки на кабинет
+    # ученика/преподавателя. read_only=True на самом поле (а не только
+    # через Meta.read_only_fields) - через PUT /profile/ роли себе
+    # назначить нельзя, назначаются только из админки.
+    roles = serializers.SlugRelatedField(many=True, slug_field='codename', read_only=True)
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'phone', 'avatar', 'created_at', 'updated_at']
+        fields = ['id', 'username', 'email', 'phone', 'avatar', 'roles', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 

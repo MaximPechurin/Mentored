@@ -16,6 +16,10 @@
         <!-- <router-link to="/gratis">Gratis</router-link> -->
         <router-link to="/blog">Blog</router-link>
         <router-link to="/contacto">Contacto</router-link>
+        <!-- Видно только пользователям с соответствующей ролью (roles
+             приходят в профиле, см. mentored/serializers.py) -->
+        <router-link v-if="isStudent" to="/escuela/estudiante">Mi escuela</router-link>
+        <router-link v-if="isTeacher" to="/escuela/profesor">Panel de profesor</router-link>
       </nav>
 
       <!-- Действия -->
@@ -67,9 +71,20 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { useLanguage } from '../composables/useLanguage.js'
+import { useAuth } from '../composables/useAuth.js'
 
 const { currentLang, setLanguage, t } = useLanguage()
+
+// user - это снэпшот из localStorage (см. useAuth.loadUser) - может быть
+// устаревшим, если роль назначили после последнего логина/refreshUser().
+// Для хедера это ок (просто пункт меню появится чуть позже, после
+// обновления профиля на любой другой странице) - здесь сознательно не
+// дёргаем API при каждой отрисовке хедера.
+const { user } = useAuth()
+const isStudent = computed(() => !!user.value?.roles?.includes('student'))
+const isTeacher = computed(() => !!user.value?.roles?.includes('teacher'))
 </script>
 
 <style scoped>

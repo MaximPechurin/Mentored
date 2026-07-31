@@ -15,6 +15,8 @@ import LoginPage from "../views/auth/LoginPage.vue";
 import RegisterPage from "../views/auth/RegisterPage.vue";
 import BlogPostPage from "../views/blog/BlogPostPage.vue";
 import OrderPage from "../views/order/OrderPage.vue";
+import EstudianteCabinetPage from "../views/escuela/EstudianteCabinetPage.vue";
+import ProfesorCabinetPage from "../views/escuela/ProfesorCabinetPage.vue";
 
 const routes = [
   {
@@ -88,6 +90,21 @@ const routes = [
     path: '/order/:orderNumber',
     name: 'Order',
     component: OrderPage,
+  },
+  {
+    // Контроль доступа по роли (student) - внутри компонента, см.
+    // EstudianteCabinetPage.vue onMounted(). Данные курсов - заглушка,
+    // ждём school API (Неделя 2 плана, см. PLAN_ETAP2.md).
+    path: '/escuela/estudiante',
+    name: 'EstudianteCabinet',
+    component: EstudianteCabinetPage,
+  },
+  {
+    // Контроль доступа по роли (teacher) - внутри компонента, см.
+    // ProfesorCabinetPage.vue onMounted().
+    path: '/escuela/profesor',
+    name: 'ProfesorCabinet',
+    component: ProfesorCabinetPage,
   },
 ]
 
