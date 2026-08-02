@@ -6,12 +6,45 @@ from .models import (
 )
 
 
+class TeacherScopedAdminMixin:
+    """
+    Ограничивает то, что видит в этой админке пользователь с ролью
+    teacher (не суперюзер): только объекты, относящиеся к курсам,
+    которые он ведёт (school.CourseTeacher). Суперюзер и staff без роли
+    teacher видят всё как раньше - это не сужает админку в целом, а
+    именно закрывает ментору доступ к чужим курсам/студентам/работам.
+
+    course_lookup - путь ORM от модели этой админки до school.Course,
+    например '' для самой Course, 'course' для Module, 'module__course'
+    для Lesson и т.д.
+    """
+    course_lookup = ''
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        user = request.user
+        if user.is_superuser or not user.is_teacher:
+            return qs
+        prefix = f"{self.course_lookup}__" if self.course_lookup else ""
+        return qs.filter(**{f"{prefix}course_teachers__teacher": user}).distinct()
+
+
 @admin.register(TeacherProfile)
 class TeacherProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'specialization', 'is_public', 'created_at')
     list_filter = ('is_public',)
     search_fields = ('user__email', 'user__username', 'specialization')
     readonly_fields = ('created_at', 'updated_at')
+
+    def get_queryset(self, request):
+        # Отдельный случай - тут нет course_teachers, ограничиваем сразу
+        # по владельцу профиля: ментор видит и редактирует только свою
+        # карточку, не чужие.
+        qs = super().get_queryset(request)
+        user = request.user
+        if user.is_superuser or not user.is_teacher:
+            return qs
+        return qs.filter(user=user)
 
 
 class ModuleInline(admin.TabularInline):
@@ -37,7 +70,8 @@ class ProductCourseAccessInline(admin.TabularInline):
 
 
 @admin.register(Course)
-class CourseAdmin(admin.ModelAdmin):
+class CourseAdmin(TeacherScopedAdminMixin, admin.ModelAdmin):
+    course_lookup = ''
     list_display = ('title', 'is_active', 'created_at')
     list_filter = ('is_active',)
     search_fields = ('title', 'description')
@@ -47,7 +81,8 @@ class CourseAdmin(admin.ModelAdmin):
 
 
 @admin.register(ProductCourseAccess)
-class ProductCourseAccessAdmin(admin.ModelAdmin):
+class ProductCourseAccessAdmin(TeacherScopedAdminMixin, admin.ModelAdmin):
+    course_lookup = 'course'
     """
     Отдельный экран на случай, когда удобнее искать не "от курса", а "от
     товара" - например, у какого-то товара уже есть привязка или нет.
@@ -66,6 +101,16 @@ class CourseTeacherAdmin(admin.ModelAdmin):
     list_display = ('course', 'teacher', 'assigned_at')
     list_filter = ('course',)
     search_fields = ('course__title', 'teacher__email')
+
+    def get_queryset(self, request):
+        # Особый случай - это сама таблица назначений, ограничиваем
+        # напрямую по teacher, а не через course_teachers (это она и
+        # есть), иначе ментор видел бы и других менторов на своих курсах.
+        qs = super().get_queryset(request)
+        user = request.user
+        if user.is_superuser or not user.is_teacher:
+            return qs
+        return qs.filter(teacher=user)
 
 
 class LessonMaterialInline(admin.TabularInline):
@@ -86,7 +131,8 @@ class LessonInline(admin.TabularInline):
 
 
 @admin.register(Module)
-class ModuleAdmin(admin.ModelAdmin):
+class ModuleAdmin(TeacherScopedAdminMixin, admin.ModelAdmin):
+    course_lookup = 'course'
     list_display = ('title', 'course', 'order')
     list_filter = ('course',)
     search_fields = ('title', 'course__title')
@@ -94,7 +140,8 @@ class ModuleAdmin(admin.ModelAdmin):
 
 
 @admin.register(Lesson)
-class LessonAdmin(admin.ModelAdmin):
+class LessonAdmin(TeacherScopedAdminMixin, admin.ModelAdmin):
+    course_lookup = 'module__course'
     list_display = ('title', 'module', 'order', 'duration_minutes', 'is_free_preview')
     list_filter = ('module__course', 'is_free_preview')
     search_fields = ('title', 'module__title')
@@ -102,7 +149,8 @@ class LessonAdmin(admin.ModelAdmin):
 
 
 @admin.register(Enrollment)
-class EnrollmentAdmin(admin.ModelAdmin):
+class EnrollmentAdmin(TeacherScopedAdminMixin, admin.ModelAdmin):
+    course_lookup = 'course'
     list_display = ('user', 'course', 'is_active', 'enrolled_at')
     list_filter = ('is_active', 'course', 'enrolled_at')
     search_fields = ('user__email', 'course__title')
@@ -110,20 +158,23 @@ class EnrollmentAdmin(admin.ModelAdmin):
 
 
 @admin.register(LessonProgress)
-class LessonProgressAdmin(admin.ModelAdmin):
+class LessonProgressAdmin(TeacherScopedAdminMixin, admin.ModelAdmin):
+    course_lookup = 'enrollment__course'
     list_display = ('enrollment', 'lesson', 'is_completed', 'completed_at')
     list_filter = ('is_completed',)
     search_fields = ('enrollment__user__email', 'lesson__title')
 
 
 @admin.register(Assignment)
-class AssignmentAdmin(admin.ModelAdmin):
+class AssignmentAdmin(TeacherScopedAdminMixin, admin.ModelAdmin):
+    course_lookup = 'lesson__module__course'
     list_display = ('title', 'lesson', 'max_score')
     search_fields = ('title', 'lesson__title')
 
 
 @admin.register(Submission)
-class SubmissionAdmin(admin.ModelAdmin):
+class SubmissionAdmin(TeacherScopedAdminMixin, admin.ModelAdmin):
+    course_lookup = 'assignment__lesson__module__course'
     list_display = ('assignment', 'enrollment', 'status', 'score', 'submitted_at', 'reviewed_at')
     list_filter = ('status', 'submitted_at')
     search_fields = ('enrollment__user__email', 'assignment__title')

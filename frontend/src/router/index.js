@@ -17,6 +17,7 @@ import BlogPostPage from "../views/blog/BlogPostPage.vue";
 import OrderPage from "../views/order/OrderPage.vue";
 import EstudianteCabinetPage from "../views/escuela/EstudianteCabinetPage.vue";
 import ProfesorCabinetPage from "../views/escuela/ProfesorCabinetPage.vue";
+import EscuelaCoursePage from "../views/escuela/EscuelaCoursePage.vue";
 
 const routes = [
   {
@@ -93,8 +94,8 @@ const routes = [
   },
   {
     // Контроль доступа по роли (student) - внутри компонента, см.
-    // EstudianteCabinetPage.vue onMounted(). Данные курсов - заглушка,
-    // ждём school API (Неделя 2 плана, см. PLAN_ETAP2.md).
+    // EstudianteCabinetPage.vue onMounted(). Подключено к реальному
+    // school API (Неделя 2 плана, см. PLAN_ETAP2.md).
     path: '/escuela/estudiante',
     name: 'EstudianteCabinet',
     component: EstudianteCabinetPage,
@@ -105,6 +106,13 @@ const routes = [
     path: '/escuela/profesor',
     name: 'ProfesorCabinet',
     component: ProfesorCabinetPage,
+  },
+  {
+    // Контроль доступа - роль student + активный Enrollment на бэкенде
+    // (403 -> forbidden state в компоненте), см. EscuelaCoursePage.vue.
+    path: '/escuela/curso/:slug',
+    name: 'EscuelaCourse',
+    component: EscuelaCoursePage,
   },
 ]
 

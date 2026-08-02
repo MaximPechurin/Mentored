@@ -7,6 +7,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('mentored.urls')),
     path('payment/', include('payments.urls')),
+    path('school/', include('school.urls')),
 ]
 
 # ТОЛЬКО ДЛЯ РАЗРАБОТКИ!

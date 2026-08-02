@@ -14,21 +14,32 @@
     <div class="esc-shell">
       <h2 class="esc-section-title">Mis cursos</h2>
 
-      <!--
-        Todavía no hay API de la escuela (school/) para traer los cursos
-        reales del Enrollment del alumno - eso es la Semana 2 del plan
-        (ver PLAN_ETAP2.md). Por ahora mostramos el estado vacío, ya
-        conectado al control de acceso por rol real.
-      -->
-      <div v-if="courses.length === 0" class="esc-empty">
+      <div v-if="loadingCourses" class="esc-empty">
+        <p class="esc-empty-text">Cargando tus cursos...</p>
+      </div>
+
+      <div v-else-if="courses.length === 0" class="esc-empty">
         <p class="esc-empty-text">Aún no tienes cursos activos.</p>
         <router-link to="/tienda" class="esc-empty-btn">Ver cursos disponibles</router-link>
       </div>
 
       <div v-else class="esc-courses">
-        <div v-for="course in courses" :key="course.id" class="esc-course">
+        <router-link
+          v-for="course in courses"
+          :key="course.id"
+          :to="`/escuela/curso/${course.slug}`"
+          class="esc-course"
+        >
           <h3 class="esc-course-title">{{ course.title }}</h3>
-        </div>
+          <p v-if="course.teachers.length" class="esc-course-teacher">{{ course.teachers.join(', ') }}</p>
+          <div class="esc-progress">
+            <span>Progreso</span>
+            <span class="esc-progress-value">{{ course.progress_percent }}%</span>
+          </div>
+          <div class="esc-progress-bar">
+            <div class="esc-progress-fill" :style="{ width: course.progress_percent + '%' }"></div>
+          </div>
+        </router-link>
       </div>
     </div>
   </div>
@@ -38,13 +49,13 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '../../composables/useAuth'
+import { schoolApi } from '../../api/school'
 
 const router = useRouter()
 const { user, isAuthenticated, refreshUser } = useAuth()
 
 const checking = ref(true)
-// Реальные курсы появятся, когда будет готов school API (Неделя 2 плана) -
-// пока пусто, но структура страницы уже под это готова.
+const loadingCourses = ref(true)
 const courses = ref([])
 
 const userDisplayName = computed(() => {
@@ -74,6 +85,15 @@ onMounted(async () => {
   }
 
   checking.value = false
+
+  try {
+    const response = await schoolApi.myCourses()
+    courses.value = response.data
+  } catch (error) {
+    console.error('Error al cargar mis cursos:', error)
+  } finally {
+    loadingCourses.value = false
+  }
 })
 </script>
 
@@ -201,6 +221,14 @@ onMounted(async () => {
   border: 1px solid #ece7e1;
   border-radius: 18px;
   padding: 22px;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  transition: border-color 0.3s;
+}
+
+.esc-course:hover {
+  border-color: #8e1519;
 }
 
 .esc-course-title {
@@ -208,7 +236,40 @@ onMounted(async () => {
   font-size: 19px;
   font-weight: 600;
   color: #15110f;
-  margin: 0;
+  margin: 0 0 6px;
+}
+
+.esc-course-teacher {
+  font-size: 13.5px;
+  color: #8a8079;
+  margin: 0 0 16px;
+}
+
+.esc-progress {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13.5px;
+  color: #8a8079;
+  margin-bottom: 8px;
+}
+
+.esc-progress-value {
+  font-weight: 600;
+  color: #8e1519;
+}
+
+.esc-progress-bar {
+  height: 7px;
+  border-radius: 4px;
+  background: #f0ebe5;
+  overflow: hidden;
+}
+
+.esc-progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: #8e1519;
+  transition: width 0.3s;
 }
 
 @media (max-width: 920px) {

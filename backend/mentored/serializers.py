@@ -2,8 +2,8 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .models import User, BlogCategory, BlogPost, FAQ, Testimonial, Product, Book, Course, Consultation, Membership, \
-    Cart, CartItem, Order, OrderItem, ContactMessage
+from .models import User, Role, BlogCategory, BlogPost, FAQ, Testimonial, Product, Book, Course, Consultation, \
+    Membership, Cart, CartItem, Order, OrderItem, ContactMessage
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -37,6 +37,15 @@ class RegisterSerializer(serializers.ModelSerializer):
         user = User(**validated_data)
         user.set_password(password)
         user.save()
+        # Каждый новый пользователь - студент по умолчанию (доступ к
+        # купленным курсам). Роль teacher никогда не выдаётся тут -
+        # только вручную из админки. get_or_create - на случай, если
+        # сид-миграция 0007_seed_roles ещё не прогнана на этом окружении.
+        student_role, _ = Role.objects.get_or_create(
+            codename=Role.STUDENT,
+            defaults={'name': 'Студент'},
+        )
+        user.roles.add(student_role)
         return user
 
 
