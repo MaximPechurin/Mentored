@@ -69,6 +69,13 @@ class User(AbstractUser):
         null=True,
         verbose_name='Аватар'
     )
+    is_dev = models.BooleanField(
+        default=False,
+        verbose_name='Разработчик (доступ к закрытым разделам)',
+        help_text='Персональный feature-flag: пользователь с этой галочкой видит '
+                  'на боевом сервере ещё не выпущенные разделы (школа/кабинеты). '
+                  'Для обычных пользователей эти разделы закрыты и на фронте, и в API.',
+    )
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='Дата создания'

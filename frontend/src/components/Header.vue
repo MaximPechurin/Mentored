@@ -16,10 +16,11 @@
         <!-- <router-link to="/gratis">Gratis</router-link> -->
         <router-link to="/blog">Blog</router-link>
         <router-link to="/contacto">Contacto</router-link>
-        <!-- Видно только пользователям с соответствующей ролью (roles
-             приходят в профиле, см. mentored/serializers.py) -->
-        <router-link v-if="isStudent" to="/escuela/estudiante">Mi escuela</router-link>
-        <router-link v-if="isTeacher" to="/escuela/profesor">Panel de profesor</router-link>
+        <!-- Раздел «Школа» пока закрыт: ссылки видит только dev-аккаунт
+             (is_dev) с нужной ролью. roles/is_dev приходят в профиле,
+             см. mentored/serializers.py; тот же гейт в API - IsDev. -->
+        <router-link v-if="isDev && isStudent" to="/escuela/estudiante">Mi escuela</router-link>
+        <router-link v-if="isDev && isTeacher" to="/escuela/profesor">Panel de profesor</router-link>
       </nav>
 
       <!-- Действия -->
@@ -83,6 +84,7 @@ const { currentLang, setLanguage, t } = useLanguage()
 // обновления профиля на любой другой странице) - здесь сознательно не
 // дёргаем API при каждой отрисовке хедера.
 const { user } = useAuth()
+const isDev = computed(() => !!user.value?.is_dev)
 const isStudent = computed(() => !!user.value?.roles?.includes('student'))
 const isTeacher = computed(() => !!user.value?.roles?.includes('teacher'))
 </script>

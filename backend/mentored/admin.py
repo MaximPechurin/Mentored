@@ -22,10 +22,12 @@ class UserAdmin(BaseUserAdmin):
         'roles_list',
         'avatar_preview',
         'is_active',
+        'is_dev',
         'is_staff',
         'date_joined'
     )
-    list_filter = ('is_active', 'is_staff', 'is_superuser', 'roles', 'date_joined')
+    list_editable = ('is_dev',)
+    list_filter = ('is_active', 'is_dev', 'is_staff', 'is_superuser', 'roles', 'date_joined')
     search_fields = ('email', 'username', 'phone', 'first_name', 'last_name')
     ordering = ('-date_joined',)
     readonly_fields = ('created_at', 'updated_at', 'avatar_preview')
@@ -42,7 +44,7 @@ class UserAdmin(BaseUserAdmin):
             'fields': ('roles',)
         }),
         ('Права доступа', {
-            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')
+            'fields': ('is_active', 'is_dev', 'is_staff', 'is_superuser', 'groups', 'user_permissions')
         }),
         ('Даты', {
             'fields': ('created_at', 'updated_at', 'last_login', 'date_joined'),

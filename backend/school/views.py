@@ -6,13 +6,14 @@ from rest_framework.views import APIView
 from rest_framework import status
 
 from .models import Course, Enrollment, Lesson, LessonProgress
-from .permissions import IsStudent
+from .permissions import IsStudent, IsDev
 from .serializers import ModuleSerializer, MyCourseSerializer
 
 
 class MyCoursesView(APIView):
     """ GET /school/my-courses/ - курсы, купленные студентом (активный Enrollment). """
-    permission_classes = [IsAuthenticated, IsStudent]
+    # IsDev - временный гейт, пока школа не открыта для всех (см. permissions.py)
+    permission_classes = [IsAuthenticated, IsDev, IsStudent]
 
     def get(self, request):
         enrollments = Enrollment.objects.filter(
@@ -33,7 +34,7 @@ class CourseDetailView(APIView):
     но урок помечен free preview" - тут это уже неважно, раз Enrollment
     и так есть.
     """
-    permission_classes = [IsAuthenticated, IsStudent]
+    permission_classes = [IsAuthenticated, IsDev, IsStudent]
 
     def get(self, request, slug):
         course = get_object_or_404(Course, slug=slug, is_active=True)
@@ -67,7 +68,7 @@ class LessonProgressView(APIView):
     Требует активного Enrollment на курс, которому принадлежит урок -
     иначе можно было бы отмечать прогресс по чужим/некупленным курсам.
     """
-    permission_classes = [IsAuthenticated, IsStudent]
+    permission_classes = [IsAuthenticated, IsDev, IsStudent]
 
     def post(self, request, lesson_id):
         lesson = get_object_or_404(Lesson, id=lesson_id)
