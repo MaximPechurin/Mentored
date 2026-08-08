@@ -88,13 +88,18 @@ Membership — разные модели), во-вторых, opt-in через 
 - [ ] Свериться с ТЗ, что модели `Module / Lesson / LessonMaterial /
       Enrollment / LessonProgress / Assignment / Submission` закрывают
       нужную структуру — дополнить, если чего-то не хватает
-- [ ] Автосоздание `Enrollment` при оплате заказа: хук на смену статуса
-      `mentored.Order` в `paid` → для каждого `OrderItem` найти
-      `ProductCourseAccess` по товару → создать/активировать
-      `Enrollment` на каждый найденный `school.Course`. Разобраться, как
-      резолвить реальный товар из `OrderItem.product_type`/`product_id`
-      (сейчас это просто строка+число, не настоящий `ContentType`) для
-      поиска `ProductCourseAccess`.
+- [x] Автосоздание `Enrollment` при оплате заказа: сигнал `post_save`
+      на `mentored.Order` (`school/signals.py`, подключён в
+      `school/apps.py::ready()`). На статусе `paid` для каждого
+      `OrderItem` резолвим товар (`ContentType` строго
+      `app_label='mentored'` + `product_id`), берём все
+      `ProductCourseAccess` и заводим `Enrollment` на каждый курс.
+      Идемпотентно (не реактивирует вручную отозванный доступ, без
+      дублей), заодно проставляет роль `student`. Покрывает и вебхук
+      Mercado Pago, и ручную смену статуса в админке. Ошибки только
+      логируются — сохранение заказа/вебхук не роняются. Провалидировано
+      смоук-тестом (товар-курс → 1 курс, membership → 2 курса, роль,
+      идемпотентность).
 - [ ] Удобная привязка «товар → курс» в админке при создании товара
       (сейчас три отдельных шага: товар, `school.Course`,
       `ProductCourseAccess` — стоит облегчить UX, когда дойдём)
