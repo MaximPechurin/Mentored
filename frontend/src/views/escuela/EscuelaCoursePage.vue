@@ -50,8 +50,48 @@
                 </li>
               </ul>
 
+              <!-- Домашние задания урока -->
+              <div v-if="lesson.assignments && lesson.assignments.length" class="esc-assignments">
+                <div v-for="a in lesson.assignments" :key="a.id" class="esc-assignment">
+                  <button class="esc-assignment-head" @click="toggleAssignment(a.id)">
+                    <span>📝 {{ a.title }}</span>
+                    <span class="esc-assignment-max">{{ a.max_score }} pts</span>
+                  </button>
+
+                  <div v-if="activeAssignmentId === a.id" class="esc-assignment-body">
+                    <p v-if="assignmentLoading" class="esc-muted">Cargando...</p>
+                    <template v-else>
+                      <p v-if="assignmentDetail.description" class="esc-assignment-desc">{{ assignmentDetail.description }}</p>
+
+                      <div v-if="mySub" class="esc-sub-status" :class="mySub.status">
+                        {{ statusLabel(mySub.status) }}
+                        <span v-if="mySub.score !== null && mySub.score !== undefined"> — {{ mySub.score }}/{{ a.max_score }}</span>
+                      </div>
+                      <p v-if="mySub && mySub.mentor_comment" class="esc-mentor-comment">
+                        <strong>Comentario del mentor:</strong> {{ mySub.mentor_comment }}
+                      </p>
+
+                      <textarea
+                        v-model="submitText"
+                        rows="4"
+                        placeholder="Escribe tu respuesta..."
+                        class="esc-textarea"
+                      ></textarea>
+                      <input type="file" class="esc-file" @change="onFileChange" />
+                      <button
+                        class="esc-complete-btn"
+                        :disabled="submitting"
+                        @click="submitAssignment(a)"
+                      >
+                        {{ submitting ? 'Enviando...' : (mySub ? 'Reenviar' : 'Enviar respuesta') }}
+                      </button>
+                    </template>
+                  </div>
+                </div>
+              </div>
+
               <button
-                class="esc-complete-btn"
+                class="esc-complete-btn esc-complete-btn--lesson"
                 :disabled="savingLessonId === lesson.id"
                 @click="toggleComplete(lesson)"
               >
@@ -82,8 +122,75 @@ const course = ref({ title: '', description: '', modules: [] })
 const activeLessonId = ref(null)
 const savingLessonId = ref(null)
 
+// Домашние задания
+const activeAssignmentId = ref(null)
+const assignmentLoading = ref(false)
+const assignmentDetail = ref({})
+const mySub = ref(null)
+const submitText = ref('')
+const submitFile = ref(null)
+const submitting = ref(false)
+
 const toggleLesson = (lessonId) => {
   activeLessonId.value = activeLessonId.value === lessonId ? null : lessonId
+  // закрываем раскрытое задание при переключении урока
+  activeAssignmentId.value = null
+}
+
+const statusLabel = (s) => ({
+  submitted: 'Enviado, en revisión',
+  reviewed: 'Revisado',
+  needs_revision: 'Devuelto para corrección',
+}[s] || s)
+
+const toggleAssignment = async (assignmentId) => {
+  if (activeAssignmentId.value === assignmentId) {
+    activeAssignmentId.value = null
+    return
+  }
+  activeAssignmentId.value = assignmentId
+  assignmentLoading.value = true
+  mySub.value = null
+  submitText.value = ''
+  submitFile.value = null
+  try {
+    const { data } = await schoolApi.getAssignment(assignmentId)
+    assignmentDetail.value = data
+    mySub.value = data.my_submission
+    submitText.value = data.my_submission?.text || ''
+  } catch (error) {
+    console.error('Error al cargar la tarea:', error)
+  } finally {
+    assignmentLoading.value = false
+  }
+}
+
+const onFileChange = (e) => {
+  submitFile.value = e.target.files[0] || null
+}
+
+const submitAssignment = async (a) => {
+  if (!submitText.value && !submitFile.value) {
+    alert('Adjunta un texto o un archivo.')
+    return
+  }
+  submitting.value = true
+  try {
+    const fd = new FormData()
+    fd.append('text', submitText.value || '')
+    if (submitFile.value) fd.append('file', submitFile.value)
+    await schoolApi.submitAssignment(a.id, fd)
+    // перечитываем задание, чтобы показать новый статус/сброс оценки
+    const { data } = await schoolApi.getAssignment(a.id)
+    assignmentDetail.value = data
+    mySub.value = data.my_submission
+    submitFile.value = null
+  } catch (error) {
+    console.error('Error al enviar la tarea:', error)
+    alert('No se pudo enviar la tarea. Intenta de nuevo.')
+  } finally {
+    submitting.value = false
+  }
 }
 
 // Конвертация обычной ссылки на YouTube/Vimeo в embed-плеер. Если формат
@@ -332,6 +439,110 @@ onMounted(async () => {
 
 .esc-materials a:hover {
   text-decoration: underline;
+}
+
+/* --- Домашние задания --- */
+.esc-assignments {
+  margin: 4px 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.esc-assignment {
+  border: 1px solid #ece7e1;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.esc-assignment-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #faf8f5;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  color: #1c1c1c;
+  padding: 13px 16px;
+  text-align: left;
+}
+
+.esc-assignment-max {
+  font-size: 12.5px;
+  color: #8a8079;
+  white-space: nowrap;
+}
+
+.esc-assignment-body {
+  padding: 14px 16px 18px;
+}
+
+.esc-assignment-desc {
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: #3f3a35;
+  margin: 0 0 14px;
+  white-space: pre-line;
+}
+
+.esc-muted {
+  color: #8a8079;
+  margin: 0;
+}
+
+.esc-sub-status {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 999px;
+  margin-bottom: 10px;
+}
+
+.esc-sub-status.submitted { background: #fff4e0; color: #9a6a00; }
+.esc-sub-status.reviewed { background: #e4f3e6; color: #2f7a3a; }
+.esc-sub-status.needs_revision { background: #fde6e6; color: #a52a2a; }
+
+.esc-mentor-comment {
+  font-size: 14px;
+  color: #3f3a35;
+  background: #f6f3ef;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin: 0 0 14px;
+}
+
+.esc-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #e4ddd2;
+  border-radius: 10px;
+  padding: 12px;
+  font-family: inherit;
+  font-size: 14.5px;
+  color: #15110f;
+  background: #fbf9f6;
+  outline: none;
+  resize: vertical;
+  margin-bottom: 10px;
+}
+
+.esc-textarea:focus { border-color: #8e1519; }
+
+.esc-file {
+  display: block;
+  font-size: 13.5px;
+  color: #6b6259;
+  margin-bottom: 14px;
+}
+
+.esc-complete-btn--lesson {
+  margin-top: 6px;
 }
 
 .esc-complete-btn {

@@ -15,4 +15,15 @@ export const schoolApi = {
   updateLessonProgress(lessonId, data) {
     return api.post(`/school/lessons/${lessonId}/progress/`, data)
   },
+
+  // Задание + мой ответ
+  getAssignment(assignmentId) {
+    return api.get(`/school/assignments/${assignmentId}/`)
+  },
+
+  // Сдать задание. formData: FormData с полями text и/или file
+  // (Content-Type multipart проставит браузер сам)
+  submitAssignment(assignmentId, formData) {
+    return api.post(`/school/assignments/${assignmentId}/submit/`, formData)
+  },
 }
