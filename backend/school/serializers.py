@@ -1,12 +1,22 @@
 from rest_framework import serializers
 
-from .models import Course, Module, Lesson, LessonMaterial, Enrollment, LessonProgress
+from .models import (
+    Course, Module, Lesson, LessonMaterial, Enrollment, LessonProgress,
+    Assignment, Submission,
+)
 
 
 class LessonMaterialSerializer(serializers.ModelSerializer):
     class Meta:
         model = LessonMaterial
         fields = ['id', 'title', 'file']
+
+
+class LessonAssignmentBriefSerializer(serializers.ModelSerializer):
+    """ Короткая карточка задания в списке уроков (без ответа студента). """
+    class Meta:
+        model = Assignment
+        fields = ['id', 'title', 'max_score']
 
 
 class LessonSerializer(serializers.ModelSerializer):
@@ -21,6 +31,7 @@ class LessonSerializer(serializers.ModelSerializer):
     одним запросом на весь курс.
     """
     materials = LessonMaterialSerializer(many=True, read_only=True)
+    assignments = LessonAssignmentBriefSerializer(many=True, read_only=True)
     is_completed = serializers.SerializerMethodField()
     last_position_seconds = serializers.SerializerMethodField()
 
@@ -28,7 +39,7 @@ class LessonSerializer(serializers.ModelSerializer):
         model = Lesson
         fields = [
             'id', 'title', 'order', 'video_url', 'content', 'duration_minutes',
-            'is_free_preview', 'materials', 'is_completed', 'last_position_seconds',
+            'is_free_preview', 'materials', 'assignments', 'is_completed', 'last_position_seconds',
         ]
 
     def _progress_for(self, obj):
@@ -92,3 +103,48 @@ class MyCourseSerializer(serializers.ModelSerializer):
         if not total:
             return 0
         return round(self.get_lessons_completed(obj) / total * 100)
+
+
+class SubmissionSerializer(serializers.ModelSerializer):
+    """ Ответ студента на задание (для кабинета студента). """
+    class Meta:
+        model = Submission
+        fields = [
+            'id', 'text', 'file', 'status', 'score', 'mentor_comment',
+            'submitted_at', 'reviewed_at',
+        ]
+        read_only_fields = ['id', 'status', 'score', 'mentor_comment', 'submitted_at', 'reviewed_at']
+
+
+class AssignmentDetailSerializer(serializers.ModelSerializer):
+    """ Задание + ответ текущего студента (my_submission из context). """
+    my_submission = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Assignment
+        fields = ['id', 'title', 'description', 'max_score', 'my_submission']
+
+    def get_my_submission(self, obj):
+        sub = self.context.get('my_submission')
+        return SubmissionSerializer(sub).data if sub else None
+
+
+class TeacherSubmissionSerializer(serializers.ModelSerializer):
+    """ Сдача глазами ментора - с контекстом (кто, какой курс/задание). """
+    student = serializers.SerializerMethodField()
+    assignment_title = serializers.CharField(source='assignment.title')
+    course_title = serializers.CharField(source='assignment.lesson.module.course.title')
+    lesson_title = serializers.CharField(source='assignment.lesson.title')
+    max_score = serializers.IntegerField(source='assignment.max_score')
+
+    class Meta:
+        model = Submission
+        fields = [
+            'id', 'student', 'course_title', 'lesson_title', 'assignment_title',
+            'max_score', 'text', 'file', 'status', 'score', 'mentor_comment',
+            'submitted_at', 'reviewed_at',
+        ]
+
+    def get_student(self, obj):
+        u = obj.enrollment.user
+        return u.username or u.email
