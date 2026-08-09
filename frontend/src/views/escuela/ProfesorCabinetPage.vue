@@ -15,19 +15,43 @@
       <section class="esc-block">
         <h2 class="esc-section-title">Mis cursos</h2>
 
-        <!--
-          Todavía no hay API de la escuela (school/) para traer los
-          cursos reales asignados via CourseTeacher - eso es la Semana 2
-          del plan (ver PLAN_ETAP2.md). Por ahora mostramos el estado
-          vacío, ya conectado al control de acceso por rol real.
-        -->
-        <div v-if="courses.length === 0" class="esc-empty">
+        <div v-if="loadingCourses" class="esc-empty">
+          <p class="esc-empty-text">Cargando...</p>
+        </div>
+        <div v-else-if="courses.length === 0" class="esc-empty">
           <p class="esc-empty-text">Todavía no tienes cursos asignados.</p>
         </div>
 
-        <div v-else class="esc-courses">
-          <div v-for="course in courses" :key="course.id" class="esc-course">
-            <h3 class="esc-course-title">{{ course.title }}</h3>
+        <div v-else class="esc-course-list">
+          <div v-for="course in courses" :key="course.id" class="esc-course-card">
+            <button class="esc-course-head" @click="toggleCourse(course.id)">
+              <span class="esc-course-title">{{ course.title }}</span>
+              <span class="esc-course-meta">
+                {{ course.students_count }} alumnos
+                <span v-if="course.pending_submissions_count" class="esc-badge">
+                  {{ course.pending_submissions_count }} por revisar
+                </span>
+              </span>
+            </button>
+
+            <div v-if="activeCourseId === course.id" class="esc-roster">
+              <p v-if="rosterLoading" class="esc-muted">Cargando alumnos...</p>
+              <template v-else>
+                <p v-if="roster.length === 0" class="esc-muted">Nadie ha comprado este curso todavía.</p>
+                <div v-for="st in roster" :key="st.id" class="esc-student">
+                  <div class="esc-student-info">
+                    <span class="esc-student-name">{{ st.student }}</span>
+                    <span class="esc-student-email">{{ st.email }}</span>
+                  </div>
+                  <div class="esc-student-progress">
+                    <div class="esc-progress-bar">
+                      <div class="esc-progress-fill" :style="{ width: st.progress_percent + '%' }"></div>
+                    </div>
+                    <span class="esc-progress-val">{{ st.progress_percent }}% ({{ st.lessons_completed }}/{{ st.lessons_total }})</span>
+                  </div>
+                </div>
+              </template>
+            </div>
           </div>
         </div>
       </section>
@@ -39,9 +63,13 @@
           <p class="esc-empty-text">No hay tareas pendientes de revisión.</p>
         </div>
 
-        <div v-else class="esc-courses">
-          <div v-for="s in submissions" :key="s.id" class="esc-course">
-            <h3 class="esc-course-title">{{ s.title }}</h3>
+        <div v-else class="esc-course-list">
+          <div v-for="s in submissions" :key="s.id" class="esc-sub-card">
+            <div class="esc-sub-main">
+              <strong>{{ s.student }}</strong> — {{ s.assignment_title }}
+              <div class="esc-sub-sub">{{ s.course_title }} · {{ s.lesson_title }}</div>
+            </div>
+            <span class="esc-badge">{{ statusLabel(s.status) }}</span>
           </div>
         </div>
       </section>
@@ -53,16 +81,44 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '../../composables/useAuth'
+import { schoolApi } from '../../api/school'
 
 const router = useRouter()
 const { user, isAuthenticated, refreshUser } = useAuth()
 
 const checking = ref(true)
-// Реальные данные появятся с school API (Неделя 2 плана: CourseTeacher
-// -> список курсов, Submission со статусом 'submitted' -> очередь на
-// проверку). Пока пусто, структура страницы уже готова под это.
+const loadingCourses = ref(true)
 const courses = ref([])
 const submissions = ref([])
+
+// раскрытый курс + его ростер студентов
+const activeCourseId = ref(null)
+const rosterLoading = ref(false)
+const roster = ref([])
+
+const statusLabel = (s) => ({
+  submitted: 'En revisión',
+  reviewed: 'Revisado',
+  needs_revision: 'Devuelto',
+}[s] || s)
+
+const toggleCourse = async (courseId) => {
+  if (activeCourseId.value === courseId) {
+    activeCourseId.value = null
+    return
+  }
+  activeCourseId.value = courseId
+  rosterLoading.value = true
+  roster.value = []
+  try {
+    const { data } = await schoolApi.teacherCourseStudents(courseId)
+    roster.value = data.students
+  } catch (error) {
+    console.error('Error al cargar alumnos:', error)
+  } finally {
+    rosterLoading.value = false
+  }
+}
 
 const userDisplayName = computed(() => {
   if (!user.value) return 'Invitado'
@@ -99,6 +155,19 @@ onMounted(async () => {
   }
 
   checking.value = false
+
+  try {
+    const [cr, sr] = await Promise.all([
+      schoolApi.teacherCourses(),
+      schoolApi.teacherSubmissions(),
+    ])
+    courses.value = cr.data
+    submissions.value = sr.data
+  } catch (error) {
+    console.error('Error al cargar el panel del profesor:', error)
+  } finally {
+    loadingCourses.value = false
+  }
 })
 </script>
 
@@ -221,6 +290,121 @@ onMounted(async () => {
   color: #15110f;
   margin: 0;
 }
+
+/* --- Список курсов препода с раскрытием ростера --- */
+.esc-course-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.esc-course-card {
+  background: #ffffff;
+  border: 1px solid #ece7e1;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.esc-course-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  padding: 20px 24px;
+}
+
+.esc-course-meta {
+  font-size: 14px;
+  color: #8a8079;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.esc-badge {
+  display: inline-block;
+  background: #fff4e0;
+  color: #9a6a00;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.esc-roster {
+  border-top: 1px solid #ece7e1;
+  padding: 12px 24px 20px;
+}
+
+.esc-muted {
+  color: #8a8079;
+  margin: 8px 0;
+}
+
+.esc-student {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0ebe5;
+}
+
+.esc-student:last-child { border-bottom: none; }
+
+.esc-student-info { display: flex; flex-direction: column; min-width: 0; }
+.esc-student-name { font-weight: 600; color: #15110f; }
+.esc-student-email { font-size: 13px; color: #8a8079; }
+
+.esc-student-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  width: 260px;
+  max-width: 45%;
+}
+
+.esc-progress-bar {
+  flex: 1;
+  height: 7px;
+  border-radius: 4px;
+  background: #f0ebe5;
+  overflow: hidden;
+}
+
+.esc-progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: #8e1519;
+}
+
+.esc-progress-val {
+  font-size: 13px;
+  color: #6b6259;
+  white-space: nowrap;
+}
+
+.esc-sub-card {
+  background: #ffffff;
+  border: 1px solid #ece7e1;
+  border-radius: 14px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.esc-sub-main { min-width: 0; }
+.esc-sub-sub { font-size: 13px; color: #8a8079; margin-top: 2px; }
 
 @media (max-width: 920px) {
   .esc-hero { padding: 40px 20px !important; }

@@ -26,4 +26,20 @@ export const schoolApi = {
   submitAssignment(assignmentId, formData) {
     return api.post(`/school/assignments/${assignmentId}/submit/`, formData)
   },
+
+  // --- Преподаватель ---
+  // Мои курсы (как препода) со счётчиками
+  teacherCourses() {
+    return api.get('/school/teacher/courses/')
+  },
+
+  // Ростер студентов курса с прогрессом
+  teacherCourseStudents(courseId) {
+    return api.get(`/school/teacher/courses/${courseId}/students/`)
+  },
+
+  // Очередь домашних заданий на проверку (по умолчанию submitted)
+  teacherSubmissions() {
+    return api.get('/school/teacher/submissions/')
+  },
 }

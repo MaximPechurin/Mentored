@@ -148,3 +148,54 @@ class TeacherSubmissionSerializer(serializers.ModelSerializer):
     def get_student(self, obj):
         u = obj.enrollment.user
         return u.username or u.email
+
+
+class TeacherCourseSerializer(serializers.ModelSerializer):
+    """ Курс в кабинете преподавателя: со счётчиками студентов и сдач на проверку. """
+    students_count = serializers.SerializerMethodField()
+    pending_submissions_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Course
+        fields = ['id', 'slug', 'title', 'is_active', 'students_count', 'pending_submissions_count']
+
+    def get_students_count(self, obj):
+        return obj.enrollments.filter(is_active=True).count()
+
+    def get_pending_submissions_count(self, obj):
+        return Submission.objects.filter(
+            assignment__lesson__module__course=obj, status='submitted',
+        ).count()
+
+
+class TeacherStudentProgressSerializer(serializers.ModelSerializer):
+    """ Строка ростера: студент курса + его прогресс (на базе Enrollment). """
+    student = serializers.SerializerMethodField()
+    email = serializers.EmailField(source='user.email')
+    lessons_total = serializers.SerializerMethodField()
+    lessons_completed = serializers.SerializerMethodField()
+    progress_percent = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Enrollment
+        fields = [
+            'id', 'student', 'email', 'is_active', 'enrolled_at',
+            'lessons_total', 'lessons_completed', 'progress_percent',
+        ]
+
+    def get_student(self, obj):
+        return obj.user.username or obj.user.email
+
+    def get_lessons_total(self, obj):
+        # считается один раз на курс и кладётся в context, чтобы не
+        # дёргать БД для каждого студента ростера
+        return self.context.get('lessons_total', 0)
+
+    def get_lessons_completed(self, obj):
+        return LessonProgress.objects.filter(enrollment=obj, is_completed=True).count()
+
+    def get_progress_percent(self, obj):
+        total = self.get_lessons_total(obj)
+        if not total:
+            return 0
+        return round(self.get_lessons_completed(obj) / total * 100)

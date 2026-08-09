@@ -12,7 +12,8 @@ from .models import (
 from .permissions import IsStudent, IsTeacher, IsDev
 from .serializers import (
     ModuleSerializer, MyCourseSerializer, AssignmentDetailSerializer,
-    TeacherSubmissionSerializer,
+    TeacherSubmissionSerializer, TeacherCourseSerializer,
+    TeacherStudentProgressSerializer,
 )
 
 
@@ -179,6 +180,40 @@ class AssignmentSubmitView(APIView):
             'id': submission.id,
             'status': submission.status,
         }, status=status.HTTP_201_CREATED)
+
+
+class TeacherCoursesView(APIView):
+    """ GET /school/teacher/courses/ - курсы, которые ведёт этот ментор. """
+    permission_classes = [IsAuthenticated, IsDev, IsTeacher]
+
+    def get(self, request):
+        courses = Course.objects.filter(
+            course_teachers__teacher=request.user,
+        ).distinct().order_by('title')
+        return Response(TeacherCourseSerializer(courses, many=True).data)
+
+
+class TeacherCourseStudentsView(APIView):
+    """
+    GET /school/teacher/courses/<course_id>/students/ - ростер студентов
+    курса с прогрессом. Только для ментора этого курса, иначе 403.
+    """
+    permission_classes = [IsAuthenticated, IsDev, IsTeacher]
+
+    def get(self, request, course_id):
+        course = get_object_or_404(Course, id=course_id)
+        if not course.course_teachers.filter(teacher=request.user).exists():
+            return Response({'error': 'Это не ваш курс'}, status=status.HTTP_403_FORBIDDEN)
+
+        lessons_total = Lesson.objects.filter(module__course=course).count()
+        enrollments = course.enrollments.select_related('user').order_by('-enrolled_at')
+        data = TeacherStudentProgressSerializer(
+            enrollments, many=True, context={'lessons_total': lessons_total},
+        ).data
+        return Response({
+            'course': {'id': course.id, 'title': course.title, 'lessons_total': lessons_total},
+            'students': data,
+        })
 
 
 class TeacherSubmissionsView(APIView):
