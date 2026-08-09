@@ -6,15 +6,23 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 
+from django.contrib.auth import get_user_model
+from django.db.models import Q
+
 from .models import (
     Course, Enrollment, Lesson, LessonProgress, Assignment, Submission,
+    ForumThread, ForumPost, DirectMessage, CourseTeacher,
+    is_course_participant, is_course_teacher, can_direct_message,
 )
 from .permissions import IsStudent, IsTeacher, IsDev
 from .serializers import (
     ModuleSerializer, MyCourseSerializer, AssignmentDetailSerializer,
     TeacherSubmissionSerializer, TeacherCourseSerializer,
-    TeacherStudentProgressSerializer,
+    TeacherStudentProgressSerializer, ForumThreadListSerializer,
+    ForumThreadDetailSerializer, ForumPostSerializer, DirectMessageSerializer,
 )
+
+User = get_user_model()
 
 
 class MyCoursesView(APIView):
@@ -290,4 +298,253 @@ class TeacherSubmissionReviewView(APIView):
             'id': submission.id,
             'status': submission.status,
             'score': submission.score,
+        })
+
+
+# ============================================================
+# Форум курса
+# ============================================================
+
+def _course_teacher_ids(course):
+    return set(course.course_teachers.values_list('teacher_id', flat=True))
+
+
+class CourseThreadsView(APIView):
+    """
+    GET  /school/courses/<course_id>/threads/ - список тем форума курса.
+    POST /school/courses/<course_id>/threads/ - создать тему {title, content}.
+    Доступ - только участникам курса (студенты + преподаватели).
+    """
+    permission_classes = [IsAuthenticated, IsDev]
+
+    def get(self, request, course_id):
+        course = get_object_or_404(Course, id=course_id)
+        if not is_course_participant(request.user, course):
+            return Response({'error': 'Нет доступа к форуму этого курса'}, status=status.HTTP_403_FORBIDDEN)
+        threads = course.forum_threads.select_related('author')
+        return Response(ForumThreadListSerializer(threads, many=True).data)
+
+    def post(self, request, course_id):
+        course = get_object_or_404(Course, id=course_id)
+        if not is_course_participant(request.user, course):
+            return Response({'error': 'Нет доступа к форуму этого курса'}, status=status.HTTP_403_FORBIDDEN)
+        title = (request.data.get('title') or '').strip()
+        content = (request.data.get('content') or '').strip()
+        if not title or not content:
+            return Response({'error': 'Нужны title и content'}, status=status.HTTP_400_BAD_REQUEST)
+        thread = ForumThread.objects.create(course=course, author=request.user, title=title)
+        ForumPost.objects.create(thread=thread, author=request.user, content=content)
+        return Response(ForumThreadListSerializer(thread).data, status=status.HTTP_201_CREATED)
+
+
+class ThreadDetailView(APIView):
+    """ GET /school/threads/<id>/ - тема + все сообщения. """
+    permission_classes = [IsAuthenticated, IsDev]
+
+    def get(self, request, thread_id):
+        thread = get_object_or_404(ForumThread.objects.select_related('course'), id=thread_id)
+        if not is_course_participant(request.user, thread.course):
+            return Response({'error': 'Нет доступа'}, status=status.HTTP_403_FORBIDDEN)
+        ctx = {'teacher_ids': _course_teacher_ids(thread.course)}
+        return Response(ForumThreadDetailSerializer(thread, context=ctx).data)
+
+
+class ThreadPostsView(APIView):
+    """
+    POST /school/threads/<id>/posts/ - ответить в теме {content}.
+    В закрытой (is_locked) теме отвечать могут только преподаватели.
+    """
+    permission_classes = [IsAuthenticated, IsDev]
+
+    def post(self, request, thread_id):
+        thread = get_object_or_404(ForumThread.objects.select_related('course'), id=thread_id)
+        if not is_course_participant(request.user, thread.course):
+            return Response({'error': 'Нет доступа'}, status=status.HTTP_403_FORBIDDEN)
+        if thread.is_locked and not is_course_teacher(request.user, thread.course):
+            return Response({'error': 'Тема закрыта для ответов'}, status=status.HTTP_403_FORBIDDEN)
+        content = (request.data.get('content') or '').strip()
+        if not content:
+            return Response({'error': 'Нужен content'}, status=status.HTTP_400_BAD_REQUEST)
+        post = ForumPost.objects.create(thread=thread, author=request.user, content=content)
+        # обновляем updated_at темы, чтобы всплыла наверх в списке
+        thread.save(update_fields=['updated_at'])
+        ctx = {'teacher_ids': _course_teacher_ids(thread.course)}
+        return Response(ForumPostSerializer(post, context=ctx).data, status=status.HTTP_201_CREATED)
+
+
+class ThreadModerateView(APIView):
+    """
+    POST /school/threads/<id>/moderate/ - закрепить/закрыть тему.
+    Тело: {"is_pinned": bool} и/или {"is_locked": bool}. Только препод курса.
+    """
+    permission_classes = [IsAuthenticated, IsDev, IsTeacher]
+
+    def post(self, request, thread_id):
+        thread = get_object_or_404(ForumThread.objects.select_related('course'), id=thread_id)
+        if not is_course_teacher(request.user, thread.course):
+            return Response({'error': 'Это не ваш курс'}, status=status.HTTP_403_FORBIDDEN)
+        if 'is_pinned' in request.data:
+            thread.is_pinned = bool(request.data.get('is_pinned'))
+        if 'is_locked' in request.data:
+            thread.is_locked = bool(request.data.get('is_locked'))
+        thread.save()
+        return Response({'id': thread.id, 'is_pinned': thread.is_pinned, 'is_locked': thread.is_locked})
+
+
+# ============================================================
+# Личные сообщения (студент <-> преподаватель с общим курсом)
+# ============================================================
+
+class ConversationsView(APIView):
+    """ GET /school/messages/ - список диалогов (собеседник + последнее сообщение + непрочитанные). """
+    permission_classes = [IsAuthenticated, IsDev]
+
+    def get(self, request):
+        me = request.user
+        msgs = DirectMessage.objects.filter(
+            Q(sender=me) | Q(recipient=me),
+        ).select_related('sender', 'recipient').order_by('-created_at')
+
+        conversations = {}
+        for m in msgs:
+            other = m.recipient if m.sender_id == me.id else m.sender
+            if other.id not in conversations:
+                conversations[other.id] = {
+                    'user_id': other.id,
+                    'name': other.username or other.email,
+                    'last_message': m.content,
+                    'last_at': m.created_at,
+                    'unread': 0,
+                }
+            # непрочитанные = входящие мне и is_read=False
+            if m.recipient_id == me.id and not m.is_read:
+                conversations[other.id]['unread'] += 1
+
+        return Response(list(conversations.values()))
+
+
+class ConversationView(APIView):
+    """
+    GET  /school/messages/<user_id>/ - переписка с пользователем (и помечает входящие прочитанными).
+    POST /school/messages/<user_id>/ - отправить сообщение {content}.
+    Разрешено только между студентом и преподавателем с общим курсом.
+    """
+    permission_classes = [IsAuthenticated, IsDev]
+
+    def get(self, request, user_id):
+        other = get_object_or_404(User, id=user_id)
+        me = request.user
+        qs = DirectMessage.objects.filter(
+            Q(sender=me, recipient=other) | Q(sender=other, recipient=me),
+        ).order_by('created_at')
+        # помечаем входящие прочитанными
+        DirectMessage.objects.filter(sender=other, recipient=me, is_read=False).update(is_read=True)
+        return Response(DirectMessageSerializer(qs, many=True, context={'me_id': me.id}).data)
+
+    def post(self, request, user_id):
+        other = get_object_or_404(User, id=user_id)
+        me = request.user
+        if not can_direct_message(me, other):
+            return Response(
+                {'error': 'Личные сообщения доступны только между студентом и преподавателем общего курса'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        content = (request.data.get('content') or '').strip()
+        if not content:
+            return Response({'error': 'Нужен content'}, status=status.HTTP_400_BAD_REQUEST)
+        msg = DirectMessage.objects.create(sender=me, recipient=other, content=content)
+        return Response(DirectMessageSerializer(msg, context={'me_id': me.id}).data, status=status.HTTP_201_CREATED)
+
+
+# ============================================================
+# Аналитика (только бэкенд, read-only)
+# ============================================================
+
+class TeacherCourseAnalyticsView(APIView):
+    """
+    GET /school/teacher/courses/<course_id>/analytics/ - сводка по курсу
+    для его преподавателя: студенты, средний прогресс, распределение
+    (завершили/в процессе/не начали), статистика по домашкам.
+    """
+    permission_classes = [IsAuthenticated, IsDev, IsTeacher]
+
+    def get(self, request, course_id):
+        course = get_object_or_404(Course, id=course_id)
+        if not is_course_teacher(request.user, course):
+            return Response({'error': 'Это не ваш курс'}, status=status.HTTP_403_FORBIDDEN)
+
+        lessons_total = Lesson.objects.filter(module__course=course).count()
+        enrollments = list(course.enrollments.filter(is_active=True))
+        students_count = len(enrollments)
+
+        completed = in_progress = not_started = 0
+        progress_sum = 0
+        for e in enrollments:
+            done = LessonProgress.objects.filter(enrollment=e, is_completed=True).count()
+            pct = round(done / lessons_total * 100) if lessons_total else 0
+            progress_sum += pct
+            if pct == 0:
+                not_started += 1
+            elif pct >= 100:
+                completed += 1
+            else:
+                in_progress += 1
+
+        avg_progress = round(progress_sum / students_count) if students_count else 0
+
+        subs = Submission.objects.filter(assignment__lesson__module__course=course)
+        submissions_stats = {
+            'submitted': subs.filter(status='submitted').count(),
+            'reviewed': subs.filter(status='reviewed').count(),
+            'needs_revision': subs.filter(status='needs_revision').count(),
+        }
+
+        return Response({
+            'course': {'id': course.id, 'title': course.title, 'lessons_total': lessons_total},
+            'students_count': students_count,
+            'avg_progress': avg_progress,
+            'distribution': {
+                'completed': completed,
+                'in_progress': in_progress,
+                'not_started': not_started,
+            },
+            'submissions': submissions_stats,
+        })
+
+
+class PlatformAnalyticsView(APIView):
+    """
+    GET /school/analytics/overview/ - общая аналитика по школе.
+    Только суперюзер (без IsDev/IsTeacher - это админский обзор).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Только для администратора'}, status=status.HTTP_403_FORBIDDEN)
+
+        courses_total = Course.objects.count()
+        courses_active = Course.objects.filter(is_active=True).count()
+        enrollments_active = Enrollment.objects.filter(is_active=True).count()
+        students_active = Enrollment.objects.filter(is_active=True).values('user').distinct().count()
+        teachers_total = CourseTeacher.objects.values('teacher').distinct().count()
+
+        # средняя завершаемость по всем активным доступам
+        total_pct = 0
+        active = list(Enrollment.objects.filter(is_active=True).select_related('course'))
+        for e in active:
+            lt = Lesson.objects.filter(module__course=e.course).count()
+            done = LessonProgress.objects.filter(enrollment=e, is_completed=True).count()
+            total_pct += round(done / lt * 100) if lt else 0
+        avg_completion = round(total_pct / len(active)) if active else 0
+
+        return Response({
+            'courses_total': courses_total,
+            'courses_active': courses_active,
+            'enrollments_active': enrollments_active,
+            'students_active': students_active,
+            'teachers_total': teachers_total,
+            'avg_completion': avg_completion,
+            'submissions_pending': Submission.objects.filter(status='submitted').count(),
+            'forum_threads': ForumThread.objects.count(),
         })

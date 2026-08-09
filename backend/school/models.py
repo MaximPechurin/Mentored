@@ -446,3 +446,169 @@ class Submission(models.Model):
 
     def __str__(self):
         return f"{self.enrollment.user.email} - {self.assignment.title} ({self.get_status_display()})"
+
+
+# ============================================================
+# Общение: форум курса (публично) и личные сообщения (1:1).
+#
+# Кто с кем (согласовано в чате):
+# - Форум привязан к курсу. Участники = активные студенты курса +
+#   преподаватели курса. Посторонние форум не видят.
+# - Личка - только между студентом и преподавателем, у которых есть
+#   ОБЩИЙ курс (студент купил курс, который ведёт этот препод).
+#   Студент-студент личку не делаем.
+# Хелперы доступа - is_course_participant / can_direct_message ниже.
+# ============================================================
+
+
+class ForumThread(models.Model):
+    """ Тема обсуждения на форуме курса. """
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.CASCADE,
+        related_name='forum_threads',
+        verbose_name='Курс',
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='forum_threads',
+        verbose_name='Автор',
+    )
+    title = models.CharField(max_length=255, verbose_name='Заголовок темы')
+    is_pinned = models.BooleanField(
+        default=False,
+        verbose_name='Закреплена',
+        help_text='Закреплённые темы показываются вверху (управляет преподаватель)',
+    )
+    is_locked = models.BooleanField(
+        default=False,
+        verbose_name='Закрыта',
+        help_text='В закрытой теме отвечать могут только преподаватели',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Тема форума'
+        verbose_name_plural = 'Темы форума'
+        # Сначала закреплённые, потом свежие
+        ordering = ['-is_pinned', '-updated_at']
+
+    def __str__(self):
+        return f"{self.course.title}: {self.title}"
+
+
+class ForumPost(models.Model):
+    """ Сообщение (ответ) в теме форума. """
+    thread = models.ForeignKey(
+        ForumThread,
+        on_delete=models.CASCADE,
+        related_name='posts',
+        verbose_name='Тема',
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='forum_posts',
+        verbose_name='Автор',
+    )
+    content = models.TextField(verbose_name='Текст')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Сообщение форума'
+        verbose_name_plural = 'Сообщения форума'
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"{self.thread.title} - {self.author_id}"
+
+
+class DirectMessage(models.Model):
+    """
+    Личное сообщение 1:1 между студентом и преподавателем.
+    Разрешено, только если у отправителя и получателя есть общий курс
+    (см. can_direct_message). Диалог = все сообщения между парой.
+    """
+    sender = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='sent_messages',
+        verbose_name='Отправитель',
+    )
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='received_messages',
+        verbose_name='Получатель',
+    )
+    content = models.TextField(verbose_name='Текст')
+    is_read = models.BooleanField(default=False, verbose_name='Прочитано получателем')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Личное сообщение'
+        verbose_name_plural = 'Личные сообщения'
+        ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['sender', 'recipient', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.sender_id} -> {self.recipient_id}"
+
+
+# ============================================================
+# Хелперы доступа для общения
+# ============================================================
+
+def is_course_participant(user, course):
+    """
+    Участник форума курса: активный студент (Enrollment) ИЛИ
+    преподаватель курса (CourseTeacher). Суперюзер - всегда.
+    """
+    if not (user and user.is_authenticated):
+        return False
+    if user.is_superuser:
+        return True
+    if Enrollment.objects.filter(user=user, course=course, is_active=True).exists():
+        return True
+    return CourseTeacher.objects.filter(course=course, teacher=user).exists()
+
+
+def is_course_teacher(user, course):
+    """ Преподаватель этого курса (или суперюзер). """
+    if not (user and user.is_authenticated):
+        return False
+    if user.is_superuser:
+        return True
+    return CourseTeacher.objects.filter(course=course, teacher=user).exists()
+
+
+def can_direct_message(user_a, user_b):
+    """
+    Личка разрешена, если у пары есть общий курс в связке
+    студент<->преподаватель (в любую сторону):
+    a учится на курсе, который ведёт b, ИЛИ b учится на курсе, который
+    ведёт a. Курсы берём по активным Enrollment и CourseTeacher.
+    """
+    if not (user_a and user_b) or user_a == user_b:
+        return False
+    a_student_courses = set(
+        Enrollment.objects.filter(user=user_a, is_active=True).values_list('course_id', flat=True)
+    )
+    a_teacher_courses = set(
+        CourseTeacher.objects.filter(teacher=user_a).values_list('course_id', flat=True)
+    )
+    b_student_courses = set(
+        Enrollment.objects.filter(user=user_b, is_active=True).values_list('course_id', flat=True)
+    )
+    b_teacher_courses = set(
+        CourseTeacher.objects.filter(teacher=user_b).values_list('course_id', flat=True)
+    )
+    # a студент у b-препода  ИЛИ  b студент у a-препода
+    return bool(a_student_courses & b_teacher_courses) or bool(b_student_courses & a_teacher_courses)

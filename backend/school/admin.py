@@ -3,6 +3,7 @@ from django.contrib import admin
 from .models import (
     TeacherProfile, Course, ProductCourseAccess, CourseTeacher, Module, Lesson,
     LessonMaterial, Enrollment, LessonProgress, Assignment, Submission,
+    ForumThread, ForumPost, DirectMessage,
 )
 
 
@@ -180,3 +181,34 @@ class SubmissionAdmin(TeacherScopedAdminMixin, admin.ModelAdmin):
     search_fields = ('enrollment__user__email', 'assignment__title')
     date_hierarchy = 'submitted_at'
     readonly_fields = ('assignment', 'enrollment', 'text', 'file', 'submitted_at')
+
+
+class ForumPostInline(admin.TabularInline):
+    model = ForumPost
+    extra = 0
+    fields = ('author', 'content', 'created_at')
+    readonly_fields = ('created_at',)
+
+
+@admin.register(ForumThread)
+class ForumThreadAdmin(TeacherScopedAdminMixin, admin.ModelAdmin):
+    course_lookup = 'course'
+    list_display = ('title', 'course', 'author', 'is_pinned', 'is_locked', 'updated_at')
+    list_filter = ('is_pinned', 'is_locked', 'course')
+    search_fields = ('title', 'course__title', 'author__email')
+    inlines = [ForumPostInline]
+
+
+@admin.register(ForumPost)
+class ForumPostAdmin(TeacherScopedAdminMixin, admin.ModelAdmin):
+    course_lookup = 'thread__course'
+    list_display = ('thread', 'author', 'created_at')
+    search_fields = ('thread__title', 'author__email', 'content')
+
+
+@admin.register(DirectMessage)
+class DirectMessageAdmin(admin.ModelAdmin):
+    list_display = ('sender', 'recipient', 'is_read', 'created_at')
+    list_filter = ('is_read', 'created_at')
+    search_fields = ('sender__email', 'recipient__email', 'content')
+    readonly_fields = ('sender', 'recipient', 'content', 'created_at')

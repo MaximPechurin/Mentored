@@ -2,8 +2,14 @@ from rest_framework import serializers
 
 from .models import (
     Course, Module, Lesson, LessonMaterial, Enrollment, LessonProgress,
-    Assignment, Submission,
+    Assignment, Submission, ForumThread, ForumPost, DirectMessage,
 )
+
+
+def _display_name(user):
+    if not user:
+        return 'Usuario eliminado'
+    return user.username or user.email
 
 
 class LessonMaterialSerializer(serializers.ModelSerializer):
@@ -199,3 +205,62 @@ class TeacherStudentProgressSerializer(serializers.ModelSerializer):
         if not total:
             return 0
         return round(self.get_lessons_completed(obj) / total * 100)
+
+
+# ============================================================
+# Форум и личные сообщения
+# ============================================================
+
+class ForumPostSerializer(serializers.ModelSerializer):
+    author = serializers.SerializerMethodField()
+    is_teacher = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ForumPost
+        fields = ['id', 'author', 'author_id', 'is_teacher', 'content', 'created_at']
+
+    def get_author(self, obj):
+        return _display_name(obj.author)
+
+    def get_is_teacher(self, obj):
+        # автор - препод этого курса? (для метки "преподаватель" в UI)
+        teacher_ids = self.context.get('teacher_ids', set())
+        return obj.author_id in teacher_ids
+
+
+class ForumThreadListSerializer(serializers.ModelSerializer):
+    author = serializers.SerializerMethodField()
+    posts_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ForumThread
+        fields = ['id', 'title', 'author', 'is_pinned', 'is_locked', 'posts_count', 'created_at', 'updated_at']
+
+    def get_author(self, obj):
+        return _display_name(obj.author)
+
+    def get_posts_count(self, obj):
+        return obj.posts.count()
+
+
+class ForumThreadDetailSerializer(serializers.ModelSerializer):
+    author = serializers.SerializerMethodField()
+    posts = ForumPostSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ForumThread
+        fields = ['id', 'title', 'author', 'is_pinned', 'is_locked', 'created_at', 'posts']
+
+    def get_author(self, obj):
+        return _display_name(obj.author)
+
+
+class DirectMessageSerializer(serializers.ModelSerializer):
+    is_mine = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DirectMessage
+        fields = ['id', 'sender_id', 'content', 'is_read', 'is_mine', 'created_at']
+
+    def get_is_mine(self, obj):
+        return obj.sender_id == self.context.get('me_id')

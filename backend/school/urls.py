@@ -5,6 +5,9 @@ from .views import (
     AssignmentDetailView, AssignmentSubmitView,
     TeacherCoursesView, TeacherCourseStudentsView,
     TeacherSubmissionsView, TeacherSubmissionReviewView,
+    CourseThreadsView, ThreadDetailView, ThreadPostsView, ThreadModerateView,
+    ConversationsView, ConversationView,
+    TeacherCourseAnalyticsView, PlatformAnalyticsView,
 )
 
 urlpatterns = [
@@ -18,6 +21,20 @@ urlpatterns = [
     # Преподаватель
     path('teacher/courses/', TeacherCoursesView.as_view(), name='school-teacher-courses'),
     path('teacher/courses/<int:course_id>/students/', TeacherCourseStudentsView.as_view(), name='school-teacher-course-students'),
+    path('teacher/courses/<int:course_id>/analytics/', TeacherCourseAnalyticsView.as_view(), name='school-teacher-course-analytics'),
     path('teacher/submissions/', TeacherSubmissionsView.as_view(), name='school-teacher-submissions'),
     path('teacher/submissions/<int:submission_id>/review/', TeacherSubmissionReviewView.as_view(), name='school-teacher-submission-review'),
+
+    # Форум курса
+    path('courses/<int:course_id>/threads/', CourseThreadsView.as_view(), name='school-course-threads'),
+    path('threads/<int:thread_id>/', ThreadDetailView.as_view(), name='school-thread-detail'),
+    path('threads/<int:thread_id>/posts/', ThreadPostsView.as_view(), name='school-thread-posts'),
+    path('threads/<int:thread_id>/moderate/', ThreadModerateView.as_view(), name='school-thread-moderate'),
+
+    # Личные сообщения
+    path('messages/', ConversationsView.as_view(), name='school-conversations'),
+    path('messages/<int:user_id>/', ConversationView.as_view(), name='school-conversation'),
+
+    # Аналитика
+    path('analytics/overview/', PlatformAnalyticsView.as_view(), name='school-analytics-overview'),
 ]
