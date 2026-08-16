@@ -82,3 +82,7 @@ docker-compose.override.yml
 # === OS ===
 .DS_Store
 Thumbs.db
+
+# Скиллы с кредами/ключами - не коммитить
+/.claude/skills/dahaka-vm/
+
