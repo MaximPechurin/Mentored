@@ -178,17 +178,17 @@ onUnmounted(() => { if (poll) clearInterval(poll) })
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: #8e1519;
-  color: #fff;
-  border: none;
+  background: #ffffff;      /* белая кнопка */
+  color: #8e1519;          /* красная эмблема (иконка внутри белая - fill: none) */
+  border: 1px solid #ece7e1;
   cursor: pointer;
-  box-shadow: 0 10px 24px -8px rgba(0,0,0,0.5);
+  box-shadow: 0 10px 24px -8px rgba(0,0,0,0.35);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s;
+  transition: box-shadow 0.2s, transform 0.2s;
 }
-.chat-fab:hover { background: #a01a1f; }
+.chat-fab:hover { box-shadow: 0 12px 28px -8px rgba(0,0,0,0.45); transform: translateY(-1px); }
 
 .chat-dot {
   width: 10px;
@@ -201,7 +201,7 @@ onUnmounted(() => { if (poll) clearInterval(poll) })
   position: absolute;
   top: 8px;
   right: 8px;
-  border: 2px solid #8e1519;
+  border: 2px solid #ffffff;  /* белая обводка под белую кнопку */
 }
 
 .chat-panel {
