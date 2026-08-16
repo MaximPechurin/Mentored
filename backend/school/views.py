@@ -554,3 +554,49 @@ class PlatformAnalyticsView(APIView):
             'submissions_pending': Submission.objects.filter(status='submitted').count(),
             'forum_threads': ForumThread.objects.count(),
         })
+
+
+class ChatDirectoryView(APIView):
+    """
+    GET /school/chat/directory/ - «дерево» чата для текущего пользователя
+    с счётчиками непрочитанного:
+    - преподаватель: курсы -> студенты (unread на каждом уровне)
+    - студент: курсы -> преподаватели (unread)
+    Тред/отправка/пометка прочитанным - через /school/messages/<user_id>/.
+    """
+    permission_classes = [IsAuthenticated, IsDev]
+
+    def get(self, request):
+        from collections import Counter
+        me = request.user
+        unread = Counter(
+            DirectMessage.objects.filter(recipient=me, is_read=False).values_list('sender_id', flat=True)
+        )
+        total_unread = sum(unread.values())
+
+        teaches = CourseTeacher.objects.filter(teacher=me).exists()
+        courses = []
+
+        if teaches:
+            role = 'teacher'
+            for course in Course.objects.filter(course_teachers__teacher=me).distinct().order_by('title'):
+                people, c_unread = [], 0
+                for enr in course.enrollments.filter(is_active=True).select_related('user'):
+                    u = enr.user
+                    cnt = unread.get(u.id, 0)
+                    c_unread += cnt
+                    people.append({'user_id': u.id, 'name': u.username or u.email, 'unread': cnt})
+                courses.append({'id': course.id, 'title': course.title, 'unread': c_unread, 'people': people})
+        else:
+            role = 'student'
+            for enr in Enrollment.objects.filter(user=me, is_active=True).select_related('course').order_by('-enrolled_at'):
+                course = enr.course
+                people, c_unread = [], 0
+                for ct in course.course_teachers.select_related('teacher'):
+                    t = ct.teacher
+                    cnt = unread.get(t.id, 0)
+                    c_unread += cnt
+                    people.append({'user_id': t.id, 'name': t.username or t.email, 'unread': cnt})
+                courses.append({'id': course.id, 'title': course.title, 'unread': c_unread, 'people': people})
+
+        return Response({'role': role, 'total_unread': total_unread, 'courses': courses})

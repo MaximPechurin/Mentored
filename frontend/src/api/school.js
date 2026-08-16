@@ -47,4 +47,18 @@ export const schoolApi = {
   reviewSubmission(submissionId, data) {
     return api.post(`/school/teacher/submissions/${submissionId}/review/`, data)
   },
+
+  // --- Чат / личные сообщения ---
+  // Дерево чата: курсы -> собеседники + непрочитанные
+  chatDirectory() {
+    return api.get('/school/chat/directory/')
+  },
+  // Переписка с пользователем (GET помечает входящие прочитанными)
+  getConversation(userId) {
+    return api.get(`/school/messages/${userId}/`)
+  },
+  // Отправить сообщение
+  sendMessage(userId, content) {
+    return api.post(`/school/messages/${userId}/`, { content })
+  },
 }

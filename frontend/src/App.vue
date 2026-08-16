@@ -9,6 +9,8 @@
       <router-view />
     </main>
     <Footer v-if="!isEscuela" />
+    <!-- Чат преподаватель↔ученик - только внутри учебной платформы -->
+    <ChatWidget v-if="isEscuela && isAuthenticated" />
   </div>
 </template>
 
@@ -18,10 +20,13 @@ import { useRoute } from 'vue-router'
 import Header from './components/Header.vue'
 import Footer from './components/Footer.vue'
 import EscuelaNav from './components/EscuelaNav.vue'
+import ChatWidget from './components/ChatWidget.vue'
 import { useLanguage } from './composables/useLanguage'
+import { useAuth } from './composables/useAuth'
 
 const route = useRoute()
 const isEscuela = computed(() => route.path.startsWith('/escuela'))
+const { isAuthenticated } = useAuth()
 
 // Инициализируем язык
 const { currentLang, setLanguage, t } = useLanguage()

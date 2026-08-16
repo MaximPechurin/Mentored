@@ -37,6 +37,7 @@ const dict = {
     },
     status: { submitted: 'En revisión', reviewed: 'Revisado', needs_revision: 'Devuelto' },
     statusFull: { submitted: 'Enviado, en revisión', reviewed: 'Revisado', needs_revision: 'Devuelto para corrección' },
+    chat: { title: 'Mensajes', placeholder: 'Escribe un mensaje...', send: 'Enviar', empty: 'Aún no hay mensajes.', noChats: 'No hay chats disponibles.', back: '← Atrás' },
   },
   ru: {
     nav: { misCursos: 'Мои курсы', panelProfesor: 'Кабинет преподавателя', volverSitio: '← Вернуться на сайт', salir: 'Выйти' },
@@ -65,6 +66,7 @@ const dict = {
     },
     status: { submitted: 'На проверке', reviewed: 'Проверено', needs_revision: 'Возвращено' },
     statusFull: { submitted: 'Отправлено, на проверке', reviewed: 'Проверено', needs_revision: 'Возвращено на доработку' },
+    chat: { title: 'Сообщения', placeholder: 'Напишите сообщение...', send: 'Отправить', empty: 'Пока нет сообщений.', noChats: 'Нет доступных чатов.', back: '← Назад' },
   },
   en: {
     nav: { misCursos: 'My courses', panelProfesor: 'Teacher panel', volverSitio: '← Back to site', salir: 'Log out' },
@@ -93,6 +95,7 @@ const dict = {
     },
     status: { submitted: 'In review', reviewed: 'Reviewed', needs_revision: 'Returned' },
     statusFull: { submitted: 'Submitted, in review', reviewed: 'Reviewed', needs_revision: 'Returned for revision' },
+    chat: { title: 'Messages', placeholder: 'Write a message...', send: 'Send', empty: 'No messages yet.', noChats: 'No chats available.', back: '← Back' },
   },
 }
 

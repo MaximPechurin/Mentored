@@ -6,7 +6,7 @@ from .views import (
     TeacherCoursesView, TeacherCourseStudentsView,
     TeacherSubmissionsView, TeacherSubmissionReviewView,
     CourseThreadsView, ThreadDetailView, ThreadPostsView, ThreadModerateView,
-    ConversationsView, ConversationView,
+    ConversationsView, ConversationView, ChatDirectoryView,
     TeacherCourseAnalyticsView, PlatformAnalyticsView,
 )
 
@@ -31,7 +31,8 @@ urlpatterns = [
     path('threads/<int:thread_id>/posts/', ThreadPostsView.as_view(), name='school-thread-posts'),
     path('threads/<int:thread_id>/moderate/', ThreadModerateView.as_view(), name='school-thread-moderate'),
 
-    # Личные сообщения
+    # Личные сообщения / чат
+    path('chat/directory/', ChatDirectoryView.as_view(), name='school-chat-directory'),
     path('messages/', ConversationsView.as_view(), name='school-conversations'),
     path('messages/<int:user_id>/', ConversationView.as_view(), name='school-conversation'),
 
