@@ -1,18 +1,27 @@
 <template>
-  <div id="app">
-    <Header />
+  <div id="app" :class="{ 'app--escuela': isEscuela }">
+    <!-- Раздел /escuela/* - отдельная "учебная платформа" со своей
+         тёмной шапкой и без маркетингового Header/Footer, чтобы визуально
+         отличаться от витрины магазина. -->
+    <EscuelaNav v-if="isEscuela" />
+    <Header v-else />
     <main>
       <router-view />
     </main>
-    <Footer />
+    <Footer v-if="!isEscuela" />
   </div>
 </template>
 
 <script setup>
-import { provide } from 'vue'
+import { provide, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import Header from './components/Header.vue'
 import Footer from './components/Footer.vue'
+import EscuelaNav from './components/EscuelaNav.vue'
 import { useLanguage } from './composables/useLanguage'
+
+const route = useRoute()
+const isEscuela = computed(() => route.path.startsWith('/escuela'))
 
 // Инициализируем язык
 const { currentLang, setLanguage, t } = useLanguage()

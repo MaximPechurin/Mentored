@@ -16,15 +16,21 @@
         <!-- <router-link to="/gratis">Gratis</router-link> -->
         <router-link to="/blog">Blog</router-link>
         <router-link to="/contacto">Contacto</router-link>
-        <!-- Раздел «Школа» пока закрыт: ссылки видит только dev-аккаунт
-             (is_dev) с нужной ролью. roles/is_dev приходят в профиле,
-             см. mentored/serializers.py; тот же гейт в API - IsDev. -->
-        <router-link v-if="isDev && isStudent" to="/escuela/estudiante">Mi escuela</router-link>
-        <router-link v-if="isDev && isTeacher" to="/escuela/profesor">Panel de profesor</router-link>
       </nav>
 
       <!-- Действия -->
       <div class="actions">
+        <!-- Заметная кнопка входа в учебную платформу. Видна только тем,
+             у кого есть доступ к школе (is_dev + роль student/teacher).
+             Ведёт в панель препода, если он преподаватель, иначе - в
+             кабинет студента. -->
+        <router-link v-if="hasSchool" :to="schoolHome" class="btn-escuela">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m2 7 10-5 10 5-10 5z"/><path d="M6 9.5V15c0 1.5 2.7 3 6 3s6-1.5 6-3V9.5"/>
+          </svg>
+          Ir a la Escuela
+        </router-link>
+
         <div class="cta-buttons">
           <!--<a href="#" class="btn-test">{{ t('nav.test') }}</a> МБ ВЕРНУТЬ В ДАЛЬНЕЙШЕМ -->
           <a href="https://wa.me/51940304595" class="btn-whatsapp">
@@ -87,6 +93,9 @@ const { user } = useAuth()
 const isDev = computed(() => !!user.value?.is_dev)
 const isStudent = computed(() => !!user.value?.roles?.includes('student'))
 const isTeacher = computed(() => !!user.value?.roles?.includes('teacher'))
+// Доступ к школе: dev-аккаунт с ролью студента или преподавателя
+const hasSchool = computed(() => isDev.value && (isStudent.value || isTeacher.value))
+const schoolHome = computed(() => (isTeacher.value ? '/escuela/profesor' : '/escuela/estudiante'))
 </script>
 
 <style scoped>
@@ -191,6 +200,31 @@ const isTeacher = computed(() => !!user.value?.roles?.includes('teacher'))
   background: #8e1519;
   color: #fff;
 }
+
+.btn-escuela {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  background: #0e0c0c;
+  color: #fff;
+  font-weight: 600;
+  font-size: 15.5px;
+  padding: 12px 20px;
+  border-radius: 999px;
+  white-space: nowrap;
+  border: 1.5px solid #c49a3f;
+  transition: all 0.3s;
+}
+
+.btn-escuela svg { color: #c49a3f; }
+
+.btn-escuela:hover {
+  background: #c49a3f;
+  border-color: #c49a3f;
+}
+
+.btn-escuela:hover svg { color: #0e0c0c; }
 
 .btn-whatsapp {
   display: inline-flex;
