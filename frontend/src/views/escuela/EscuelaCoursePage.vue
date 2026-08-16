@@ -26,7 +26,7 @@
                 {{ lesson.is_completed ? '✓' : '' }}
               </span>
               <span class="esc-lesson-title">{{ lesson.title }}</span>
-              <span v-if="lesson.duration_minutes" class="esc-lesson-duration">{{ lesson.duration_minutes }} min</span>
+              <span v-if="lesson.duration_minutes" class="esc-lesson-duration">{{ lesson.duration_minutes }} {{ st('course.min') }}</span>
             </button>
 
             <div v-if="activeLessonId === lesson.id" class="esc-lesson-body">

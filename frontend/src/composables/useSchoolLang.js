@@ -23,7 +23,7 @@ const dict = {
       verVideo: 'Ver video', completar: 'Marcar como completado', descompletar: 'Marcar como no visto',
       pts: 'pts', comentarioMentor: 'Comentario del mentor:', tuRespuesta: 'Escribe tu respuesta...',
       enviar: 'Enviar respuesta', reenviar: 'Reenviar', enviando: 'Enviando...',
-      adjunta: 'Adjunta un texto o un archivo.',
+      adjunta: 'Adjunta un texto o un archivo.', min: 'min',
     },
     teacher: {
       panel: 'Panel de profesor', hola: 'Hola', misCursos: 'Mis cursos',
@@ -47,7 +47,7 @@ const dict = {
       verVideo: 'Смотреть видео', completar: 'Отметить пройденным', descompletar: 'Снять отметку',
       pts: 'баллов', comentarioMentor: 'Комментарий преподавателя:', tuRespuesta: 'Напишите ваш ответ...',
       enviar: 'Отправить ответ', reenviar: 'Отправить заново', enviando: 'Отправка...',
-      adjunta: 'Приложите текст или файл.',
+      adjunta: 'Приложите текст или файл.', min: 'мин',
     },
     teacher: {
       panel: 'Кабинет преподавателя', hola: 'Привет', misCursos: 'Мои курсы',
@@ -71,7 +71,7 @@ const dict = {
       verVideo: 'Watch video', completar: 'Mark as completed', descompletar: 'Mark as not done',
       pts: 'pts', comentarioMentor: 'Mentor comment:', tuRespuesta: 'Write your answer...',
       enviar: 'Submit answer', reenviar: 'Resubmit', enviando: 'Submitting...',
-      adjunta: 'Attach text or a file.',
+      adjunta: 'Attach text or a file.', min: 'min',
     },
     teacher: {
       panel: 'Teacher panel', hola: 'Hi', misCursos: 'My courses',
