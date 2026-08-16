@@ -1,25 +1,25 @@
 <template>
-  <div v-if="checking" class="esc-checking">Cargando...</div>
+  <div v-if="checking" class="esc-checking">{{ st('common.cargando') }}</div>
   <div v-else class="esc-page">
     <section class="esc-hero">
       <div class="esc-hero-container">
         <span class="esc-hero-avatar">{{ userInitials }}</span>
         <div>
-          <span class="esc-hero-tag">Panel de profesor</span>
-          <h1 class="esc-hero-title">Hola, {{ userDisplayName }}</h1>
+          <span class="esc-hero-tag">{{ st('teacher.panel') }}</span>
+          <h1 class="esc-hero-title">{{ st('teacher.hola') }}, {{ userDisplayName }}</h1>
         </div>
       </div>
     </section>
 
     <div class="esc-shell">
       <section class="esc-block">
-        <h2 class="esc-section-title">Mis cursos</h2>
+        <h2 class="esc-section-title">{{ st('teacher.misCursos') }}</h2>
 
         <div v-if="loadingCourses" class="esc-empty">
-          <p class="esc-empty-text">Cargando...</p>
+          <p class="esc-empty-text">{{ st('common.cargando') }}</p>
         </div>
         <div v-else-if="courses.length === 0" class="esc-empty">
-          <p class="esc-empty-text">Todavía no tienes cursos asignados.</p>
+          <p class="esc-empty-text">{{ st('teacher.sinCursos') }}</p>
         </div>
 
         <div v-else class="esc-course-list">
@@ -27,27 +27,27 @@
             <button class="esc-course-head" @click="toggleCourse(course.id)">
               <span class="esc-course-title">{{ course.title }}</span>
               <span class="esc-course-meta">
-                {{ course.students_count }} alumnos
+                {{ course.students_count }} {{ st('teacher.alumnos') }}
                 <span v-if="course.pending_submissions_count" class="esc-badge">
-                  {{ course.pending_submissions_count }} por revisar
+                  {{ course.pending_submissions_count }} {{ st('teacher.porRevisar') }}
                 </span>
               </span>
             </button>
 
             <div v-if="activeCourseId === course.id" class="esc-roster">
-              <p v-if="rosterLoading" class="esc-muted">Cargando alumnos...</p>
+              <p v-if="rosterLoading" class="esc-muted">{{ st('teacher.cargandoAlumnos') }}</p>
               <template v-else>
-                <p v-if="roster.length === 0" class="esc-muted">Nadie ha comprado este curso todavía.</p>
-                <div v-for="st in roster" :key="st.id" class="esc-student">
+                <p v-if="roster.length === 0" class="esc-muted">{{ st('teacher.nadieCompro') }}</p>
+                <div v-for="row in roster" :key="row.id" class="esc-student">
                   <div class="esc-student-info">
-                    <span class="esc-student-name">{{ st.student }}</span>
-                    <span class="esc-student-email">{{ st.email }}</span>
+                    <span class="esc-student-name">{{ row.student }}</span>
+                    <span class="esc-student-email">{{ row.email }}</span>
                   </div>
                   <div class="esc-student-progress">
                     <div class="esc-progress-bar">
-                      <div class="esc-progress-fill" :style="{ width: st.progress_percent + '%' }"></div>
+                      <div class="esc-progress-fill" :style="{ width: row.progress_percent + '%' }"></div>
                     </div>
-                    <span class="esc-progress-val">{{ st.progress_percent }}% ({{ st.lessons_completed }}/{{ st.lessons_total }})</span>
+                    <span class="esc-progress-val">{{ row.progress_percent }}% ({{ row.lessons_completed }}/{{ row.lessons_total }})</span>
                   </div>
                 </div>
               </template>
@@ -57,10 +57,10 @@
       </section>
 
       <section class="esc-block">
-        <h2 class="esc-section-title">Tareas por revisar</h2>
+        <h2 class="esc-section-title">{{ st('teacher.tareasPorRevisar') }}</h2>
 
         <div v-if="submissions.length === 0" class="esc-empty">
-          <p class="esc-empty-text">No hay tareas pendientes de revisión.</p>
+          <p class="esc-empty-text">{{ st('teacher.sinTareas') }}</p>
         </div>
 
         <div v-else class="esc-course-list">
@@ -82,9 +82,11 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '../../composables/useAuth'
 import { schoolApi } from '../../api/school'
+import { useSchoolLang } from '../../composables/useSchoolLang'
 
 const router = useRouter()
 const { user, isAuthenticated, refreshUser } = useAuth()
+const { st } = useSchoolLang()
 
 const checking = ref(true)
 const loadingCourses = ref(true)
@@ -96,11 +98,7 @@ const activeCourseId = ref(null)
 const rosterLoading = ref(false)
 const roster = ref([])
 
-const statusLabel = (s) => ({
-  submitted: 'En revisión',
-  reviewed: 'Revisado',
-  needs_revision: 'Devuelto',
-}[s] || s)
+const statusLabel = (s) => st('status.' + s)
 
 const toggleCourse = async (courseId) => {
   if (activeCourseId.value === courseId) {

@@ -8,13 +8,22 @@
       </router-link>
 
       <nav class="esc-nav-links">
-        <router-link v-if="isStudent" to="/escuela/estudiante">Mis cursos</router-link>
-        <router-link v-if="isTeacher" to="/escuela/profesor">Panel de profesor</router-link>
+        <router-link v-if="isStudent" to="/escuela/estudiante">{{ st('nav.misCursos') }}</router-link>
+        <router-link v-if="isTeacher" to="/escuela/profesor">{{ st('nav.panelProfesor') }}</router-link>
       </nav>
 
       <div class="esc-nav-actions">
-        <router-link to="/" class="esc-back-site">← Volver al sitio</router-link>
-        <button class="esc-logout" @click="handleLogout">Salir</button>
+        <div class="esc-lang">
+          <button
+            v-for="lang in supported"
+            :key="lang"
+            class="esc-lang-btn"
+            :class="{ active: schoolLang === lang }"
+            @click="setSchoolLang(lang)"
+          >{{ lang.toUpperCase() }}</button>
+        </div>
+        <router-link to="/" class="esc-back-site">{{ st('nav.volverSitio') }}</router-link>
+        <button class="esc-logout" @click="handleLogout">{{ st('nav.salir') }}</button>
       </div>
     </div>
   </header>
@@ -24,9 +33,11 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
+import { useSchoolLang } from '../composables/useSchoolLang'
 
 const router = useRouter()
 const { user, logout } = useAuth()
+const { st, schoolLang, supported, setSchoolLang } = useSchoolLang()
 
 const isStudent = computed(() => !!user.value?.roles?.includes('student'))
 const isTeacher = computed(() => !!user.value?.roles?.includes('teacher'))
@@ -107,6 +118,36 @@ const handleLogout = () => {
   align-items: center;
   gap: 16px;
   flex-shrink: 0;
+}
+
+.esc-lang {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid #3a3230;
+  border-radius: 999px;
+  padding: 2px;
+}
+
+.esc-lang-btn {
+  background: none;
+  border: none;
+  color: #8a8079;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.esc-lang-btn:hover { color: #ffffff; }
+
+.esc-lang-btn.active {
+  background: #c49a3f;
+  color: #0e0c0c;
 }
 
 .esc-back-site {

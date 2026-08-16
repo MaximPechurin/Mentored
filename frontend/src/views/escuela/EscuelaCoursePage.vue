@@ -1,13 +1,13 @@
 <template>
-  <div v-if="checking || loading" class="esc-checking">Cargando...</div>
+  <div v-if="checking || loading" class="esc-checking">{{ st('common.cargando') }}</div>
   <div v-else-if="forbidden" class="esc-checking">
-    <p>No tienes acceso a este curso.</p>
+    <p>{{ st('course.sinAcceso') }}</p>
   </div>
   <div v-else class="esc-page">
     <section class="esc-hero">
       <div class="esc-hero-container">
         <div>
-          <router-link to="/escuela/estudiante" class="esc-back">&larr; Mis cursos</router-link>
+          <router-link to="/escuela/estudiante" class="esc-back">{{ st('course.volverCursos') }}</router-link>
           <h1 class="esc-hero-title">{{ course.title }}</h1>
         </div>
       </div>
@@ -39,7 +39,7 @@
                 ></iframe>
               </div>
               <a v-else-if="lesson.video_url" :href="lesson.video_url" target="_blank" rel="noopener" class="esc-video-link">
-                Ver video
+                {{ st('course.verVideo') }}
               </a>
 
               <p v-if="lesson.content" class="esc-lesson-content">{{ lesson.content }}</p>
@@ -55,11 +55,11 @@
                 <div v-for="a in lesson.assignments" :key="a.id" class="esc-assignment">
                   <button class="esc-assignment-head" @click="toggleAssignment(a.id)">
                     <span>📝 {{ a.title }}</span>
-                    <span class="esc-assignment-max">{{ a.max_score }} pts</span>
+                    <span class="esc-assignment-max">{{ a.max_score }} {{ st('course.pts') }}</span>
                   </button>
 
                   <div v-if="activeAssignmentId === a.id" class="esc-assignment-body">
-                    <p v-if="assignmentLoading" class="esc-muted">Cargando...</p>
+                    <p v-if="assignmentLoading" class="esc-muted">{{ st('common.cargando') }}</p>
                     <template v-else>
                       <p v-if="assignmentDetail.description" class="esc-assignment-desc">{{ assignmentDetail.description }}</p>
 
@@ -68,13 +68,13 @@
                         <span v-if="mySub.score !== null && mySub.score !== undefined"> — {{ mySub.score }}/{{ a.max_score }}</span>
                       </div>
                       <p v-if="mySub && mySub.mentor_comment" class="esc-mentor-comment">
-                        <strong>Comentario del mentor:</strong> {{ mySub.mentor_comment }}
+                        <strong>{{ st('course.comentarioMentor') }}</strong> {{ mySub.mentor_comment }}
                       </p>
 
                       <textarea
                         v-model="submitText"
                         rows="4"
-                        placeholder="Escribe tu respuesta..."
+                        :placeholder="st('course.tuRespuesta')"
                         class="esc-textarea"
                       ></textarea>
                       <input type="file" class="esc-file" @change="onFileChange" />
@@ -83,7 +83,7 @@
                         :disabled="submitting"
                         @click="submitAssignment(a)"
                       >
-                        {{ submitting ? 'Enviando...' : (mySub ? 'Reenviar' : 'Enviar respuesta') }}
+                        {{ submitting ? st('course.enviando') : (mySub ? st('course.reenviar') : st('course.enviar')) }}
                       </button>
                     </template>
                   </div>
@@ -95,7 +95,7 @@
                 :disabled="savingLessonId === lesson.id"
                 @click="toggleComplete(lesson)"
               >
-                {{ lesson.is_completed ? 'Marcar como no visto' : 'Marcar como completado' }}
+                {{ lesson.is_completed ? st('course.descompletar') : st('course.completar') }}
               </button>
             </div>
           </div>
@@ -110,10 +110,12 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '../../composables/useAuth'
 import { schoolApi } from '../../api/school'
+import { useSchoolLang } from '../../composables/useSchoolLang'
 
 const route = useRoute()
 const router = useRouter()
 const { user, isAuthenticated, refreshUser } = useAuth()
+const { st } = useSchoolLang()
 
 const checking = ref(true)
 const loading = ref(true)
@@ -137,11 +139,7 @@ const toggleLesson = (lessonId) => {
   activeAssignmentId.value = null
 }
 
-const statusLabel = (s) => ({
-  submitted: 'Enviado, en revisión',
-  reviewed: 'Revisado',
-  needs_revision: 'Devuelto para corrección',
-}[s] || s)
+const statusLabel = (s) => st('statusFull.' + s)
 
 const toggleAssignment = async (assignmentId) => {
   if (activeAssignmentId.value === assignmentId) {
@@ -171,7 +169,7 @@ const onFileChange = (e) => {
 
 const submitAssignment = async (a) => {
   if (!submitText.value && !submitFile.value) {
-    alert('Adjunta un texto o un archivo.')
+    alert(st('course.adjunta'))
     return
   }
   submitting.value = true

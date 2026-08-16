@@ -5,22 +5,22 @@
       <div class="esc-hero-container">
         <span class="esc-hero-avatar">{{ userInitials }}</span>
         <div>
-          <span class="esc-hero-tag">Panel de estudiante</span>
-          <h1 class="esc-hero-title">Hola, {{ userDisplayName }}</h1>
+          <span class="esc-hero-tag">{{ st('student.panel') }}</span>
+          <h1 class="esc-hero-title">{{ st('student.hola') }}, {{ userDisplayName }}</h1>
         </div>
       </div>
     </section>
 
     <div class="esc-shell">
-      <h2 class="esc-section-title">Mis cursos</h2>
+      <h2 class="esc-section-title">{{ st('student.misCursos') }}</h2>
 
       <div v-if="loadingCourses" class="esc-empty">
-        <p class="esc-empty-text">Cargando tus cursos...</p>
+        <p class="esc-empty-text">{{ st('student.cargandoCursos') }}</p>
       </div>
 
       <div v-else-if="courses.length === 0" class="esc-empty">
-        <p class="esc-empty-text">Aún no tienes cursos activos.</p>
-        <router-link to="/tienda" class="esc-empty-btn">Ver cursos disponibles</router-link>
+        <p class="esc-empty-text">{{ st('student.sinCursos') }}</p>
+        <router-link to="/tienda" class="esc-empty-btn">{{ st('student.verCursos') }}</router-link>
       </div>
 
       <div v-else class="esc-courses">
@@ -33,7 +33,7 @@
           <h3 class="esc-course-title">{{ course.title }}</h3>
           <p v-if="course.teachers.length" class="esc-course-teacher">{{ course.teachers.join(', ') }}</p>
           <div class="esc-progress">
-            <span>Progreso</span>
+            <span>{{ st('common.progreso') }}</span>
             <span class="esc-progress-value">{{ course.progress_percent }}%</span>
           </div>
           <div class="esc-progress-bar">
@@ -50,9 +50,11 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '../../composables/useAuth'
 import { schoolApi } from '../../api/school'
+import { useSchoolLang } from '../../composables/useSchoolLang'
 
 const router = useRouter()
 const { user, isAuthenticated, refreshUser } = useAuth()
+const { st } = useSchoolLang()
 
 const checking = ref(true)
 const loadingCourses = ref(true)
