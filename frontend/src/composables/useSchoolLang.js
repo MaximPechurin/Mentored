@@ -46,6 +46,14 @@ const dict = {
       pin: 'Fijar', unpin: 'Desfijar', lock: 'Cerrar', unlock: 'Abrir', pinned: '📌 Fijada',
       writeReply: 'Escribe una respuesta...', posts: 'mensajes',
     },
+    stats: {
+      title: 'Analítica', avgProgress: 'Progreso medio', completed: 'Completado',
+      inProgress: 'En curso', notStarted: 'Sin empezar', students: 'Alumnos',
+      submissions: 'Tareas', pending: 'por revisar', reviewed: 'revisadas',
+      platform: 'Analítica de la plataforma', activeCourses: 'Cursos activos',
+      activeStudents: 'Alumnos activos', teachers: 'Profesores', enrollments: 'Accesos',
+      avgCompletion: 'Finalización media', forumThreads: 'Temas del foro',
+    },
   },
   ru: {
     nav: { misCursos: 'Мои курсы', panelProfesor: 'Кабинет преподавателя', volverSitio: '← Вернуться на сайт', salir: 'Выйти' },
@@ -83,6 +91,14 @@ const dict = {
       pin: 'Закрепить', unpin: 'Открепить', lock: 'Закрыть', unlock: 'Открыть', pinned: '📌 Закреплена',
       writeReply: 'Напишите ответ...', posts: 'сообщений',
     },
+    stats: {
+      title: 'Аналитика', avgProgress: 'Средний прогресс', completed: 'Завершили',
+      inProgress: 'В процессе', notStarted: 'Не начали', students: 'Студентов',
+      submissions: 'Домашки', pending: 'на проверку', reviewed: 'проверено',
+      platform: 'Аналитика платформы', activeCourses: 'Активных курсов',
+      activeStudents: 'Активных студентов', teachers: 'Преподавателей', enrollments: 'Доступов',
+      avgCompletion: 'Средняя завершаемость', forumThreads: 'Тем на форуме',
+    },
   },
   en: {
     nav: { misCursos: 'My courses', panelProfesor: 'Teacher panel', volverSitio: '← Back to site', salir: 'Log out' },
@@ -119,6 +135,14 @@ const dict = {
       noPosts: 'No messages.', locked: 'Thread closed', teacher: 'Teacher',
       pin: 'Pin', unpin: 'Unpin', lock: 'Close', unlock: 'Open', pinned: '📌 Pinned',
       writeReply: 'Write a reply...', posts: 'messages',
+    },
+    stats: {
+      title: 'Analytics', avgProgress: 'Avg. progress', completed: 'Completed',
+      inProgress: 'In progress', notStarted: 'Not started', students: 'Students',
+      submissions: 'Homework', pending: 'to review', reviewed: 'reviewed',
+      platform: 'Platform analytics', activeCourses: 'Active courses',
+      activeStudents: 'Active students', teachers: 'Teachers', enrollments: 'Enrollments',
+      avgCompletion: 'Avg. completion', forumThreads: 'Forum threads',
     },
   },
 }

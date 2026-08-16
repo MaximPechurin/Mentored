@@ -69,11 +69,11 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        # is_dev - read-only: фронт по нему решает, показывать ли ещё не
-        # выпущенные разделы (школа). Через PUT /profile/ поставить себе
-        # флаг нельзя - только из админки.
-        fields = ['id', 'username', 'email', 'phone', 'avatar', 'roles', 'is_dev', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'is_dev', 'created_at', 'updated_at']
+        # is_dev / is_superuser - read-only: фронт по ним решает, что
+        # показывать (закрытые разделы школы / обзорную аналитику
+        # платформы). Через PUT /profile/ выставить себе нельзя.
+        fields = ['id', 'username', 'email', 'phone', 'avatar', 'roles', 'is_dev', 'is_superuser', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'is_dev', 'is_superuser', 'created_at', 'updated_at']
 
 
 class UserSerializer(serializers.ModelSerializer):

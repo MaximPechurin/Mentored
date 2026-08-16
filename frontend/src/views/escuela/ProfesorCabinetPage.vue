@@ -12,6 +12,19 @@
     </section>
 
     <div class="esc-shell">
+      <!-- Обзор платформы (только суперюзер) -->
+      <section v-if="platform" class="esc-block">
+        <h2 class="esc-section-title">{{ st('stats.platform') }}</h2>
+        <div class="stats-grid">
+          <div class="stat-card"><span class="stat-num">{{ platform.courses_active }}</span><span class="stat-lbl">{{ st('stats.activeCourses') }}</span></div>
+          <div class="stat-card"><span class="stat-num">{{ platform.students_active }}</span><span class="stat-lbl">{{ st('stats.activeStudents') }}</span></div>
+          <div class="stat-card"><span class="stat-num">{{ platform.teachers_total }}</span><span class="stat-lbl">{{ st('stats.teachers') }}</span></div>
+          <div class="stat-card"><span class="stat-num">{{ platform.enrollments_active }}</span><span class="stat-lbl">{{ st('stats.enrollments') }}</span></div>
+          <div class="stat-card"><span class="stat-num">{{ platform.avg_completion }}%</span><span class="stat-lbl">{{ st('stats.avgCompletion') }}</span></div>
+          <div class="stat-card"><span class="stat-num">{{ platform.forum_threads }}</span><span class="stat-lbl">{{ st('stats.forumThreads') }}</span></div>
+        </div>
+      </section>
+
       <section class="esc-block">
         <h2 class="esc-section-title">{{ st('teacher.misCursos') }}</h2>
 
@@ -36,6 +49,17 @@
 
             <div v-if="activeCourseId === course.id" class="esc-roster">
               <router-link :to="`/escuela/foro/${course.id}`" class="esc-foro-link">💬 {{ st('foro.open') }}</router-link>
+
+              <!-- аналитика курса -->
+              <div v-if="analytics" class="stats-grid stats-grid--course">
+                <div class="stat-card"><span class="stat-num">{{ analytics.avg_progress }}%</span><span class="stat-lbl">{{ st('stats.avgProgress') }}</span></div>
+                <div class="stat-card"><span class="stat-num">{{ analytics.distribution.completed }}</span><span class="stat-lbl">{{ st('stats.completed') }}</span></div>
+                <div class="stat-card"><span class="stat-num">{{ analytics.distribution.in_progress }}</span><span class="stat-lbl">{{ st('stats.inProgress') }}</span></div>
+                <div class="stat-card"><span class="stat-num">{{ analytics.distribution.not_started }}</span><span class="stat-lbl">{{ st('stats.notStarted') }}</span></div>
+                <div class="stat-card"><span class="stat-num">{{ analytics.submissions.submitted }}</span><span class="stat-lbl">{{ st('stats.pending') }}</span></div>
+                <div class="stat-card"><span class="stat-num">{{ analytics.submissions.reviewed }}</span><span class="stat-lbl">{{ st('stats.reviewed') }}</span></div>
+              </div>
+
               <p v-if="rosterLoading" class="esc-muted">{{ st('teacher.cargandoAlumnos') }}</p>
               <template v-else>
                 <p v-if="roster.length === 0" class="esc-muted">{{ st('teacher.nadieCompro') }}</p>
@@ -134,6 +158,11 @@ const reviewScore = ref(null)
 const reviewComment = ref('')
 const reviewing = ref(false)
 
+// аналитика
+const analytics = ref(null)          // по раскрытому курсу
+const platform = ref(null)           // обзор платформы (суперюзер)
+const isSuperuser = computed(() => !!user.value?.is_superuser)
+
 const statusLabel = (s) => st('status.' + s)
 
 const toggleSubmission = (id) => {
@@ -178,11 +207,16 @@ const toggleCourse = async (courseId) => {
   activeCourseId.value = courseId
   rosterLoading.value = true
   roster.value = []
+  analytics.value = null
   try {
-    const { data } = await schoolApi.teacherCourseStudents(courseId)
-    roster.value = data.students
+    const [r, a] = await Promise.all([
+      schoolApi.teacherCourseStudents(courseId),
+      schoolApi.courseAnalytics(courseId),
+    ])
+    roster.value = r.data.students
+    analytics.value = a.data
   } catch (error) {
-    console.error('Error al cargar alumnos:', error)
+    console.error('Error al cargar alumnos/analítica:', error)
   } finally {
     rosterLoading.value = false
   }
@@ -235,6 +269,14 @@ onMounted(async () => {
     console.error('Error al cargar el panel del profesor:', error)
   } finally {
     loadingCourses.value = false
+  }
+
+  // обзор платформы - только суперюзеру
+  if (isSuperuser.value) {
+    try {
+      const { data } = await schoolApi.platformAnalytics()
+      platform.value = data
+    } catch (e) { /* не критично */ }
   }
 })
 </script>
@@ -424,6 +466,32 @@ onMounted(async () => {
   text-decoration: none;
 }
 .esc-foro-link:hover { border-color: #8e1519; }
+
+/* --- карточки аналитики --- */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+.stats-grid--course { margin: 0 0 18px; }
+.stat-card {
+  background: #ffffff;
+  border: 1px solid #ece7e1;
+  border-radius: 14px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.stats-grid--course .stat-card { background: #faf8f5; }
+.stat-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 26px;
+  font-weight: 600;
+  color: #8e1519;
+  line-height: 1;
+}
+.stat-lbl { font-size: 13px; color: #8a8079; }
 
 .esc-muted {
   color: #8a8079;
