@@ -78,6 +78,10 @@
                         class="esc-textarea"
                       ></textarea>
                       <input type="file" class="esc-file" @change="onFileChange" />
+                      <p v-if="submitFile" class="esc-file-name">📎 {{ submitFile.name }}</p>
+                      <p v-else-if="mySub && mySub.file" class="esc-file-name">
+                        📎 <a :href="mySub.file" target="_blank" rel="noopener">{{ st('teacher.verArchivo') }}</a>
+                      </p>
                       <button
                         class="esc-complete-btn"
                         :disabled="submitting"
@@ -536,8 +540,17 @@ onMounted(async () => {
   display: block;
   font-size: 13.5px;
   color: #6b6259;
-  margin-bottom: 14px;
+  margin-bottom: 8px;
 }
+
+.esc-file-name {
+  font-size: 13.5px;
+  color: #3f3a35;
+  margin: 0 0 14px;
+}
+
+.esc-file-name a { color: #8e1519; font-weight: 600; text-decoration: none; }
+.esc-file-name a:hover { text-decoration: underline; }
 
 .esc-complete-btn--lesson {
   margin-top: 6px;

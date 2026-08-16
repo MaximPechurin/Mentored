@@ -23,6 +23,12 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
+    // Для загрузки файлов (FormData) убираем дефолтный
+    // Content-Type: application/json - иначе браузер не проставит
+    // multipart-границу и файл не долетит до сервера.
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type']
+    }
     console.log('📤 Запрос:', config.method.toUpperCase(), config.url)
     return config
   },

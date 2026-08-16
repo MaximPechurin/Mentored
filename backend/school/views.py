@@ -137,7 +137,9 @@ class AssignmentDetailView(APIView):
         if not enrollment:
             return Response({'error': 'Нет доступа к этому курсу'}, status=status.HTTP_403_FORBIDDEN)
         my_sub = Submission.objects.filter(assignment=assignment, enrollment=enrollment).first()
-        data = AssignmentDetailSerializer(assignment, context={'my_submission': my_sub}).data
+        data = AssignmentDetailSerializer(
+            assignment, context={'my_submission': my_sub, 'request': request},
+        ).data
         return Response(data)
 
 
@@ -244,7 +246,7 @@ class TeacherSubmissionsView(APIView):
         if status_filter != 'all':
             qs = qs.filter(status=status_filter)
 
-        return Response(TeacherSubmissionSerializer(qs, many=True).data)
+        return Response(TeacherSubmissionSerializer(qs, many=True, context={'request': request}).data)
 
 
 class TeacherSubmissionReviewView(APIView):

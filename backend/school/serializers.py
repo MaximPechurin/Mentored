@@ -132,7 +132,8 @@ class AssignmentDetailSerializer(serializers.ModelSerializer):
 
     def get_my_submission(self, obj):
         sub = self.context.get('my_submission')
-        return SubmissionSerializer(sub).data if sub else None
+        # прокидываем request дальше, чтобы file отдавался абсолютным URL
+        return SubmissionSerializer(sub, context=self.context).data if sub else None
 
 
 class TeacherSubmissionSerializer(serializers.ModelSerializer):
