@@ -42,4 +42,9 @@ export const schoolApi = {
   teacherSubmissions() {
     return api.get('/school/teacher/submissions/')
   },
+
+  // Проверить сдачу: { status: 'reviewed'|'needs_revision', score, mentor_comment }
+  reviewSubmission(submissionId, data) {
+    return api.post(`/school/teacher/submissions/${submissionId}/review/`, data)
+  },
 }

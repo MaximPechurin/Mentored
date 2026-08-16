@@ -65,11 +65,40 @@
 
         <div v-else class="esc-course-list">
           <div v-for="s in submissions" :key="s.id" class="esc-sub-card">
-            <div class="esc-sub-main">
-              <strong>{{ s.student }}</strong> — {{ s.assignment_title }}
-              <div class="esc-sub-sub">{{ s.course_title }} · {{ s.lesson_title }}</div>
+            <button class="esc-sub-head" @click="toggleSubmission(s.id)">
+              <div class="esc-sub-main">
+                <strong>{{ s.student }}</strong> — {{ s.assignment_title }}
+                <div class="esc-sub-sub">{{ s.course_title }} · {{ s.lesson_title }}</div>
+              </div>
+              <span class="esc-badge">{{ statusLabel(s.status) }}</span>
+            </button>
+
+            <div v-if="activeSubmissionId === s.id" class="esc-review">
+              <!-- ответ студента -->
+              <div class="esc-review-label">{{ st('teacher.respuestaAlumno') }}</div>
+              <p class="esc-review-text">{{ s.text || st('teacher.sinTexto') }}</p>
+              <p v-if="s.file" class="esc-review-file">
+                {{ st('teacher.archivoAdjunto') }}:
+                <a :href="s.file" target="_blank" rel="noopener">{{ st('teacher.verArchivo') }}</a>
+              </p>
+
+              <!-- форма проверки -->
+              <div class="esc-review-form">
+                <label class="esc-review-field">
+                  <span>{{ st('teacher.calificacion') }} (0–{{ s.max_score }})</span>
+                  <input type="number" min="0" :max="s.max_score" v-model.number="reviewScore" class="esc-score-input" />
+                </label>
+                <textarea v-model="reviewComment" rows="3" :placeholder="st('teacher.comentario')" class="esc-textarea"></textarea>
+                <div class="esc-review-actions">
+                  <button class="esc-btn-approve" :disabled="reviewing" @click="doReview(s, 'reviewed')">
+                    {{ reviewing ? st('teacher.guardando') : st('teacher.marcarRevisado') }}
+                  </button>
+                  <button class="esc-btn-return" :disabled="reviewing" @click="doReview(s, 'needs_revision')">
+                    {{ st('teacher.devolver') }}
+                  </button>
+                </div>
+              </div>
             </div>
-            <span class="esc-badge">{{ statusLabel(s.status) }}</span>
           </div>
         </div>
       </section>
@@ -98,7 +127,47 @@ const activeCourseId = ref(null)
 const rosterLoading = ref(false)
 const roster = ref([])
 
+// проверка сдачи ДЗ
+const activeSubmissionId = ref(null)
+const reviewScore = ref(null)
+const reviewComment = ref('')
+const reviewing = ref(false)
+
 const statusLabel = (s) => st('status.' + s)
+
+const toggleSubmission = (id) => {
+  if (activeSubmissionId.value === id) {
+    activeSubmissionId.value = null
+    return
+  }
+  activeSubmissionId.value = id
+  const s = submissions.value.find((x) => x.id === id)
+  // подставляем текущие значения (если уже оценивали)
+  reviewScore.value = s?.score ?? null
+  reviewComment.value = s?.mentor_comment ?? ''
+}
+
+const doReview = async (s, newStatus) => {
+  reviewing.value = true
+  try {
+    await schoolApi.reviewSubmission(s.id, {
+      status: newStatus,
+      score: reviewScore.value,
+      mentor_comment: reviewComment.value,
+    })
+    // сдача проверена - убираем из очереди "на проверку" и снижаем счётчик у курса
+    submissions.value = submissions.value.filter((x) => x.id !== s.id)
+    activeSubmissionId.value = null
+    const course = courses.value.find((c) => c.title === s.course_title)
+    if (course && course.pending_submissions_count > 0) course.pending_submissions_count -= 1
+  } catch (error) {
+    console.error('Error al revisar la tarea:', error)
+    const msg = error.response?.data?.error || 'Error'
+    alert(msg)
+  } finally {
+    reviewing.value = false
+  }
+}
 
 const toggleCourse = async (courseId) => {
   if (activeCourseId.value === courseId) {
@@ -394,6 +463,16 @@ onMounted(async () => {
   background: #ffffff;
   border: 1px solid #ece7e1;
   border-radius: 14px;
+  overflow: hidden;
+}
+
+.esc-sub-head {
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
   padding: 16px 20px;
   display: flex;
   align-items: center;
@@ -401,8 +480,92 @@ onMounted(async () => {
   gap: 16px;
 }
 
-.esc-sub-main { min-width: 0; }
+.esc-sub-main { min-width: 0; color: #1c1c1c; }
 .esc-sub-sub { font-size: 13px; color: #8a8079; margin-top: 2px; }
+
+/* --- панель проверки ДЗ --- */
+.esc-review {
+  border-top: 1px solid #ece7e1;
+  padding: 16px 20px 20px;
+}
+
+.esc-review-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #8a8079;
+  margin-bottom: 6px;
+}
+
+.esc-review-text {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #3f3a35;
+  white-space: pre-line;
+  margin: 0 0 12px;
+}
+
+.esc-review-file { font-size: 14px; margin: 0 0 14px; }
+.esc-review-file a { color: #8e1519; font-weight: 600; text-decoration: none; }
+.esc-review-file a:hover { text-decoration: underline; }
+
+.esc-review-form { border-top: 1px dashed #ece7e1; padding-top: 14px; }
+
+.esc-review-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #3f3a35;
+  margin-bottom: 10px;
+}
+
+.esc-score-input {
+  width: 80px;
+  border: 1px solid #e4ddd2;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 15px;
+  background: #fbf9f6;
+  outline: none;
+}
+
+.esc-score-input:focus { border-color: #8e1519; }
+
+.esc-review-form .esc-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #e4ddd2;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 14.5px;
+  background: #fbf9f6;
+  outline: none;
+  resize: vertical;
+  margin-bottom: 12px;
+}
+
+.esc-review-form .esc-textarea:focus { border-color: #8e1519; }
+
+.esc-review-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.esc-btn-approve, .esc-btn-return {
+  border: none;
+  border-radius: 999px;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.esc-btn-approve { background: #2f7a3a; color: #fff; }
+.esc-btn-return { background: #fff; color: #a52a2a; border: 1px solid #e2b8b8; }
+.esc-btn-approve:disabled, .esc-btn-return:disabled { opacity: 0.6; cursor: not-allowed; }
 
 @media (max-width: 920px) {
   .esc-hero { padding: 40px 20px !important; }
