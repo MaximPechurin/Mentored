@@ -294,6 +294,10 @@ class TeacherSubmissionReviewView(APIView):
         submission.reviewed_at = timezone.now()
         submission.save()
 
+        # письмо студенту "работа проверена" - best-effort, ревью не роняет
+        from .emails import send_submission_reviewed
+        send_submission_reviewed(submission)
+
         return Response({
             'id': submission.id,
             'status': submission.status,

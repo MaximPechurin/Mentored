@@ -51,6 +51,9 @@ def grant_course_access_for_order(order):
                     "School: выдан доступ user=%s course=%s (заказ %s)",
                     order.user_id, link.course_id, order.order_number,
                 )
+                # письмо "доступ открыт" - best-effort, не роняет вебхук
+                from .emails import send_course_access_granted
+                send_course_access_granted(order.user, link.course)
                 # Гарантируем роль student - иначе у пользователя будет
                 # доступ, но API школы (permission IsStudent) вернёт 403.
                 # Актуально для юзеров, зарегистрированных до авто-роли.
