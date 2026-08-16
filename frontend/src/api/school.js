@@ -61,4 +61,29 @@ export const schoolApi = {
   sendMessage(userId, content) {
     return api.post(`/school/messages/${userId}/`, { content })
   },
+
+  // --- Форум курса ---
+  courseThreads(courseId) {
+    return api.get(`/school/courses/${courseId}/threads/`)
+  },
+  createThread(courseId, data) {
+    return api.post(`/school/courses/${courseId}/threads/`, data)
+  },
+  getThread(threadId) {
+    return api.get(`/school/threads/${threadId}/`)
+  },
+  replyThread(threadId, content) {
+    return api.post(`/school/threads/${threadId}/posts/`, { content })
+  },
+  moderateThread(threadId, data) {
+    return api.post(`/school/threads/${threadId}/moderate/`, data)
+  },
+
+  // --- Аналитика ---
+  courseAnalytics(courseId) {
+    return api.get(`/school/teacher/courses/${courseId}/analytics/`)
+  },
+  platformAnalytics() {
+    return api.get('/school/analytics/overview/')
+  },
 }

@@ -38,6 +38,14 @@ const dict = {
     status: { submitted: 'En revisión', reviewed: 'Revisado', needs_revision: 'Devuelto' },
     statusFull: { submitted: 'Enviado, en revisión', reviewed: 'Revisado', needs_revision: 'Devuelto para corrección' },
     chat: { title: 'Mensajes', placeholder: 'Escribe un mensaje...', send: 'Enviar', empty: 'Aún no hay mensajes.', noChats: 'No hay chats disponibles.', back: '← Atrás' },
+    foro: {
+      title: 'Foro del curso', open: 'Foro', back: '← Al curso', backThreads: '← Temas',
+      newThread: 'Nueva tema', threadTitle: 'Título de la tema', message: 'Mensaje',
+      create: 'Crear tema', reply: 'Responder', empty: 'Todavía no hay temas. ¡Crea la primera!',
+      noPosts: 'Sin mensajes.', locked: 'Tema cerrada', teacher: 'Profesor',
+      pin: 'Fijar', unpin: 'Desfijar', lock: 'Cerrar', unlock: 'Abrir', pinned: '📌 Fijada',
+      writeReply: 'Escribe una respuesta...', posts: 'mensajes',
+    },
   },
   ru: {
     nav: { misCursos: 'Мои курсы', panelProfesor: 'Кабинет преподавателя', volverSitio: '← Вернуться на сайт', salir: 'Выйти' },
@@ -67,6 +75,14 @@ const dict = {
     status: { submitted: 'На проверке', reviewed: 'Проверено', needs_revision: 'Возвращено' },
     statusFull: { submitted: 'Отправлено, на проверке', reviewed: 'Проверено', needs_revision: 'Возвращено на доработку' },
     chat: { title: 'Сообщения', placeholder: 'Напишите сообщение...', send: 'Отправить', empty: 'Пока нет сообщений.', noChats: 'Нет доступных чатов.', back: '← Назад' },
+    foro: {
+      title: 'Форум курса', open: 'Форум', back: '← К курсу', backThreads: '← Темы',
+      newThread: 'Новая тема', threadTitle: 'Заголовок темы', message: 'Сообщение',
+      create: 'Создать тему', reply: 'Ответить', empty: 'Тем пока нет. Создайте первую!',
+      noPosts: 'Нет сообщений.', locked: 'Тема закрыта', teacher: 'Преподаватель',
+      pin: 'Закрепить', unpin: 'Открепить', lock: 'Закрыть', unlock: 'Открыть', pinned: '📌 Закреплена',
+      writeReply: 'Напишите ответ...', posts: 'сообщений',
+    },
   },
   en: {
     nav: { misCursos: 'My courses', panelProfesor: 'Teacher panel', volverSitio: '← Back to site', salir: 'Log out' },
@@ -96,6 +112,14 @@ const dict = {
     status: { submitted: 'In review', reviewed: 'Reviewed', needs_revision: 'Returned' },
     statusFull: { submitted: 'Submitted, in review', reviewed: 'Reviewed', needs_revision: 'Returned for revision' },
     chat: { title: 'Messages', placeholder: 'Write a message...', send: 'Send', empty: 'No messages yet.', noChats: 'No chats available.', back: '← Back' },
+    foro: {
+      title: 'Course forum', open: 'Forum', back: '← To course', backThreads: '← Threads',
+      newThread: 'New thread', threadTitle: 'Thread title', message: 'Message',
+      create: 'Create thread', reply: 'Reply', empty: 'No threads yet. Create the first one!',
+      noPosts: 'No messages.', locked: 'Thread closed', teacher: 'Teacher',
+      pin: 'Pin', unpin: 'Unpin', lock: 'Close', unlock: 'Open', pinned: '📌 Pinned',
+      writeReply: 'Write a reply...', posts: 'messages',
+    },
   },
 }
 

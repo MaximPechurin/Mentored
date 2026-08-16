@@ -18,6 +18,7 @@ import OrderPage from "../views/order/OrderPage.vue";
 import EstudianteCabinetPage from "../views/escuela/EstudianteCabinetPage.vue";
 import ProfesorCabinetPage from "../views/escuela/ProfesorCabinetPage.vue";
 import EscuelaCoursePage from "../views/escuela/EscuelaCoursePage.vue";
+import ForoPage from "../views/escuela/ForoPage.vue";
 
 const routes = [
   {
@@ -113,6 +114,13 @@ const routes = [
     path: '/escuela/curso/:slug',
     name: 'EscuelaCourse',
     component: EscuelaCoursePage,
+  },
+  {
+    // Форум курса (участники = студенты + преподаватели курса, проверка
+    // на бэкенде). Доступ по is_dev, см. ForoPage.vue.
+    path: '/escuela/foro/:courseId',
+    name: 'EscuelaForo',
+    component: ForoPage,
   },
 ]
 

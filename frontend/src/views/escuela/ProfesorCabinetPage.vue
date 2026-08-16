@@ -35,6 +35,7 @@
             </button>
 
             <div v-if="activeCourseId === course.id" class="esc-roster">
+              <router-link :to="`/escuela/foro/${course.id}`" class="esc-foro-link">💬 {{ st('foro.open') }}</router-link>
               <p v-if="rosterLoading" class="esc-muted">{{ st('teacher.cargandoAlumnos') }}</p>
               <template v-else>
                 <p v-if="roster.length === 0" class="esc-muted">{{ st('teacher.nadieCompro') }}</p>
@@ -409,6 +410,20 @@ onMounted(async () => {
   border-top: 1px solid #ece7e1;
   padding: 12px 24px 20px;
 }
+
+.esc-foro-link {
+  display: inline-block;
+  margin-bottom: 12px;
+  background: #faf8f5;
+  border: 1px solid #ece7e1;
+  border-radius: 999px;
+  padding: 7px 16px;
+  color: #8e1519;
+  font-weight: 600;
+  font-size: 13.5px;
+  text-decoration: none;
+}
+.esc-foro-link:hover { border-color: #8e1519; }
 
 .esc-muted {
   color: #8a8079;

@@ -14,6 +14,9 @@
     </section>
 
     <div class="esc-shell">
+      <router-link v-if="course.id" :to="`/escuela/foro/${course.id}`" class="esc-foro-link">
+        💬 {{ st('foro.open') }}
+      </router-link>
       <p v-if="course.description" class="esc-course-description">{{ course.description }}</p>
 
       <div v-for="module in course.modules" :key="module.id" class="esc-module">
@@ -319,6 +322,20 @@ onMounted(async () => {
   margin: 0 auto;
   padding: 40px 32px 88px;
 }
+
+.esc-foro-link {
+  display: inline-block;
+  margin: 0 0 20px;
+  background: #fff;
+  border: 1px solid #ece7e1;
+  border-radius: 999px;
+  padding: 9px 20px;
+  color: #8e1519;
+  font-weight: 600;
+  font-size: 14.5px;
+  text-decoration: none;
+}
+.esc-foro-link:hover { border-color: #8e1519; }
 
 .esc-course-description {
   font-size: 16px;
