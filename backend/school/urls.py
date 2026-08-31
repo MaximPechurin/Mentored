@@ -13,7 +13,11 @@ from .views import (
 urlpatterns = [
     # Студент
     path('my-courses/', MyCoursesView.as_view(), name='school-my-courses'),
-    path('courses/<slug:slug>/', CourseDetailView.as_view(), name='school-course-detail'),
+    # str, а не slug - Course.slug генерируется с allow_unicode=True
+    # (заголовки на русском/испанском с диакритикой), а встроенный
+    # slug-конвертер матчит только ASCII [-a-zA-Z0-9_]+ и 404-тил бы
+    # на любом слаге с не-ASCII символом ещё до вызова CourseDetailView.
+    path('courses/<str:slug>/', CourseDetailView.as_view(), name='school-course-detail'),
     path('lessons/<int:lesson_id>/progress/', LessonProgressView.as_view(), name='school-lesson-progress'),
     path('assignments/<int:assignment_id>/', AssignmentDetailView.as_view(), name='school-assignment-detail'),
     path('assignments/<int:assignment_id>/submit/', AssignmentSubmitView.as_view(), name='school-assignment-submit'),
