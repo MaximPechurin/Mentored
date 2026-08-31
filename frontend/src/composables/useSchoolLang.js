@@ -45,6 +45,7 @@ const dict = {
       noPosts: 'Sin mensajes.', locked: 'Tema cerrada', teacher: 'Profesor',
       pin: 'Fijar', unpin: 'Desfijar', lock: 'Cerrar', unlock: 'Abrir', pinned: '📌 Fijada',
       writeReply: 'Escribe una respuesta...', posts: 'mensajes',
+      subtitulo: 'Preguntas y comunidad del curso',
     },
     stats: {
       title: 'Analítica', avgProgress: 'Progreso medio', completed: 'Completado',
@@ -90,6 +91,7 @@ const dict = {
       noPosts: 'Нет сообщений.', locked: 'Тема закрыта', teacher: 'Преподаватель',
       pin: 'Закрепить', unpin: 'Открепить', lock: 'Закрыть', unlock: 'Открыть', pinned: '📌 Закреплена',
       writeReply: 'Напишите ответ...', posts: 'сообщений',
+      subtitulo: 'Вопросы и общение по курсу',
     },
     stats: {
       title: 'Аналитика', avgProgress: 'Средний прогресс', completed: 'Завершили',
@@ -135,6 +137,7 @@ const dict = {
       noPosts: 'No messages.', locked: 'Thread closed', teacher: 'Teacher',
       pin: 'Pin', unpin: 'Unpin', lock: 'Close', unlock: 'Open', pinned: '📌 Pinned',
       writeReply: 'Write a reply...', posts: 'messages',
+      subtitulo: 'Questions and course community',
     },
     stats: {
       title: 'Analytics', avgProgress: 'Avg. progress', completed: 'Completed',

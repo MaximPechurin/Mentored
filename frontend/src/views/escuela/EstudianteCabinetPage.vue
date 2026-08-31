@@ -24,22 +24,35 @@
       </div>
 
       <div v-else class="esc-courses">
-        <router-link
-          v-for="course in courses"
-          :key="course.id"
-          :to="`/escuela/curso/${course.slug}`"
-          class="esc-course"
-        >
-          <h3 class="esc-course-title">{{ course.title }}</h3>
-          <p v-if="course.teachers.length" class="esc-course-teacher">{{ course.teachers.join(', ') }}</p>
-          <div class="esc-progress">
-            <span>{{ st('common.progreso') }}</span>
-            <span class="esc-progress-value">{{ course.progress_percent }}%</span>
-          </div>
-          <div class="esc-progress-bar">
-            <div class="esc-progress-fill" :style="{ width: course.progress_percent + '%' }"></div>
-          </div>
-        </router-link>
+        <template v-for="course in courses" :key="course.id">
+          <router-link
+            :to="`/escuela/curso/${course.slug}`"
+            class="esc-course"
+          >
+            <h3 class="esc-course-title">{{ course.title }}</h3>
+            <p v-if="course.teachers.length" class="esc-course-teacher">{{ course.teachers.join(', ') }}</p>
+            <div class="esc-progress">
+              <span>{{ st('common.progreso') }}</span>
+              <span class="esc-progress-value">{{ course.progress_percent }}%</span>
+            </div>
+            <div class="esc-progress-bar">
+              <div class="esc-progress-fill" :style="{ width: course.progress_percent + '%' }"></div>
+            </div>
+          </router-link>
+
+          <router-link :to="`/escuela/foro/${course.id}`" class="esc-foro-card">
+            <span class="esc-foro-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+            </span>
+            <div>
+              <h3 class="esc-foro-title">{{ st('foro.title') }}</h3>
+              <p class="esc-foro-sub">{{ course.title }}</p>
+              <p class="esc-foro-desc">{{ st('foro.subtitulo') }}</p>
+            </div>
+          </router-link>
+        </template>
       </div>
     </div>
   </div>
@@ -283,7 +296,60 @@ onMounted(async () => {
   transition: width 0.3s;
 }
 
+/* --- Panel del foro (junto a las tarjetas de curso) --- */
+.esc-foro-card {
+  grid-column: span 2;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: #0e0c0c;
+  border: 1.5px solid #c49a3f;
+  border-radius: 18px;
+  padding: 26px 28px;
+  text-decoration: none;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+.esc-foro-card:hover {
+  background: #1a1614;
+  border-color: #d9ac4b;
+}
+
+.esc-foro-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(196, 154, 63, 0.15);
+  color: #c49a3f;
+  flex-shrink: 0;
+}
+
+.esc-foro-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 4px;
+}
+
+.esc-foro-sub {
+  font-size: 14px;
+  font-weight: 600;
+  color: #c49a3f;
+  margin: 0 0 4px;
+}
+
+.esc-foro-desc {
+  font-size: 13.5px;
+  color: #b8afa8;
+  margin: 0;
+}
+
 @media (max-width: 920px) {
+  .esc-foro-card { grid-column: span 1; padding: 20px; }
   .esc-hero { padding: 40px 20px !important; }
   .esc-shell { padding: 32px 20px 72px !important; }
 }
