@@ -12,6 +12,26 @@
     </section>
 
     <div class="esc-shell">
+      <div v-if="courses.length" class="esc-foros">
+        <router-link
+          v-for="course in courses"
+          :key="'foro-' + course.id"
+          :to="`/escuela/foro/${course.id}`"
+          class="esc-foro-card"
+        >
+          <span class="esc-foro-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+          </span>
+          <div>
+            <h3 class="esc-foro-title">{{ st('foro.title') }}</h3>
+            <p class="esc-foro-sub">{{ course.title }}</p>
+            <p class="esc-foro-desc">{{ st('foro.subtitulo') }}</p>
+          </div>
+        </router-link>
+      </div>
+
       <h2 class="esc-section-title">{{ st('student.misCursos') }}</h2>
 
       <div v-if="loadingCourses" class="esc-empty">
@@ -24,35 +44,22 @@
       </div>
 
       <div v-else class="esc-courses">
-        <template v-for="course in courses" :key="course.id">
-          <router-link
-            :to="`/escuela/curso/${course.slug}`"
-            class="esc-course"
-          >
-            <h3 class="esc-course-title">{{ course.title }}</h3>
-            <p v-if="course.teachers.length" class="esc-course-teacher">{{ course.teachers.join(', ') }}</p>
-            <div class="esc-progress">
-              <span>{{ st('common.progreso') }}</span>
-              <span class="esc-progress-value">{{ course.progress_percent }}%</span>
-            </div>
-            <div class="esc-progress-bar">
-              <div class="esc-progress-fill" :style="{ width: course.progress_percent + '%' }"></div>
-            </div>
-          </router-link>
-
-          <router-link :to="`/escuela/foro/${course.id}`" class="esc-foro-card">
-            <span class="esc-foro-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-              </svg>
-            </span>
-            <div>
-              <h3 class="esc-foro-title">{{ st('foro.title') }}</h3>
-              <p class="esc-foro-sub">{{ course.title }}</p>
-              <p class="esc-foro-desc">{{ st('foro.subtitulo') }}</p>
-            </div>
-          </router-link>
-        </template>
+        <router-link
+          v-for="course in courses"
+          :key="course.id"
+          :to="`/escuela/curso/${course.slug}`"
+          class="esc-course"
+        >
+          <h3 class="esc-course-title">{{ course.title }}</h3>
+          <p v-if="course.teachers.length" class="esc-course-teacher">{{ course.teachers.join(', ') }}</p>
+          <div class="esc-progress">
+            <span>{{ st('common.progreso') }}</span>
+            <span class="esc-progress-value">{{ course.progress_percent }}%</span>
+          </div>
+          <div class="esc-progress-bar">
+            <div class="esc-progress-fill" :style="{ width: course.progress_percent + '%' }"></div>
+          </div>
+        </router-link>
       </div>
     </div>
   </div>
@@ -296,9 +303,15 @@ onMounted(async () => {
   transition: width 0.3s;
 }
 
-/* --- Panel del foro (junto a las tarjetas de curso) --- */
+/* --- Panel del foro (encima de "Mis cursos") --- */
+.esc-foros {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 40px;
+}
+
 .esc-foro-card {
-  grid-column: span 2;
   display: flex;
   align-items: center;
   gap: 18px;
@@ -349,7 +362,7 @@ onMounted(async () => {
 }
 
 @media (max-width: 920px) {
-  .esc-foro-card { grid-column: span 1; padding: 20px; }
+  .esc-foro-card { padding: 20px; }
   .esc-hero { padding: 40px 20px !important; }
   .esc-shell { padding: 32px 20px 72px !important; }
 }
