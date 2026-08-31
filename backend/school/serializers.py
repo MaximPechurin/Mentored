@@ -178,6 +178,7 @@ class TeacherCourseSerializer(serializers.ModelSerializer):
 class TeacherStudentProgressSerializer(serializers.ModelSerializer):
     """ Строка ростера: студент курса + его прогресс (на базе Enrollment). """
     student = serializers.SerializerMethodField()
+    user_id = serializers.IntegerField(source='user.id')
     email = serializers.EmailField(source='user.email')
     lessons_total = serializers.SerializerMethodField()
     lessons_completed = serializers.SerializerMethodField()
@@ -186,7 +187,7 @@ class TeacherStudentProgressSerializer(serializers.ModelSerializer):
     class Meta:
         model = Enrollment
         fields = [
-            'id', 'student', 'email', 'is_active', 'enrolled_at',
+            'id', 'user_id', 'student', 'email', 'is_active', 'enrolled_at',
             'lessons_total', 'lessons_completed', 'progress_percent',
         ]
 

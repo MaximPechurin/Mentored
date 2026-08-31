@@ -63,7 +63,12 @@
               <p v-if="rosterLoading" class="esc-muted">{{ st('teacher.cargandoAlumnos') }}</p>
               <template v-else>
                 <p v-if="roster.length === 0" class="esc-muted">{{ st('teacher.nadieCompro') }}</p>
-                <div v-for="row in roster" :key="row.id" class="esc-student">
+                <router-link
+                  v-for="row in roster"
+                  :key="row.id"
+                  :to="`/escuela/profesor/curso/${course.id}/alumno/${row.user_id}`"
+                  class="esc-student"
+                >
                   <div class="esc-student-info">
                     <span class="esc-student-name">{{ row.student }}</span>
                     <span class="esc-student-email">{{ row.email }}</span>
@@ -74,7 +79,7 @@
                     </div>
                     <span class="esc-progress-val">{{ row.progress_percent }}% ({{ row.lessons_completed }}/{{ row.lessons_total }})</span>
                   </div>
-                </div>
+                </router-link>
               </template>
             </div>
           </div>
@@ -505,6 +510,8 @@ onMounted(async () => {
   gap: 16px;
   padding: 12px 0;
   border-bottom: 1px solid #f0ebe5;
+  text-decoration: none;
+  cursor: pointer;
 }
 
 .esc-student:last-child { border-bottom: none; }

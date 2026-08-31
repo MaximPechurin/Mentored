@@ -18,6 +18,7 @@ import OrderPage from "../views/order/OrderPage.vue";
 import EstudianteCabinetPage from "../views/escuela/EstudianteCabinetPage.vue";
 import ProfesorCabinetPage from "../views/escuela/ProfesorCabinetPage.vue";
 import EscuelaCoursePage from "../views/escuela/EscuelaCoursePage.vue";
+import EscuelaAlumnoProgresoPage from "../views/escuela/EscuelaAlumnoProgresoPage.vue";
 import ForoPage from "../views/escuela/ForoPage.vue";
 
 const routes = [
@@ -114,6 +115,14 @@ const routes = [
     path: '/escuela/curso/:slug',
     name: 'EscuelaCourse',
     component: EscuelaCoursePage,
+  },
+  {
+    // Прогресс конкретного студента с точки зрения его преподавателя -
+    // доступ по роли teacher + проверке CourseTeacher на бэкенде
+    // (403/404 -> forbidden state), см. EscuelaAlumnoProgresoPage.vue.
+    path: '/escuela/profesor/curso/:courseId/alumno/:userId',
+    name: 'EscuelaAlumnoProgreso',
+    component: EscuelaAlumnoProgresoPage,
   },
   {
     // Форум курса (участники = студенты + преподаватели курса, проверка

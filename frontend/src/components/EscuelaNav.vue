@@ -13,7 +13,7 @@
       </nav>
 
       <div class="esc-nav-actions">
-        <div class="esc-lang">
+        <div v-if="isSuperuser" class="esc-lang">
           <button
             v-for="lang in supported"
             :key="lang"
@@ -30,7 +30,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
 import { useSchoolLang } from '../composables/useSchoolLang'
@@ -41,8 +41,16 @@ const { st, schoolLang, supported, setSchoolLang } = useSchoolLang()
 
 const isStudent = computed(() => !!user.value?.roles?.includes('student'))
 const isTeacher = computed(() => !!user.value?.roles?.includes('teacher'))
+const isSuperuser = computed(() => !!user.value?.is_superuser)
 // Куда ведёт логотип: у препода - его панель, иначе - кабинет студента
 const schoolHome = computed(() => (isTeacher.value ? '/escuela/profesor' : '/escuela/estudiante'))
+
+// Переключатель языка - только для суперюзеров (тестирование локализации).
+// Обычные студенты/преподаватели всегда видят испанский, даже если в
+// localStorage этого браузера случайно остался другой school_lang.
+watch(isSuperuser, (val) => {
+  if (!val) setSchoolLang('es')
+}, { immediate: true })
 
 const handleLogout = () => {
   logout()

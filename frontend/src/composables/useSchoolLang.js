@@ -12,7 +12,7 @@ const schoolLang = ref(SUPPORTED.includes(stored) ? stored : 'es')
 const dict = {
   es: {
     nav: { misCursos: 'Mis cursos', panelProfesor: 'Panel de profesor', volverSitio: '← Volver al sitio', salir: 'Salir' },
-    common: { cargando: 'Cargando...', progreso: 'Progreso' },
+    common: { cargando: 'Cargando...', progreso: 'Progreso', volver: '← Volver' },
     student: {
       panel: 'Panel de estudiante', hola: 'Hola', misCursos: 'Mis cursos',
       cargandoCursos: 'Cargando tus cursos...', sinCursos: 'Aún no tienes cursos activos.',
@@ -33,7 +33,7 @@ const dict = {
       respuestaAlumno: 'Respuesta del alumno', archivoAdjunto: 'Archivo adjunto', verArchivo: 'Ver archivo',
       sinTexto: '(sin texto)', calificacion: 'Calificación', comentario: 'Comentario (opcional)',
       marcarRevisado: 'Aprobar', devolver: 'Devolver para corrección', guardando: 'Guardando...',
-      revisado: '¡Revisado!',
+      revisado: '¡Revisado!', progresoAlumno: 'Progreso del alumno',
     },
     status: { submitted: 'En revisión', reviewed: 'Revisado', needs_revision: 'Devuelto' },
     statusFull: { submitted: 'Enviado, en revisión', reviewed: 'Revisado', needs_revision: 'Devuelto para corrección' },
@@ -57,7 +57,7 @@ const dict = {
   },
   ru: {
     nav: { misCursos: 'Мои курсы', panelProfesor: 'Кабинет преподавателя', volverSitio: '← Вернуться на сайт', salir: 'Выйти' },
-    common: { cargando: 'Загрузка...', progreso: 'Прогресс' },
+    common: { cargando: 'Загрузка...', progreso: 'Прогресс', volver: '← Назад' },
     student: {
       panel: 'Кабинет студента', hola: 'Привет', misCursos: 'Мои курсы',
       cargandoCursos: 'Загружаем ваши курсы...', sinCursos: 'У вас пока нет активных курсов.',
@@ -78,7 +78,7 @@ const dict = {
       respuestaAlumno: 'Ответ студента', archivoAdjunto: 'Прикреплённый файл', verArchivo: 'Открыть файл',
       sinTexto: '(без текста)', calificacion: 'Оценка', comentario: 'Комментарий (необязательно)',
       marcarRevisado: 'Принять', devolver: 'Вернуть на доработку', guardando: 'Сохранение...',
-      revisado: 'Проверено!',
+      revisado: 'Проверено!', progresoAlumno: 'Прогресс студента',
     },
     status: { submitted: 'На проверке', reviewed: 'Проверено', needs_revision: 'Возвращено' },
     statusFull: { submitted: 'Отправлено, на проверке', reviewed: 'Проверено', needs_revision: 'Возвращено на доработку' },
@@ -102,7 +102,7 @@ const dict = {
   },
   en: {
     nav: { misCursos: 'My courses', panelProfesor: 'Teacher panel', volverSitio: '← Back to site', salir: 'Log out' },
-    common: { cargando: 'Loading...', progreso: 'Progress' },
+    common: { cargando: 'Loading...', progreso: 'Progress', volver: '← Back' },
     student: {
       panel: 'Student panel', hola: 'Hi', misCursos: 'My courses',
       cargandoCursos: 'Loading your courses...', sinCursos: 'You have no active courses yet.',
@@ -123,7 +123,7 @@ const dict = {
       respuestaAlumno: 'Student answer', archivoAdjunto: 'Attached file', verArchivo: 'Open file',
       sinTexto: '(no text)', calificacion: 'Grade', comentario: 'Comment (optional)',
       marcarRevisado: 'Approve', devolver: 'Return for revision', guardando: 'Saving...',
-      revisado: 'Reviewed!',
+      revisado: 'Reviewed!', progresoAlumno: 'Student progress',
     },
     status: { submitted: 'In review', reviewed: 'Reviewed', needs_revision: 'Returned' },
     statusFull: { submitted: 'Submitted, in review', reviewed: 'Reviewed', needs_revision: 'Returned for revision' },

@@ -38,6 +38,11 @@ export const schoolApi = {
     return api.get(`/school/teacher/courses/${courseId}/students/`)
   },
 
+  // Модули/уроки курса с прогрессом конкретного студента (вид препода)
+  teacherStudentCourse(courseId, userId) {
+    return api.get(`/school/teacher/courses/${courseId}/students/${userId}/`)
+  },
+
   // Очередь домашних заданий на проверку (по умолчанию submitted)
   teacherSubmissions() {
     return api.get('/school/teacher/submissions/')

@@ -3,7 +3,7 @@ from django.urls import path
 from .views import (
     MyCoursesView, CourseDetailView, LessonProgressView,
     AssignmentDetailView, AssignmentSubmitView,
-    TeacherCoursesView, TeacherCourseStudentsView,
+    TeacherCoursesView, TeacherCourseStudentsView, TeacherStudentCourseDetailView,
     TeacherSubmissionsView, TeacherSubmissionReviewView,
     CourseThreadsView, ThreadDetailView, ThreadPostsView, ThreadModerateView,
     ConversationsView, ConversationView, ChatDirectoryView,
@@ -21,6 +21,7 @@ urlpatterns = [
     # Преподаватель
     path('teacher/courses/', TeacherCoursesView.as_view(), name='school-teacher-courses'),
     path('teacher/courses/<int:course_id>/students/', TeacherCourseStudentsView.as_view(), name='school-teacher-course-students'),
+    path('teacher/courses/<int:course_id>/students/<int:user_id>/', TeacherStudentCourseDetailView.as_view(), name='school-teacher-student-course-detail'),
     path('teacher/courses/<int:course_id>/analytics/', TeacherCourseAnalyticsView.as_view(), name='school-teacher-course-analytics'),
     path('teacher/submissions/', TeacherSubmissionsView.as_view(), name='school-teacher-submissions'),
     path('teacher/submissions/<int:submission_id>/review/', TeacherSubmissionReviewView.as_view(), name='school-teacher-submission-review'),

@@ -226,6 +226,54 @@ class TeacherCourseStudentsView(APIView):
         })
 
 
+class TeacherStudentCourseDetailView(APIView):
+    """
+    GET /school/teacher/courses/<course_id>/students/<user_id>/ - модули/
+    уроки курса с прогрессом КОНКРЕТНОГО студента, с точки зрения его
+    преподавателя (только для ментора этого курса, иначе 403).
+
+    Не путать с CourseDetailView - та отдаёт прогресс request.user по его
+    собственному Enrollment (для студента), тут же прогресс смотрит
+    преподаватель по чужому Enrollment (студента из ростера).
+    """
+    permission_classes = [IsAuthenticated, IsDev, IsTeacher]
+
+    def get(self, request, course_id, user_id):
+        course = get_object_or_404(Course, id=course_id)
+        if not course.course_teachers.filter(teacher=request.user).exists():
+            return Response({'error': 'Это не ваш курс'}, status=status.HTTP_403_FORBIDDEN)
+
+        student = get_object_or_404(User, id=user_id)
+        enrollment = Enrollment.objects.filter(
+            user=student, course=course, is_active=True,
+        ).first()
+        if not enrollment:
+            return Response({'error': 'У этого студента нет доступа к курсу'}, status=status.HTTP_404_NOT_FOUND)
+
+        modules = course.modules.prefetch_related(
+            'lessons__materials', 'lessons__assignments',
+        ).order_by('order')
+        progress_by_lesson = {
+            p.lesson_id: p for p in LessonProgress.objects.filter(enrollment=enrollment)
+        }
+        modules_data = ModuleSerializer(
+            modules, many=True, context={'progress_by_lesson': progress_by_lesson},
+        ).data
+
+        return Response({
+            'id': course.id,
+            'slug': course.slug,
+            'title': course.title,
+            'description': course.description,
+            'student': {
+                'id': student.id,
+                'name': student.username or student.email,
+                'email': student.email,
+            },
+            'modules': modules_data,
+        })
+
+
 class TeacherSubmissionsView(APIView):
     """
     GET /school/teacher/submissions/ - очередь на проверку: сдачи по
