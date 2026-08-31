@@ -65,6 +65,14 @@
             <circle cx="12" cy="7" r="4"/>
           </svg>
         </router-link>
+        <!-- Вход в /admin/ - только суперюзерам. Обычная <a>, не router-link:
+             /admin/ - серверная страница Django, а не маршрут SPA. -->
+        <a v-if="isSuperuser" href="/admin/" class="icon-btn" aria-label="Admin">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 2 4 5.5V11c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V5.5L12 2z"/>
+            <path d="m9.5 12 1.8 1.8L15 10"/>
+          </svg>
+        </a>
         <button class="burger" aria-label="Menú">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
             <line x1="3" y1="6" x2="21" y2="6"/>
@@ -91,6 +99,7 @@ const { currentLang, setLanguage, t } = useLanguage()
 // дёргаем API при каждой отрисовке хедера.
 const { user } = useAuth()
 const isDev = computed(() => !!user.value?.is_dev)
+const isSuperuser = computed(() => !!user.value?.is_superuser)
 const isStudent = computed(() => !!user.value?.roles?.includes('student'))
 const isTeacher = computed(() => !!user.value?.roles?.includes('teacher'))
 // Доступ к школе: dev-аккаунт с ролью студента или преподавателя
