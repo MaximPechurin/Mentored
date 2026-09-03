@@ -27,6 +27,22 @@ export const schoolApi = {
     return api.post(`/school/assignments/${assignmentId}/submit/`, formData)
   },
 
+  // Лента «Ответы и комментарии» под заданием (публичные + свой).
+  // sort: 'old' (по умолчанию) | 'new'
+  assignmentAnswers(assignmentId, sort = 'old') {
+    return api.get(`/school/assignments/${assignmentId}/answers/`, { params: { sort } })
+  },
+
+  // Комментарий к ответу на задание
+  addSubmissionComment(submissionId, text) {
+    return api.post(`/school/submissions/${submissionId}/comments/`, { text })
+  },
+
+  // Открыть/скрыть свой ответ для других учеников
+  setSubmissionVisibility(submissionId, isPublic) {
+    return api.post(`/school/submissions/${submissionId}/visibility/`, { is_public: isPublic })
+  },
+
   // --- Преподаватель ---
   // Мои курсы (как препода) со счётчиками
   teacherCourses() {
@@ -46,6 +62,12 @@ export const schoolApi = {
   // Очередь домашних заданий на проверку (по умолчанию submitted)
   teacherSubmissions() {
     return api.get('/school/teacher/submissions/')
+  },
+
+  // Сводка ДЗ по всем курсам препода: по каждому студенту все задания
+  // со статусом выполнено/не выполнено
+  teacherHomework() {
+    return api.get('/school/teacher/homework/')
   },
 
   // Проверить сдачу: { status: 'reviewed'|'needs_revision', score, mentor_comment }

@@ -11,12 +11,13 @@ from django.db.models import Q
 
 from .models import (
     Course, Enrollment, Lesson, LessonProgress, Assignment, Submission,
-    ForumThread, ForumPost, DirectMessage, CourseTeacher,
+    SubmissionComment, ForumThread, ForumPost, DirectMessage, CourseTeacher,
     is_course_participant, is_course_teacher, can_direct_message,
 )
 from .permissions import IsStudent, IsTeacher, IsDev
 from .serializers import (
     ModuleSerializer, MyCourseSerializer, AssignmentDetailSerializer,
+    AnswerFeedSerializer, SubmissionCommentSerializer,
     TeacherSubmissionSerializer, TeacherCourseSerializer,
     TeacherStudentProgressSerializer, ForumThreadListSerializer,
     ForumThreadDetailSerializer, ForumPostSerializer, DirectMessageSerializer,
@@ -136,9 +137,16 @@ class AssignmentDetailView(APIView):
         enrollment = _student_enrollment_for_assignment(request.user, assignment)
         if not enrollment:
             return Response({'error': 'Нет доступа к этому курсу'}, status=status.HTTP_403_FORBIDDEN)
-        my_sub = Submission.objects.filter(assignment=assignment, enrollment=enrollment).first()
+        my_sub = Submission.objects.prefetch_related('comments__author').filter(
+            assignment=assignment, enrollment=enrollment,
+        ).first()
+        course = assignment.lesson.module.course
         data = AssignmentDetailSerializer(
-            assignment, context={'my_submission': my_sub, 'request': request},
+            assignment, context={
+                'my_submission': my_sub,
+                'request': request,
+                'teacher_ids': set(course.course_teachers.values_list('teacher_id', flat=True)),
+            },
         ).data
         return Response(data)
 
@@ -190,6 +198,95 @@ class AssignmentSubmitView(APIView):
             'id': submission.id,
             'status': submission.status,
         }, status=status.HTTP_201_CREATED)
+
+
+class AssignmentAnswersView(APIView):
+    """
+    GET /school/assignments/<id>/answers/ - лента «Ответы и комментарии»
+    под заданием: публичные (is_public) ответы студентов курса + всегда
+    свой собственный, с комментариями. ?sort=new - новые сначала
+    (по умолчанию старые сначала, как в референсе).
+    Доступ: участник курса (студент с активным Enrollment или его
+    преподаватель).
+    """
+    permission_classes = [IsAuthenticated, IsDev]
+
+    def get(self, request, assignment_id):
+        assignment = get_object_or_404(
+            Assignment.objects.select_related('lesson__module__course'), id=assignment_id,
+        )
+        course = assignment.lesson.module.course
+        if not is_course_participant(request.user, course):
+            return Response({'error': 'Нет доступа к этому курсу'}, status=status.HTTP_403_FORBIDDEN)
+
+        order = '-submitted_at' if request.query_params.get('sort') == 'new' else 'submitted_at'
+        qs = Submission.objects.filter(assignment=assignment).filter(
+            Q(is_public=True) | Q(enrollment__user=request.user),
+        ).select_related('enrollment__user').prefetch_related('comments__author').order_by(order)
+
+        data = AnswerFeedSerializer(qs, many=True, context={
+            'request': request,
+            'me_id': request.user.id,
+            'teacher_ids': _course_teacher_ids(course),
+        }).data
+        return Response(data)
+
+
+class SubmissionCommentsView(APIView):
+    """
+    POST /school/submissions/<id>/comments/ - добавить комментарий к
+    ответу. Тело: {"text": str}. Могут: автор ответа, преподаватели
+    курса, а если ответ открыт (is_public) - любой активный студент курса.
+    """
+    permission_classes = [IsAuthenticated, IsDev]
+
+    def post(self, request, submission_id):
+        submission = get_object_or_404(
+            Submission.objects.select_related(
+                'enrollment__user', 'assignment__lesson__module__course',
+            ),
+            id=submission_id,
+        )
+        course = submission.assignment.lesson.module.course
+        me = request.user
+
+        is_owner = submission.enrollment.user_id == me.id
+        is_teacher = is_course_teacher(me, course)
+        if not (is_owner or is_teacher):
+            # чужой ответ: комментировать можно только открытый и только участнику курса
+            if not (submission.is_public and is_course_participant(me, course)):
+                return Response({'error': 'Нет доступа к этому ответу'}, status=status.HTTP_403_FORBIDDEN)
+
+        text = (request.data.get('text') or '').strip()
+        if not text:
+            return Response({'error': 'Нужен text'}, status=status.HTTP_400_BAD_REQUEST)
+
+        comment = SubmissionComment.objects.create(
+            submission=submission, author=me, text=text,
+        )
+        data = SubmissionCommentSerializer(
+            comment, context={'teacher_ids': _course_teacher_ids(course)},
+        ).data
+        return Response(data, status=status.HTTP_201_CREATED)
+
+
+class SubmissionVisibilityView(APIView):
+    """
+    POST /school/submissions/<id>/visibility/ - открыть/скрыть свой ответ
+    для других учеников курса. Тело: {"is_public": bool}. Только автор.
+    """
+    permission_classes = [IsAuthenticated, IsDev, IsStudent]
+
+    def post(self, request, submission_id):
+        submission = get_object_or_404(
+            Submission.objects.select_related('enrollment__user'), id=submission_id,
+        )
+        if submission.enrollment.user_id != request.user.id:
+            return Response({'error': 'Можно менять видимость только своего ответа'}, status=status.HTTP_403_FORBIDDEN)
+
+        submission.is_public = bool(request.data.get('is_public'))
+        submission.save(update_fields=['is_public'])
+        return Response({'id': submission.id, 'is_public': submission.is_public})
 
 
 class TeacherCoursesView(APIView):
@@ -353,6 +450,83 @@ class TeacherSubmissionReviewView(APIView):
             'status': submission.status,
             'score': submission.score,
         })
+
+
+class TeacherHomeworkView(APIView):
+    """
+    GET /school/teacher/homework/ - сводка по домашним заданиям для
+    преподавателя. По каждому его курсу отдаём список студентов, а по
+    каждому студенту - ВСЕ задания курса со статусом «выполнено / не
+    выполнено» (и статусом проверки). В отличие от TeacherSubmissionsView
+    (только очередь на проверку) тут видно и тех, кто задание ещё не сдал.
+    """
+    permission_classes = [IsAuthenticated, IsDev, IsTeacher]
+
+    def get(self, request):
+        courses = Course.objects.filter(
+            course_teachers__teacher=request.user,
+        ).distinct().order_by('title')
+
+        result = []
+        for course in courses:
+            # все задания курса в порядке модуль -> урок -> задание
+            assignments = list(
+                Assignment.objects.filter(
+                    lesson__module__course=course,
+                ).select_related('lesson', 'lesson__module').order_by(
+                    'lesson__module__order', 'lesson__order', 'id',
+                )
+            )
+            enrollments = list(
+                course.enrollments.filter(is_active=True)
+                .select_related('user').order_by('-enrolled_at')
+            )
+
+            # индекс сдач: (assignment_id, enrollment_id) -> Submission,
+            # чтобы не дёргать БД по каждому заданию каждого студента
+            subs_map = {
+                (s.assignment_id, s.enrollment_id): s
+                for s in Submission.objects.filter(
+                    assignment__in=assignments, enrollment__in=enrollments,
+                )
+            }
+
+            students = []
+            for e in enrollments:
+                rows = []
+                done = 0
+                for a in assignments:
+                    sub = subs_map.get((a.id, e.id))
+                    if sub is None:
+                        st_val = 'not_submitted'
+                    else:
+                        st_val = sub.status
+                        done += 1
+                    rows.append({
+                        'assignment_id': a.id,
+                        'title': a.title,
+                        'lesson_title': a.lesson.title,
+                        'status': st_val,
+                        'submission_id': sub.id if sub else None,
+                        'score': sub.score if sub else None,
+                        'max_score': a.max_score,
+                    })
+                students.append({
+                    'user_id': e.user_id,
+                    'student': e.user.username or e.user.email,
+                    'email': e.user.email,
+                    'done': done,
+                    'total': len(assignments),
+                    'assignments': rows,
+                })
+
+            result.append({
+                'course': {'id': course.id, 'title': course.title},
+                'assignments_total': len(assignments),
+                'students': students,
+            })
+
+        return Response(result)
 
 
 # ============================================================

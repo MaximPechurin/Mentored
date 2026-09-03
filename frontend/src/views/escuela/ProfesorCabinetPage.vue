@@ -132,6 +132,66 @@
           </div>
         </div>
       </section>
+
+      <!-- Домашние задания: по каждому студенту все ДЗ выполненные/не выполненные -->
+      <section class="esc-block">
+        <h2 class="esc-section-title">{{ st('teacher.tareasTitulo') }}</h2>
+
+        <div v-if="loadingHomework" class="esc-empty">
+          <p class="esc-empty-text">{{ st('common.cargando') }}</p>
+        </div>
+        <div v-else-if="homework.length === 0" class="esc-empty">
+          <p class="esc-empty-text">{{ st('teacher.sinCursos') }}</p>
+        </div>
+
+        <div v-else class="esc-course-list">
+          <div v-for="hc in homework" :key="hc.course.id" class="esc-course-card">
+            <button class="esc-course-head" @click="toggleHwCourse(hc.course.id)">
+              <span class="esc-course-title">{{ hc.course.title }}</span>
+              <span class="esc-course-meta">
+                {{ hc.assignments_total }} {{ st('teacher.tareasCount') }}
+                · {{ hc.students.length }} {{ st('teacher.alumnos') }}
+              </span>
+            </button>
+
+            <div v-if="activeHwCourseId === hc.course.id" class="esc-roster">
+              <p v-if="hc.assignments_total === 0" class="esc-muted">{{ st('teacher.sinAsignaciones') }}</p>
+              <p v-else-if="hc.students.length === 0" class="esc-muted">{{ st('teacher.nadieCompro') }}</p>
+
+              <div v-else class="esc-hw-list">
+                <div v-for="stu in hc.students" :key="stu.user_id" class="esc-hw-student">
+                  <div class="esc-hw-student-head">
+                    <div class="esc-student-info">
+                      <span class="esc-student-name">{{ stu.student }}</span>
+                      <span class="esc-student-email">{{ stu.email }}</span>
+                    </div>
+                    <span
+                      class="esc-hw-count"
+                      :class="{ 'esc-hw-count--full': stu.total > 0 && stu.done === stu.total }"
+                    >
+                      {{ stu.done }}/{{ stu.total }} {{ st('teacher.hechas') }}
+                    </span>
+                  </div>
+
+                  <div class="esc-hw-tasks">
+                    <span
+                      v-for="a in stu.assignments"
+                      :key="a.assignment_id"
+                      class="esc-hw-chip"
+                      :class="'esc-hw-chip--' + a.status"
+                      :title="a.lesson_title + ' · ' + a.title"
+                    >
+                      <span class="esc-hw-chip-icon">{{ a.status === 'not_submitted' ? '✗' : '✓' }}</span>
+                      {{ a.title }}
+                      <span class="esc-hw-chip-status">— {{ statusLabel(a.status) }}</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   </div>
 </template>
@@ -151,6 +211,14 @@ const checking = ref(true)
 const loadingCourses = ref(true)
 const courses = ref([])
 const submissions = ref([])
+
+// сводка ДЗ по студентам (все задания: выполненные и нет)
+const loadingHomework = ref(true)
+const homework = ref([])
+const activeHwCourseId = ref(null)
+const toggleHwCourse = (id) => {
+  activeHwCourseId.value = activeHwCourseId.value === id ? null : id
+}
 
 // раскрытый курс + его ростер студентов
 const activeCourseId = ref(null)
@@ -274,6 +342,16 @@ onMounted(async () => {
     console.error('Error al cargar el panel del profesor:', error)
   } finally {
     loadingCourses.value = false
+  }
+
+  // сводка домашних заданий по студентам
+  try {
+    const { data } = await schoolApi.teacherHomework()
+    homework.value = data
+  } catch (error) {
+    console.error('Error al cargar las tareas:', error)
+  } finally {
+    loadingHomework.value = false
   }
 
   // обзор платформы - только суперюзеру
@@ -656,6 +734,61 @@ onMounted(async () => {
 .esc-btn-approve { background: #2f7a3a; color: #fff; }
 .esc-btn-return { background: #fff; color: #a52a2a; border: 1px solid #e2b8b8; }
 .esc-btn-approve:disabled, .esc-btn-return:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* --- сводка домашних заданий по студентам --- */
+.esc-hw-list { display: flex; flex-direction: column; }
+
+.esc-hw-student {
+  padding: 14px 0;
+  border-bottom: 1px solid #f0ebe5;
+}
+.esc-hw-student:last-child { border-bottom: none; }
+
+.esc-hw-student-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.esc-hw-count {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #9a6a00;
+  background: #fff4e0;
+  border-radius: 999px;
+  padding: 4px 12px;
+  white-space: nowrap;
+}
+.esc-hw-count--full { color: #2f7a3a; background: #e7f4e9; }
+
+.esc-hw-tasks { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.esc-hw-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  border-radius: 999px;
+  padding: 5px 12px;
+  border: 1px solid #ece7e1;
+  background: #faf8f5;
+  color: #3f3a35;
+}
+.esc-hw-chip-icon { font-weight: 700; }
+.esc-hw-chip-status { color: #8a8079; }
+
+/* цвета по статусу */
+.esc-hw-chip--not_submitted { background: #fdeeee; border-color: #f0cfcf; color: #a52a2a; }
+.esc-hw-chip--not_submitted .esc-hw-chip-status { color: #b56a6a; }
+.esc-hw-chip--submitted { background: #fff4e0; border-color: #f3dcb0; color: #9a6a00; }
+.esc-hw-chip--submitted .esc-hw-chip-status { color: #b58c3f; }
+.esc-hw-chip--reviewed { background: #e7f4e9; border-color: #c4e2c9; color: #2f7a3a; }
+.esc-hw-chip--reviewed .esc-hw-chip-status { color: #5a9c63; }
+.esc-hw-chip--needs_revision { background: #fdeeee; border-color: #f0cfcf; color: #a52a2a; }
+.esc-hw-chip--needs_revision .esc-hw-chip-status { color: #b56a6a; }
 
 @media (max-width: 920px) {
   .esc-hero { padding: 40px 20px !important; }
