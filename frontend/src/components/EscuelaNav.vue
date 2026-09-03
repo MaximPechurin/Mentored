@@ -10,6 +10,7 @@
       <nav class="esc-nav-links">
         <router-link v-if="isStudent" to="/escuela/estudiante">{{ st('nav.misCursos') }}</router-link>
         <router-link v-if="isTeacher" to="/escuela/profesor">{{ st('nav.panelProfesor') }}</router-link>
+        <router-link to="/escuela/foros">{{ st('nav.foros') }}</router-link>
       </nav>
 
       <div class="esc-nav-actions">

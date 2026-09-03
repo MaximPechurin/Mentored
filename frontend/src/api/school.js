@@ -90,6 +90,10 @@ export const schoolApi = {
   },
 
   // --- Форум курса ---
+  // Список форумов моих курсов (студент и/или препод)
+  forumsList() {
+    return api.get('/school/foros/')
+  },
   courseThreads(courseId) {
     return api.get(`/school/courses/${courseId}/threads/`)
   },

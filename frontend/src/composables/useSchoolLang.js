@@ -11,7 +11,7 @@ const schoolLang = ref(SUPPORTED.includes(stored) ? stored : 'es')
 
 const dict = {
   es: {
-    nav: { misCursos: 'Mis cursos', panelProfesor: 'Panel de profesor', volverSitio: '← Volver al sitio', salir: 'Salir' },
+    nav: { misCursos: 'Mis cursos', panelProfesor: 'Panel de profesor', foros: 'Foros', volverSitio: '← Volver al sitio', salir: 'Salir' },
     common: { cargando: 'Cargando...', progreso: 'Progreso', volver: '← Volver' },
     student: {
       panel: 'Panel de estudiante', hola: 'Hola', misCursos: 'Mis cursos',
@@ -58,6 +58,8 @@ const dict = {
       pin: 'Fijar', unpin: 'Desfijar', lock: 'Cerrar', unlock: 'Abrir', pinned: '📌 Fijada',
       writeReply: 'Escribe una respuesta...', posts: 'mensajes',
       subtitulo: 'Preguntas y comunidad del curso',
+      listaTitle: 'Foros de mis cursos', listaSub: 'Elige el curso para entrar a su foro',
+      sinForos: 'No tienes cursos con foro todavía.', temas: 'temas', profe: 'profesor',
     },
     stats: {
       title: 'Analítica', avgProgress: 'Progreso medio', completed: 'Completado',
@@ -69,7 +71,7 @@ const dict = {
     },
   },
   ru: {
-    nav: { misCursos: 'Мои курсы', panelProfesor: 'Кабинет преподавателя', volverSitio: '← Вернуться на сайт', salir: 'Выйти' },
+    nav: { misCursos: 'Мои курсы', panelProfesor: 'Кабинет преподавателя', foros: 'Форумы', volverSitio: '← Вернуться на сайт', salir: 'Выйти' },
     common: { cargando: 'Загрузка...', progreso: 'Прогресс', volver: '← Назад' },
     student: {
       panel: 'Кабинет студента', hola: 'Привет', misCursos: 'Мои курсы',
@@ -116,6 +118,8 @@ const dict = {
       pin: 'Закрепить', unpin: 'Открепить', lock: 'Закрыть', unlock: 'Открыть', pinned: '📌 Закреплена',
       writeReply: 'Напишите ответ...', posts: 'сообщений',
       subtitulo: 'Вопросы и общение по курсу',
+      listaTitle: 'Форумы моих курсов', listaSub: 'Выберите курс, чтобы перейти в его форум',
+      sinForos: 'У вас пока нет курсов с форумом.', temas: 'тем', profe: 'преподаватель',
     },
     stats: {
       title: 'Аналитика', avgProgress: 'Средний прогресс', completed: 'Завершили',
@@ -127,7 +131,7 @@ const dict = {
     },
   },
   en: {
-    nav: { misCursos: 'My courses', panelProfesor: 'Teacher panel', volverSitio: '← Back to site', salir: 'Log out' },
+    nav: { misCursos: 'My courses', panelProfesor: 'Teacher panel', foros: 'Forums', volverSitio: '← Back to site', salir: 'Log out' },
     common: { cargando: 'Loading...', progreso: 'Progress', volver: '← Back' },
     student: {
       panel: 'Student panel', hola: 'Hi', misCursos: 'My courses',
@@ -174,6 +178,8 @@ const dict = {
       pin: 'Pin', unpin: 'Unpin', lock: 'Close', unlock: 'Open', pinned: '📌 Pinned',
       writeReply: 'Write a reply...', posts: 'messages',
       subtitulo: 'Questions and course community',
+      listaTitle: 'My course forums', listaSub: 'Pick a course to open its forum',
+      sinForos: 'You have no courses with a forum yet.', temas: 'threads', profe: 'teacher',
     },
     stats: {
       title: 'Analytics', avgProgress: 'Avg. progress', completed: 'Completed',

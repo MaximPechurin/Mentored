@@ -7,6 +7,7 @@ from .views import (
     TeacherCoursesView, TeacherCourseStudentsView, TeacherStudentCourseDetailView,
     TeacherSubmissionsView, TeacherSubmissionReviewView, TeacherHomeworkView,
     CourseThreadsView, ThreadDetailView, ThreadPostsView, ThreadModerateView,
+    ForumsListView,
     ConversationsView, ConversationView, ChatDirectoryView,
     TeacherCourseAnalyticsView, PlatformAnalyticsView,
 )
@@ -36,6 +37,7 @@ urlpatterns = [
     path('teacher/submissions/<int:submission_id>/review/', TeacherSubmissionReviewView.as_view(), name='school-teacher-submission-review'),
 
     # Форум курса
+    path('foros/', ForumsListView.as_view(), name='school-forums-list'),
     path('courses/<int:course_id>/threads/', CourseThreadsView.as_view(), name='school-course-threads'),
     path('threads/<int:thread_id>/', ThreadDetailView.as_view(), name='school-thread-detail'),
     path('threads/<int:thread_id>/posts/', ThreadPostsView.as_view(), name='school-thread-posts'),

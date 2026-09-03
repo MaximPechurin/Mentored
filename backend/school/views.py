@@ -537,6 +537,33 @@ def _course_teacher_ids(course):
     return set(course.course_teachers.values_list('teacher_id', flat=True))
 
 
+class ForumsListView(APIView):
+    """
+    GET /school/foros/ - список форумов курсов пользователя: курсы, где
+    он активный студент и/или преподаватель, со счётчиком тем. Точка
+    входа для кнопки «Форумы» в навигации школы.
+    """
+    permission_classes = [IsAuthenticated, IsDev]
+
+    def get(self, request):
+        me = request.user
+        student_courses = Course.objects.filter(
+            enrollments__user=me, enrollments__is_active=True, is_active=True,
+        )
+        teacher_courses = Course.objects.filter(course_teachers__teacher=me)
+        courses = (student_courses | teacher_courses).distinct().order_by('title')
+
+        return Response([
+            {
+                'id': c.id,
+                'title': c.title,
+                'threads_count': c.forum_threads.count(),
+                'is_teacher': me.id in _course_teacher_ids(c),
+            }
+            for c in courses
+        ])
+
+
 class CourseThreadsView(APIView):
     """
     GET  /school/courses/<course_id>/threads/ - список тем форума курса.

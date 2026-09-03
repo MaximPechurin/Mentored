@@ -21,6 +21,7 @@ import EscuelaCoursePage from "../views/escuela/EscuelaCoursePage.vue";
 import EscuelaLeccionPage from "../views/escuela/EscuelaLeccionPage.vue";
 import EscuelaAlumnoProgresoPage from "../views/escuela/EscuelaAlumnoProgresoPage.vue";
 import ForoPage from "../views/escuela/ForoPage.vue";
+import EscuelaForosPage from "../views/escuela/EscuelaForosPage.vue";
 
 const routes = [
   {
@@ -138,6 +139,13 @@ const routes = [
     path: '/escuela/foro/:courseId',
     name: 'EscuelaForo',
     component: ForoPage,
+  },
+  {
+    // Список форумов всех курсов пользователя (студент и/или препод) -
+    // точка входа из шапки школы, см. EscuelaForosPage.vue.
+    path: '/escuela/foros',
+    name: 'EscuelaForos',
+    component: EscuelaForosPage,
   },
 ]
 
