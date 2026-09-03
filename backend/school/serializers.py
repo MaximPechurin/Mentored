@@ -2,7 +2,8 @@ from rest_framework import serializers
 
 from .models import (
     Course, Module, Lesson, LessonMaterial, Enrollment, LessonProgress,
-    Assignment, Submission, ForumThread, ForumPost, DirectMessage,
+    Assignment, Submission, SubmissionComment, ForumThread, ForumPost,
+    DirectMessage,
 )
 
 
@@ -111,15 +112,59 @@ class MyCourseSerializer(serializers.ModelSerializer):
         return round(self.get_lessons_completed(obj) / total * 100)
 
 
+class SubmissionCommentSerializer(serializers.ModelSerializer):
+    """ Комментарий под ответом на задание (переписка в ленте ответов). """
+    author = serializers.SerializerMethodField()
+    author_id = serializers.IntegerField(source='author.id', read_only=True)
+    is_teacher = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SubmissionComment
+        fields = ['id', 'author', 'author_id', 'is_teacher', 'text', 'created_at']
+
+    def get_author(self, obj):
+        return _display_name(obj.author)
+
+    def get_is_teacher(self, obj):
+        # teacher_ids кладёт вью одним запросом на курс
+        return obj.author_id in self.context.get('teacher_ids', set())
+
+
 class SubmissionSerializer(serializers.ModelSerializer):
     """ Ответ студента на задание (для кабинета студента). """
+    comments = SubmissionCommentSerializer(many=True, read_only=True)
+
     class Meta:
         model = Submission
         fields = [
-            'id', 'text', 'file', 'status', 'score', 'mentor_comment',
-            'submitted_at', 'reviewed_at',
+            'id', 'text', 'file', 'status', 'is_public', 'score',
+            'mentor_comment', 'submitted_at', 'reviewed_at', 'comments',
         ]
         read_only_fields = ['id', 'status', 'score', 'mentor_comment', 'submitted_at', 'reviewed_at']
+
+
+class AnswerFeedSerializer(serializers.ModelSerializer):
+    """
+    Ответ в ленте «Ответы и комментарии» под заданием: публичные ответы
+    студентов курса (+ всегда свой), с автором и комментариями.
+    """
+    student = serializers.SerializerMethodField()
+    student_id = serializers.IntegerField(source='enrollment.user.id', read_only=True)
+    is_mine = serializers.SerializerMethodField()
+    comments = SubmissionCommentSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Submission
+        fields = [
+            'id', 'student', 'student_id', 'is_mine', 'text', 'file',
+            'status', 'is_public', 'score', 'submitted_at', 'comments',
+        ]
+
+    def get_student(self, obj):
+        return _display_name(obj.enrollment.user)
+
+    def get_is_mine(self, obj):
+        return obj.enrollment.user_id == self.context.get('me_id')
 
 
 class AssignmentDetailSerializer(serializers.ModelSerializer):

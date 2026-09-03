@@ -18,6 +18,7 @@ import OrderPage from "../views/order/OrderPage.vue";
 import EstudianteCabinetPage from "../views/escuela/EstudianteCabinetPage.vue";
 import ProfesorCabinetPage from "../views/escuela/ProfesorCabinetPage.vue";
 import EscuelaCoursePage from "../views/escuela/EscuelaCoursePage.vue";
+import EscuelaLeccionPage from "../views/escuela/EscuelaLeccionPage.vue";
 import EscuelaAlumnoProgresoPage from "../views/escuela/EscuelaAlumnoProgresoPage.vue";
 import ForoPage from "../views/escuela/ForoPage.vue";
 
@@ -115,6 +116,13 @@ const routes = [
     path: '/escuela/curso/:slug',
     name: 'EscuelaCourse',
     component: EscuelaCoursePage,
+  },
+  {
+    // Страница урока (материала): шапка с навигацией пред/след, контент,
+    // задание, лента ответов и комментариев. Доступ как у курса.
+    path: '/escuela/curso/:slug/leccion/:lessonId',
+    name: 'EscuelaLeccion',
+    component: EscuelaLeccionPage,
   },
   {
     // Прогресс конкретного студента с точки зрения его преподавателя -

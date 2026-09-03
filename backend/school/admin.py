@@ -3,7 +3,7 @@ from django.contrib import admin
 from .models import (
     TeacherProfile, Course, ProductCourseAccess, CourseTeacher, Module, Lesson,
     LessonMaterial, Enrollment, LessonProgress, Assignment, Submission,
-    ForumThread, ForumPost, DirectMessage,
+    SubmissionComment, ForumThread, ForumPost, DirectMessage,
 )
 
 
@@ -173,14 +173,29 @@ class AssignmentAdmin(TeacherScopedAdminMixin, admin.ModelAdmin):
     search_fields = ('title', 'lesson__title')
 
 
+class SubmissionCommentInline(admin.TabularInline):
+    model = SubmissionComment
+    extra = 0
+    fields = ('author', 'text', 'created_at')
+    readonly_fields = ('created_at',)
+
+
 @admin.register(Submission)
 class SubmissionAdmin(TeacherScopedAdminMixin, admin.ModelAdmin):
     course_lookup = 'assignment__lesson__module__course'
-    list_display = ('assignment', 'enrollment', 'status', 'score', 'submitted_at', 'reviewed_at')
-    list_filter = ('status', 'submitted_at')
+    list_display = ('assignment', 'enrollment', 'status', 'is_public', 'score', 'submitted_at', 'reviewed_at')
+    list_filter = ('status', 'is_public', 'submitted_at')
     search_fields = ('enrollment__user__email', 'assignment__title')
     date_hierarchy = 'submitted_at'
     readonly_fields = ('assignment', 'enrollment', 'text', 'file', 'submitted_at')
+    inlines = [SubmissionCommentInline]
+
+
+@admin.register(SubmissionComment)
+class SubmissionCommentAdmin(TeacherScopedAdminMixin, admin.ModelAdmin):
+    course_lookup = 'submission__assignment__lesson__module__course'
+    list_display = ('submission', 'author', 'created_at')
+    search_fields = ('author__email', 'text', 'submission__assignment__title')
 
 
 class ForumPostInline(admin.TabularInline):

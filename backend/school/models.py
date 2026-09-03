@@ -426,6 +426,12 @@ class Submission(models.Model):
         default='submitted',
         verbose_name='Статус',
     )
+    is_public = models.BooleanField(
+        default=False,
+        verbose_name='Виден другим ученикам',
+        help_text='По умолчанию ответ видят только автор и преподаватели; '
+                  'ученик может открыть его для остальных студентов курса',
+    )
     score = models.PositiveIntegerField(null=True, blank=True, verbose_name='Оценка')
     mentor_comment = models.TextField(blank=True, verbose_name='Комментарий ментора')
     reviewed_by = models.ForeignKey(
@@ -446,6 +452,37 @@ class Submission(models.Model):
 
     def __str__(self):
         return f"{self.enrollment.user.email} - {self.assignment.title} ({self.get_status_display()})"
+
+
+class SubmissionComment(models.Model):
+    """
+    Комментарий к ответу на домашнее задание (переписка под ответом,
+    как в ленте ответов GetCourse-подобных LMS). Писать могут автор
+    ответа и преподаватели курса; если ответ открыт (is_public) -
+    любой активный студент курса.
+    """
+    submission = models.ForeignKey(
+        Submission,
+        on_delete=models.CASCADE,
+        related_name='comments',
+        verbose_name='Ответ на задание',
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='submission_comments',
+        verbose_name='Автор',
+    )
+    text = models.TextField(verbose_name='Текст комментария')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата')
+
+    class Meta:
+        verbose_name = 'Комментарий к ответу'
+        verbose_name_plural = 'Комментарии к ответам'
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"{self.author.email} -> ответ #{self.submission_id}"
 
 
 # ============================================================
