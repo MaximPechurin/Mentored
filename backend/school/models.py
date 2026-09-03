@@ -239,11 +239,20 @@ class Lesson(models.Model):
     )
     title = models.CharField(max_length=255, verbose_name='Название урока')
     order = models.PositiveIntegerField(default=0, verbose_name='Порядок')
+    video_file = models.FileField(
+        upload_to=get_upload_path,
+        blank=True,
+        null=True,
+        verbose_name='Видеофайл',
+        help_text='Загруженный на сервер файл (mp4 и т.п.) - если заполнен, плеер '
+                  'использует его вместо ссылки ниже; так поддерживается пересчёт '
+                  'позиции просмотра (последняя минута сохраняется автоматически)',
+    )
     video_url = models.URLField(
         blank=True,
         null=True,
-        verbose_name='Ссылка на видео',
-        help_text='Vimeo/YouTube/облако - плеер на фронте просто встраивает эту ссылку',
+        verbose_name='Ссылка на видео (запасной вариант)',
+        help_text='Vimeo/YouTube/облако - используется только если видеофайл выше не загружен',
     )
     content = models.TextField(
         blank=True,

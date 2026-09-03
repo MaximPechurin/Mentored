@@ -49,7 +49,22 @@
 
       <!-- Тело материала: видео, текст, вложения -->
       <div class="esc-lesson-content-card">
-        <div v-if="embedUrl(lesson.video_url)" class="esc-video-wrapper">
+        <!-- видеофайл, загруженный в админке - плеер сам сохраняет позицию просмотра -->
+        <div v-if="lesson.video_file" class="esc-video-wrapper">
+          <video
+            :key="lesson.id"
+            ref="videoEl"
+            :src="lesson.video_file"
+            controls
+            playsinline
+            @loadedmetadata="onVideoLoaded"
+            @timeupdate="onVideoTimeUpdate"
+            @pause="saveVideoPosition"
+            @ended="saveVideoPosition"
+          ></video>
+        </div>
+        <!-- запасной вариант - внешняя ссылка (YouTube/Vimeo), без сохранения позиции -->
+        <div v-else-if="embedUrl(lesson.video_url)" class="esc-video-wrapper">
           <iframe
             :src="embedUrl(lesson.video_url)"
             frameborder="0"
@@ -218,7 +233,7 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive, onMounted, watch } from 'vue'
+import { ref, computed, reactive, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '../../composables/useAuth'
 import { schoolApi } from '../../api/school'
@@ -246,6 +261,48 @@ const commentDrafts = reactive({})
 const savingProgress = ref(false)
 const savingVisibility = ref(false)
 const submitting = ref(false)
+
+// сохранение позиции просмотра видеофайла (загруженного в админке)
+const videoEl = ref(null)
+let lastSavedPosition = -1
+let lastSaveAt = 0
+
+const onVideoLoaded = () => {
+  const pos = lesson.value?.last_position_seconds
+  if (videoEl.value && pos) {
+    videoEl.value.currentTime = pos
+  }
+  lastSavedPosition = pos || 0
+}
+
+const saveVideoPosition = () => {
+  if (!videoEl.value || !lesson.value) return
+  const pos = Math.floor(videoEl.value.currentTime)
+  if (pos === lastSavedPosition) return
+  lastSavedPosition = pos
+  schoolApi.updateLessonProgress(lesson.value.id, { last_position_seconds: pos })
+    .catch((error) => console.error('Error al guardar la posición del video:', error))
+}
+
+// вызывается из watch(route.params.lessonId) ДО того, как lesson/videoEl
+// переключатся на новый урок - поэтому id урока передаём явно, а не берём
+// из lesson.value (который к этому моменту уже указывает на следующий урок)
+const saveVideoPositionForLessonId = (lessonId) => {
+  if (!videoEl.value || !lessonId) return
+  const pos = Math.floor(videoEl.value.currentTime)
+  schoolApi.updateLessonProgress(lessonId, { last_position_seconds: pos })
+    .catch((error) => console.error('Error al guardar la posición del video:', error))
+}
+
+// timeupdate дёргается очень часто - сохраняем не чаще раза в 5 секунд,
+// плюс сразу на паузе/окончании (см. обработчики в шаблоне)
+const onVideoTimeUpdate = () => {
+  const now = Date.now()
+  if (now - lastSaveAt > 5000) {
+    lastSaveAt = now
+    saveVideoPosition()
+  }
+}
 
 // плоский список уроков курса (модули по порядку) - для «N из M» и пред/след
 const flatLessons = computed(() =>
@@ -391,12 +448,22 @@ const sendFeedComment = (ans, aId) => sendComment(ans.id, 'ans-' + ans.id, aId)
 
 const loadLessonData = async () => {
   if (!lesson.value) return
+  lastSavedPosition = -1
+  lastSaveAt = 0
   const ids = (lesson.value.assignments || []).map((a) => a.id)
   await Promise.all(ids.flatMap((id) => [loadAssignment(id), loadAnswers(id)]))
 }
 
-// при переходе пред/след меняется только параметр маршрута - курс уже загружен
-watch(() => route.params.lessonId, () => { loadLessonData() })
+// при переходе пред/след меняется только параметр маршрута - курс уже загружен.
+// watch с flush: 'pre' (по умолчанию) срабатывает раньше, чем DOM/videoEl
+// переключится на новый урок, поэтому videoEl.value ещё указывает на видео
+// СТАРОГО урока - успеваем сохранить его позицию под правильным id.
+watch(() => route.params.lessonId, (_, oldId) => {
+  if (oldId) saveVideoPositionForLessonId(Number(oldId))
+  loadLessonData()
+})
+
+onBeforeUnmount(() => saveVideoPosition())
 
 onMounted(async () => {
   if (!isAuthenticated.value) {
@@ -563,12 +630,14 @@ onMounted(async () => {
   overflow: hidden;
   margin-bottom: 16px;
 }
-.esc-video-wrapper iframe {
+.esc-video-wrapper iframe,
+.esc-video-wrapper video {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   border: 0;
+  background: #000;
 }
 
 .esc-video-link {
