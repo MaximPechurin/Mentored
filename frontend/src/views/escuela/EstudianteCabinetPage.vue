@@ -12,26 +12,6 @@
     </section>
 
     <div class="esc-shell">
-      <div v-if="courses.length" class="esc-foros">
-        <router-link
-          v-for="course in courses"
-          :key="'foro-' + course.id"
-          :to="`/escuela/foro/${course.id}`"
-          class="esc-foro-card"
-        >
-          <span class="esc-foro-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            </svg>
-          </span>
-          <div>
-            <h3 class="esc-foro-title">{{ st('foro.title') }}</h3>
-            <p class="esc-foro-sub">{{ course.title }}</p>
-            <p class="esc-foro-desc">{{ st('foro.subtitulo') }}</p>
-          </div>
-        </router-link>
-      </div>
-
       <h2 class="esc-section-title">{{ st('student.misCursos') }}</h2>
 
       <div v-if="loadingCourses" class="esc-empty">
@@ -303,66 +283,7 @@ onMounted(async () => {
   transition: width 0.3s;
 }
 
-/* --- Panel del foro (encima de "Mis cursos") --- */
-.esc-foros {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-bottom: 40px;
-}
-
-.esc-foro-card {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  background: #0e0c0c;
-  border: 1.5px solid #c49a3f;
-  border-radius: 18px;
-  padding: 26px 28px;
-  text-decoration: none;
-  transition: background 0.3s, border-color 0.3s;
-}
-
-.esc-foro-card:hover {
-  background: #1a1614;
-  border-color: #d9ac4b;
-}
-
-.esc-foro-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: rgba(196, 154, 63, 0.15);
-  color: #c49a3f;
-  flex-shrink: 0;
-}
-
-.esc-foro-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 20px;
-  font-weight: 600;
-  color: #ffffff;
-  margin: 0 0 4px;
-}
-
-.esc-foro-sub {
-  font-size: 14px;
-  font-weight: 600;
-  color: #c49a3f;
-  margin: 0 0 4px;
-}
-
-.esc-foro-desc {
-  font-size: 13.5px;
-  color: #b8afa8;
-  margin: 0;
-}
-
 @media (max-width: 920px) {
-  .esc-foro-card { padding: 20px; }
   .esc-hero { padding: 40px 20px !important; }
   .esc-shell { padding: 32px 20px 72px !important; }
 }
