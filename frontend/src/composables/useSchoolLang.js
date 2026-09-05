@@ -34,6 +34,7 @@ const dict = {
       hacerVisible: 'Hacer visible para todos', hacerPrivada: 'Ocultar de otros alumnos',
       comentar: 'Añadir un comentario...', enviarComentario: 'Comentar',
       tareaHecha: 'Tarea completada', tareaPendiente: 'Tarea pendiente', tú: 'Tú',
+      completaTareaPrimero: 'Envía tu tarea para poder marcar esta lección como completada.',
     },
     teacher: {
       panel: 'Panel de profesor', hola: 'Hola', misCursos: 'Mis cursos',
@@ -94,6 +95,7 @@ const dict = {
       hacerVisible: 'Сделать видимым для всех', hacerPrivada: 'Скрыть от других учеников',
       comentar: 'Добавить комментарий...', enviarComentario: 'Отправить',
       tareaHecha: 'Задание выполнено', tareaPendiente: 'Задание не выполнено', tú: 'Вы',
+      completaTareaPrimero: 'Сначала отправьте домашнее задание, чтобы отметить урок пройденным.',
     },
     teacher: {
       panel: 'Кабинет преподавателя', hola: 'Привет', misCursos: 'Мои курсы',
@@ -154,6 +156,7 @@ const dict = {
       hacerVisible: 'Make visible to everyone', hacerPrivada: 'Hide from other students',
       comentar: 'Add a comment...', enviarComentario: 'Send',
       tareaHecha: 'Assignment completed', tareaPendiente: 'Assignment pending', tú: 'You',
+      completaTareaPrimero: 'Submit your assignment to mark this lesson as completed.',
     },
     teacher: {
       panel: 'Teacher panel', hola: 'Hi', misCursos: 'My courses',

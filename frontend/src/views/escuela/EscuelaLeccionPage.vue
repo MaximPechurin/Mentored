@@ -16,36 +16,46 @@
       </div>
     </section>
 
-    <div class="esc-shell">
-      <!-- Шапка материала: N из M, статус, пред/след -->
-      <div class="esc-lesson-header">
-        <router-link
-          v-if="prevLesson"
-          :to="`/escuela/curso/${course.slug}/leccion/${prevLesson.id}`"
-          class="esc-nav-link"
-        >
-          {{ st('leccion.anterior') }}
-          <span class="esc-nav-title">{{ prevLesson.title }}</span>
-        </router-link>
-        <span v-else class="esc-nav-spacer"></span>
-
-        <div class="esc-lesson-meta">
-          <span class="esc-lesson-counter">{{ lessonIndex + 1 }} {{ st('leccion.deMateriales') }} {{ flatLessons.length }} {{ st('leccion.materiales') }}</span>
-          <span class="esc-lesson-state" :class="{ done: lesson.is_completed }">
-            {{ lesson.is_completed ? st('leccion.tareaHecha') : st('leccion.tareaPendiente') }}
-          </span>
+    <div class="esc-shell esc-shell--player">
+      <!-- Левая панель: все уроки курса, клик переключает урок без ухода со страницы -->
+      <aside class="esc-sidebar">
+        <div v-for="module in course.modules" :key="module.id" class="esc-sidebar-module">
+          <div class="esc-sidebar-module-title">{{ module.title }}</div>
+          <button
+            v-for="l in module.lessons"
+            :key="l.id"
+            class="esc-sidebar-lesson"
+            :class="{ active: l.id === lesson.id }"
+            @click="goToLesson(l.id)"
+          >
+            <span class="esc-sidebar-check" :class="{ done: l.is_completed }">{{ l.is_completed ? '✓' : '' }}</span>
+            <span class="esc-sidebar-lesson-title">{{ l.title }}</span>
+          </button>
         </div>
+      </aside>
 
-        <router-link
-          v-if="nextLesson"
-          :to="`/escuela/curso/${course.slug}/leccion/${nextLesson.id}`"
-          class="esc-nav-link esc-nav-link--next"
-        >
-          {{ st('leccion.siguiente') }}
-          <span class="esc-nav-title">{{ nextLesson.title }}</span>
-        </router-link>
-        <span v-else class="esc-nav-spacer"></span>
-      </div>
+      <div class="esc-player-main">
+        <!-- Шапка материала: N из M, статус, пред/след -->
+        <div class="esc-lesson-header">
+          <button v-if="prevLesson" class="esc-nav-link" @click="goToLesson(prevLesson.id)">
+            {{ st('leccion.anterior') }}
+            <span class="esc-nav-title">{{ prevLesson.title }}</span>
+          </button>
+          <span v-else class="esc-nav-spacer"></span>
+
+          <div class="esc-lesson-meta">
+            <span class="esc-lesson-counter">{{ lessonIndex + 1 }} {{ st('leccion.deMateriales') }} {{ flatLessons.length }} {{ st('leccion.materiales') }}</span>
+            <span class="esc-lesson-state" :class="{ done: lesson.is_completed }">
+              {{ lesson.is_completed ? st('leccion.tareaHecha') : st('leccion.tareaPendiente') }}
+            </span>
+          </div>
+
+          <button v-if="nextLesson" class="esc-nav-link esc-nav-link--next" @click="goToLesson(nextLesson.id)">
+            {{ st('leccion.siguiente') }}
+            <span class="esc-nav-title">{{ nextLesson.title }}</span>
+          </button>
+          <span v-else class="esc-nav-spacer"></span>
+        </div>
 
       <!-- Тело материала: видео, текст, вложения -->
       <div class="esc-lesson-content-card">
@@ -86,11 +96,14 @@
 
         <button
           class="esc-complete-btn"
-          :disabled="savingProgress"
+          :disabled="savingProgress || (!lesson.is_completed && !canMarkComplete)"
           @click="toggleComplete"
         >
           {{ lesson.is_completed ? st('course.descompletar') : st('course.completar') }}
         </button>
+        <p v-if="!lesson.is_completed && !canMarkComplete" class="esc-complete-hint">
+          {{ st('leccion.completaTareaPrimero') }}
+        </p>
       </div>
 
       <!-- Задание(я) -->
@@ -228,6 +241,7 @@
           </div>
         </div>
       </section>
+      </div>
     </div>
   </div>
 </template>
@@ -314,6 +328,21 @@ const lessonIndex = computed(() =>
 const lesson = computed(() =>
   lessonIndex.value >= 0 ? flatLessons.value[lessonIndex.value] : null
 )
+// урок с ДЗ можно отметить пройденным, только если по каждому его заданию
+// уже есть отправленный ответ (см. mySubs, наполняется в loadAssignment)
+const canMarkComplete = computed(() => {
+  if (!lesson.value) return false
+  const assignments = lesson.value.assignments || []
+  return assignments.every((a) => !!mySubs[a.id])
+})
+
+// переключение урока БЕЗ ухода со страницы - слева/пред/след меняют
+// только :lessonId в маршруте, компонент переиспользуется целиком
+const goToLesson = (lessonId) => {
+  if (lessonId === lesson.value?.id) return
+  router.push(`/escuela/curso/${course.value.slug}/leccion/${lessonId}`)
+}
+
 const prevLesson = computed(() =>
   lessonIndex.value > 0 ? flatLessons.value[lessonIndex.value - 1] : null
 )
@@ -361,6 +390,7 @@ const toggleComplete = async () => {
     lesson.value.is_completed = data.is_completed
   } catch (error) {
     console.error('Error al guardar el progreso:', error)
+    alert(error.response?.data?.error || 'No se pudo guardar el progreso.')
   } finally {
     savingProgress.value = false
   }
@@ -528,7 +558,7 @@ onMounted(async () => {
 }
 
 .esc-hero-container {
-  max-width: 900px;
+  max-width: 1180px;
   margin: 0 auto;
 }
 
@@ -553,9 +583,97 @@ onMounted(async () => {
 }
 
 .esc-shell {
-  max-width: 900px;
+  max-width: 1180px;
   margin: 0 auto;
   padding: 40px 32px 88px;
+}
+
+/* --- двухколоночный плеер: слева уроки курса, справа контент урока --- */
+.esc-shell--player {
+  display: flex;
+  align-items: flex-start;
+  gap: 28px;
+}
+
+.esc-sidebar {
+  flex: 0 0 280px;
+  width: 280px;
+  background: #ffffff;
+  border: 1px solid #ece7e1;
+  border-radius: 18px;
+  padding: 12px;
+  position: sticky;
+  top: 80px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+}
+
+.esc-sidebar-module + .esc-sidebar-module {
+  margin-top: 14px;
+}
+
+.esc-sidebar-module-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #8a8079;
+  padding: 8px 10px 4px;
+}
+
+.esc-sidebar-lesson {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  padding: 9px 10px;
+  color: #3f3a35;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.esc-sidebar-lesson:hover { background: #faf8f5; }
+
+.esc-sidebar-lesson.active {
+  background: #fbeceb;
+  color: #8e1519;
+  font-weight: 600;
+}
+
+.esc-sidebar-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid #d8d1c8;
+  font-size: 11px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.esc-sidebar-check.done {
+  background: #8e1519;
+  border-color: #8e1519;
+}
+
+.esc-player-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.esc-complete-hint {
+  font-size: 13px;
+  color: #8a8079;
+  margin: 8px 0 0;
 }
 
 /* --- шапка материала: счётчик, статус, пред/след --- */
@@ -580,6 +698,12 @@ onMounted(async () => {
   font-size: 13.5px;
   text-decoration: none;
   max-width: 220px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  padding: 0;
 }
 .esc-nav-link--next { text-align: right; align-items: flex-end; }
 .esc-nav-link:hover { text-decoration: underline; }
@@ -929,5 +1053,11 @@ onMounted(async () => {
   .esc-shell { padding: 32px 20px 72px !important; }
   .esc-lesson-header { flex-wrap: wrap; }
   .esc-nav-title { display: none; }
+  .esc-shell--player { flex-direction: column; }
+  .esc-sidebar {
+    width: 100%;
+    position: static;
+    max-height: 260px;
+  }
 }
 </style>

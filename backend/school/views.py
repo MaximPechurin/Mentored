@@ -102,6 +102,22 @@ class LessonProgressView(APIView):
         is_completed = request.data.get('is_completed')
         last_position_seconds = request.data.get('last_position_seconds')
 
+        if is_completed:
+            # Урок с домашним заданием нельзя отметить пройденным, пока
+            # студент не отправил ответ хотя бы по каждому заданию урока
+            # (оценка/проверка ментором для этого не нужна - достаточно
+            # самого факта отправки).
+            assignment_ids = list(lesson.assignments.values_list('id', flat=True))
+            if assignment_ids:
+                submitted_ids = set(Submission.objects.filter(
+                    assignment_id__in=assignment_ids, enrollment=enrollment,
+                ).values_list('assignment_id', flat=True))
+                if not set(assignment_ids).issubset(submitted_ids):
+                    return Response(
+                        {'error': 'Сначала отправьте домашнее задание урока'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
         if is_completed is not None:
             progress.is_completed = bool(is_completed)
             progress.completed_at = timezone.now() if progress.is_completed else None
