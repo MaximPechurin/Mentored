@@ -25,10 +25,14 @@
             v-for="l in module.lessons"
             :key="l.id"
             class="esc-sidebar-lesson"
-            :class="{ active: l.id === lesson.id }"
+            :class="{ active: l.id === lesson.id, locked: isLessonLocked(l.id) }"
+            :disabled="isLessonLocked(l.id)"
+            :title="isLessonLocked(l.id) ? st('leccion.leccionBloqueada') : ''"
             @click="goToLesson(l.id)"
           >
-            <span class="esc-sidebar-check" :class="{ done: l.is_completed }">{{ l.is_completed ? '✓' : '' }}</span>
+            <span class="esc-sidebar-check" :class="{ done: l.is_completed }">
+              {{ l.is_completed ? '✓' : (isLessonLocked(l.id) ? '🔒' : '') }}
+            </span>
             <span class="esc-sidebar-lesson-title">{{ l.title }}</span>
           </button>
         </div>
@@ -50,13 +54,28 @@
             </span>
           </div>
 
-          <button v-if="nextLesson" class="esc-nav-link esc-nav-link--next" @click="goToLesson(nextLesson.id)">
-            {{ st('leccion.siguiente') }}
+          <button
+            v-if="nextLesson"
+            class="esc-nav-link esc-nav-link--next"
+            :disabled="isLessonLocked(nextLesson.id)"
+            :title="isLessonLocked(nextLesson.id) ? st('leccion.leccionBloqueada') : ''"
+            @click="goToLesson(nextLesson.id)"
+          >
+            {{ isLessonLocked(nextLesson.id) ? '🔒 ' : '' }}{{ st('leccion.siguiente') }}
             <span class="esc-nav-title">{{ nextLesson.title }}</span>
           </button>
           <span v-else class="esc-nav-spacer"></span>
         </div>
 
+      <!-- Урок заблокирован - предыдущий ещё не пройден -->
+      <div v-if="currentLessonLocked" class="esc-locked-card">
+        <span class="esc-locked-icon">🔒</span>
+        <h2 class="esc-locked-title">{{ st('leccion.leccionBloqueadaTitulo') }}</h2>
+        <p class="esc-locked-text">{{ st('leccion.leccionBloqueadaTexto') }}</p>
+        <button class="esc-complete-btn" @click="goToLesson(prevLesson.id)">{{ st('leccion.irAnterior') }}</button>
+      </div>
+
+      <template v-else>
       <!-- Тело материала: видео, текст, вложения -->
       <div class="esc-lesson-content-card">
         <!-- видеофайл, загруженный в админке - плеер сам сохраняет позицию просмотра -->
@@ -241,6 +260,7 @@
           </div>
         </div>
       </section>
+      </template>
       </div>
     </div>
   </div>
@@ -336,10 +356,26 @@ const canMarkComplete = computed(() => {
   return assignments.every((a) => !!mySubs[a.id])
 })
 
+// последовательная блокировка: урок доступен, только если пройден
+// непосредственно предыдущий (заказчик попросил не пускать вперёд по
+// программе, пока не закрыт текущий шаг) - действует и на кнопку
+// «следующий», и на клик по любому уроку в левой панели
+const lockedLessonIds = computed(() => {
+  const arr = flatLessons.value
+  const locked = new Set()
+  for (let i = 1; i < arr.length; i++) {
+    if (!arr[i - 1].is_completed) locked.add(arr[i].id)
+  }
+  return locked
+})
+const isLessonLocked = (lessonId) => lockedLessonIds.value.has(lessonId)
+const currentLessonLocked = computed(() => !!lesson.value && isLessonLocked(lesson.value.id))
+
 // переключение урока БЕЗ ухода со страницы - слева/пред/след меняют
 // только :lessonId в маршруте, компонент переиспользуется целиком
 const goToLesson = (lessonId) => {
   if (lessonId === lesson.value?.id) return
+  if (isLessonLocked(lessonId)) return
   router.push(`/escuela/curso/${course.value.slug}/leccion/${lessonId}`)
 }
 
@@ -477,7 +513,7 @@ const sendComment = async (submissionId, draftKey, aId) => {
 const sendFeedComment = (ans, aId) => sendComment(ans.id, 'ans-' + ans.id, aId)
 
 const loadLessonData = async () => {
-  if (!lesson.value) return
+  if (!lesson.value || currentLessonLocked.value) return
   lastSavedPosition = -1
   lastSaveAt = 0
   const ids = (lesson.value.assignments || []).map((a) => a.id)
@@ -647,6 +683,12 @@ onMounted(async () => {
   font-weight: 600;
 }
 
+.esc-sidebar-lesson.locked {
+  color: #b0a99f;
+  cursor: not-allowed;
+}
+.esc-sidebar-lesson.locked:hover { background: none; }
+
 .esc-sidebar-check {
   display: inline-flex;
   align-items: center;
@@ -674,6 +716,31 @@ onMounted(async () => {
   font-size: 13px;
   color: #8a8079;
   margin: 8px 0 0;
+}
+
+/* --- заблокированный урок --- */
+.esc-locked-card {
+  background: #ffffff;
+  border: 1px solid #ece7e1;
+  border-radius: 18px;
+  padding: 48px 32px;
+  text-align: center;
+}
+
+.esc-locked-icon { font-size: 32px; display: block; margin-bottom: 12px; }
+
+.esc-locked-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: #15110f;
+  margin: 0 0 8px;
+}
+
+.esc-locked-text {
+  font-size: 15px;
+  color: #6b6259;
+  margin: 0 0 20px;
 }
 
 /* --- шапка материала: счётчик, статус, пред/след --- */
@@ -707,6 +774,11 @@ onMounted(async () => {
 }
 .esc-nav-link--next { text-align: right; align-items: flex-end; }
 .esc-nav-link:hover { text-decoration: underline; }
+.esc-nav-link:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  text-decoration: none;
+}
 .esc-nav-title {
   font-weight: 400;
   font-size: 12.5px;

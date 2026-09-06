@@ -35,6 +35,10 @@ const dict = {
       comentar: 'Añadir un comentario...', enviarComentario: 'Comentar',
       tareaHecha: 'Tarea completada', tareaPendiente: 'Tarea pendiente', tú: 'Tú',
       completaTareaPrimero: 'Envía tu tarea para poder marcar esta lección como completada.',
+      leccionBloqueada: 'Termina la lección anterior para desbloquear esta.',
+      leccionBloqueadaTitulo: 'Lección bloqueada',
+      leccionBloqueadaTexto: 'Completa la lección anterior para poder acceder a esta.',
+      irAnterior: 'Ir a la lección anterior',
     },
     teacher: {
       panel: 'Panel de profesor', hola: 'Hola', misCursos: 'Mis cursos',
@@ -96,6 +100,10 @@ const dict = {
       comentar: 'Добавить комментарий...', enviarComentario: 'Отправить',
       tareaHecha: 'Задание выполнено', tareaPendiente: 'Задание не выполнено', tú: 'Вы',
       completaTareaPrimero: 'Сначала отправьте домашнее задание, чтобы отметить урок пройденным.',
+      leccionBloqueada: 'Сначала пройдите предыдущий урок, чтобы открыть этот.',
+      leccionBloqueadaTitulo: 'Урок заблокирован',
+      leccionBloqueadaTexto: 'Завершите предыдущий урок, чтобы получить доступ к этому.',
+      irAnterior: 'Перейти к предыдущему уроку',
     },
     teacher: {
       panel: 'Кабинет преподавателя', hola: 'Привет', misCursos: 'Мои курсы',
@@ -157,6 +165,10 @@ const dict = {
       comentar: 'Add a comment...', enviarComentario: 'Send',
       tareaHecha: 'Assignment completed', tareaPendiente: 'Assignment pending', tú: 'You',
       completaTareaPrimero: 'Submit your assignment to mark this lesson as completed.',
+      leccionBloqueada: 'Finish the previous lesson to unlock this one.',
+      leccionBloqueadaTitulo: 'Lesson locked',
+      leccionBloqueadaTexto: 'Complete the previous lesson to access this one.',
+      irAnterior: 'Go to the previous lesson',
     },
     teacher: {
       panel: 'Teacher panel', hola: 'Hi', misCursos: 'My courses',

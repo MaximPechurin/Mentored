@@ -25,9 +25,12 @@
             :key="lesson.id"
             :to="`/escuela/curso/${course.slug}/leccion/${lesson.id}`"
             class="esc-lesson-row"
+            :class="{ locked: isLessonLocked(lesson.id) }"
+            :title="isLessonLocked(lesson.id) ? st('leccion.leccionBloqueada') : ''"
+            @click="onLessonClick($event, lesson)"
           >
             <span class="esc-lesson-check" :class="{ done: lesson.is_completed }">
-              {{ lesson.is_completed ? '✓' : '' }}
+              {{ lesson.is_completed ? '✓' : (isLessonLocked(lesson.id) ? '🔒' : '') }}
             </span>
             <span class="esc-lesson-main">
               <span class="esc-lesson-title">{{ lesson.title }}</span>
@@ -45,7 +48,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '../../composables/useAuth'
 import { schoolApi } from '../../api/school'
@@ -65,6 +68,24 @@ const course = ref({ title: '', description: '', modules: [] })
 const snippet = (text) => {
   const t = (text || '').replace(/\s+/g, ' ').trim()
   return t.length > 110 ? t.slice(0, 110) + '…' : t
+}
+
+// последовательная блокировка: урок доступен, только если пройден
+// непосредственно предыдущий - тот же критерий, что и в EscuelaLeccionPage
+const flatLessons = computed(() =>
+  (course.value.modules || []).flatMap((m) => m.lessons || [])
+)
+const lockedLessonIds = computed(() => {
+  const arr = flatLessons.value
+  const locked = new Set()
+  for (let i = 1; i < arr.length; i++) {
+    if (!arr[i - 1].is_completed) locked.add(arr[i].id)
+  }
+  return locked
+})
+const isLessonLocked = (lessonId) => lockedLessonIds.value.has(lessonId)
+const onLessonClick = (event, lesson) => {
+  if (isLessonLocked(lesson.id)) event.preventDefault()
 }
 
 onMounted(async () => {
@@ -211,6 +232,12 @@ onMounted(async () => {
 }
 
 .esc-lesson-row:hover { background: #faf8f5; }
+
+.esc-lesson-row.locked {
+  color: #b0a99f;
+  cursor: not-allowed;
+}
+.esc-lesson-row.locked:hover { background: none; }
 
 .esc-lesson-check {
   display: inline-flex;
