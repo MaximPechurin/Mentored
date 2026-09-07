@@ -344,6 +344,32 @@ class Enrollment(models.Model):
         return f"{self.user.email} -> {self.course.title}"
 
 
+class Certificate(models.Model):
+    """
+    Сертификат о прохождении курса. Выдаётся автоматически (см.
+    LessonProgressView), когда у Enrollment пройдены ВСЕ уроки курса.
+    Само изображение сертификата не хранится - генерируется на лету
+    (school/certificates.py) из шаблона + имени студента/курса/даты,
+    чтобы дизайн можно было поменять и он применился ко всем задним
+    числом.
+    """
+    enrollment = models.OneToOneField(
+        Enrollment,
+        on_delete=models.CASCADE,
+        related_name='certificate',
+        verbose_name='Доступ к курсу',
+    )
+    issued_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата выдачи')
+
+    class Meta:
+        verbose_name = 'Сертификат'
+        verbose_name_plural = 'Сертификаты'
+        ordering = ['-issued_at']
+
+    def __str__(self):
+        return f"{self.enrollment.user.email} - {self.enrollment.course.title}"
+
+
 class LessonProgress(models.Model):
     """ Прогресс конкретного студента по конкретному уроку """
     enrollment = models.ForeignKey(

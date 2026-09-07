@@ -1,7 +1,7 @@
 from django.urls import path
 
 from .views import (
-    MyCoursesView, CourseDetailView, LessonProgressView,
+    MyCoursesView, CourseDetailView, LessonProgressView, CertificateDownloadView,
     AssignmentDetailView, AssignmentSubmitView, AssignmentAnswersView,
     SubmissionCommentsView, SubmissionVisibilityView,
     TeacherCoursesView, TeacherCourseStudentsView, TeacherStudentCourseDetailView,
@@ -20,6 +20,7 @@ urlpatterns = [
     # slug-конвертер матчит только ASCII [-a-zA-Z0-9_]+ и 404-тил бы
     # на любом слаге с не-ASCII символом ещё до вызова CourseDetailView.
     path('courses/<str:slug>/', CourseDetailView.as_view(), name='school-course-detail'),
+    path('courses/<str:slug>/certificate/', CertificateDownloadView.as_view(), name='school-course-certificate'),
     path('lessons/<int:lesson_id>/progress/', LessonProgressView.as_view(), name='school-lesson-progress'),
     path('assignments/<int:assignment_id>/', AssignmentDetailView.as_view(), name='school-assignment-detail'),
     path('assignments/<int:assignment_id>/submit/', AssignmentSubmitView.as_view(), name='school-assignment-submit'),

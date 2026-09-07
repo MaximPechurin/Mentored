@@ -16,7 +16,7 @@ const dict = {
     student: {
       panel: 'Panel de estudiante', hola: 'Hola', misCursos: 'Mis cursos',
       cargandoCursos: 'Cargando tus cursos...', sinCursos: 'Aún no tienes cursos activos.',
-      verCursos: 'Ver cursos disponibles',
+      verCursos: 'Ver cursos disponibles', descargarCertificado: 'Descargar certificado',
     },
     course: {
       sinAcceso: 'No tienes acceso a este curso.', volverCursos: '← Mis cursos',
@@ -81,7 +81,7 @@ const dict = {
     student: {
       panel: 'Кабинет студента', hola: 'Привет', misCursos: 'Мои курсы',
       cargandoCursos: 'Загружаем ваши курсы...', sinCursos: 'У вас пока нет активных курсов.',
-      verCursos: 'Смотреть доступные курсы',
+      verCursos: 'Смотреть доступные курсы', descargarCertificado: 'Скачать сертификат',
     },
     course: {
       sinAcceso: 'У вас нет доступа к этому курсу.', volverCursos: '← Мои курсы',
@@ -146,7 +146,7 @@ const dict = {
     student: {
       panel: 'Student panel', hola: 'Hi', misCursos: 'My courses',
       cargandoCursos: 'Loading your courses...', sinCursos: 'You have no active courses yet.',
-      verCursos: 'Browse available courses',
+      verCursos: 'Browse available courses', descargarCertificado: 'Download certificate',
     },
     course: {
       sinAcceso: 'You do not have access to this course.', volverCursos: '← My courses',

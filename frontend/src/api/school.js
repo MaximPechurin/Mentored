@@ -16,6 +16,12 @@ export const schoolApi = {
     return api.post(`/school/lessons/${lessonId}/progress/`, data)
   },
 
+  // Скачать сертификат о прохождении курса (PNG). Доступен только если
+  // курс пройден полностью - см. has_certificate в getCourse/myCourses.
+  downloadCertificate(slug) {
+    return api.get(`/school/courses/${slug}/certificate/`, { responseType: 'blob' })
+  },
+
   // Задание + мой ответ
   getAssignment(assignmentId) {
     return api.get(`/school/assignments/${assignmentId}/`)

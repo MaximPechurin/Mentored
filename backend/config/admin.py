@@ -16,7 +16,8 @@ SCHOOL_SECTIONS = [
         "assignment", "courseteacher", "productcourseaccess",
     ]),
     ("👤 Школа · Студенты и доступы", [
-        "enrollment", "lessonprogress", "submission", "submissioncomment", "teacherprofile",
+        "enrollment", "lessonprogress", "submission", "submissioncomment",
+        "certificate", "teacherprofile",
     ]),
     ("💬 Школа · Общение", [
         "forumthread", "forumpost", "directmessage",

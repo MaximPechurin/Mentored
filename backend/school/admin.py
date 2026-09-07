@@ -3,7 +3,7 @@ from django.contrib import admin
 from .models import (
     TeacherProfile, Course, ProductCourseAccess, CourseTeacher, Module, Lesson,
     LessonMaterial, Enrollment, LessonProgress, Assignment, Submission,
-    SubmissionComment, ForumThread, ForumPost, DirectMessage,
+    SubmissionComment, Certificate, ForumThread, ForumPost, DirectMessage,
 )
 
 
@@ -164,6 +164,15 @@ class LessonProgressAdmin(TeacherScopedAdminMixin, admin.ModelAdmin):
     list_display = ('enrollment', 'lesson', 'is_completed', 'completed_at')
     list_filter = ('is_completed',)
     search_fields = ('enrollment__user__email', 'lesson__title')
+
+
+@admin.register(Certificate)
+class CertificateAdmin(TeacherScopedAdminMixin, admin.ModelAdmin):
+    course_lookup = 'enrollment__course'
+    list_display = ('enrollment', 'issued_at')
+    search_fields = ('enrollment__user__email', 'enrollment__course__title')
+    date_hierarchy = 'issued_at'
+    readonly_fields = ('enrollment', 'issued_at')
 
 
 @admin.register(Assignment)

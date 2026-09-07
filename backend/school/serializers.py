@@ -2,8 +2,8 @@ from rest_framework import serializers
 
 from .models import (
     Course, Module, Lesson, LessonMaterial, Enrollment, LessonProgress,
-    Assignment, Submission, SubmissionComment, ForumThread, ForumPost,
-    DirectMessage,
+    Assignment, Submission, SubmissionComment, Certificate, ForumThread,
+    ForumPost, DirectMessage,
 )
 
 
@@ -84,13 +84,14 @@ class MyCourseSerializer(serializers.ModelSerializer):
     lessons_total = serializers.SerializerMethodField()
     lessons_completed = serializers.SerializerMethodField()
     progress_percent = serializers.SerializerMethodField()
+    has_certificate = serializers.SerializerMethodField()
 
     class Meta:
         model = Enrollment
         fields = [
             'id', 'slug', 'title', 'description', 'teachers',
             'lessons_total', 'lessons_completed', 'progress_percent',
-            'enrolled_at',
+            'has_certificate', 'enrolled_at',
         ]
 
     def get_teachers(self, obj):
@@ -110,6 +111,9 @@ class MyCourseSerializer(serializers.ModelSerializer):
         if not total:
             return 0
         return round(self.get_lessons_completed(obj) / total * 100)
+
+    def get_has_certificate(self, obj):
+        return Certificate.objects.filter(enrollment=obj).exists()
 
 
 class SubmissionCommentSerializer(serializers.ModelSerializer):

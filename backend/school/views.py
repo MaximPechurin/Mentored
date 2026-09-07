@@ -1,3 +1,4 @@
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
@@ -11,9 +12,10 @@ from django.db.models import Q
 
 from .models import (
     Course, Enrollment, Lesson, LessonProgress, Assignment, Submission,
-    SubmissionComment, ForumThread, ForumPost, DirectMessage, CourseTeacher,
-    is_course_participant, is_course_teacher, can_direct_message,
+    SubmissionComment, Certificate, ForumThread, ForumPost, DirectMessage,
+    CourseTeacher, is_course_participant, is_course_teacher, can_direct_message,
 )
+from .certificates import render_certificate
 from .permissions import IsStudent, IsTeacher, IsDev
 from .serializers import (
     ModuleSerializer, MyCourseSerializer, AssignmentDetailSerializer,
@@ -76,7 +78,40 @@ class CourseDetailView(APIView):
             'title': course.title,
             'description': course.description,
             'modules': modules_data,
+            'has_certificate': Certificate.objects.filter(enrollment=enrollment).exists(),
         })
+
+
+class CertificateDownloadView(APIView):
+    """
+    GET /school/courses/<slug>/certificate/ - скачать PNG сертификата о
+    прохождении курса. Доступен только если для Enrollment пользователя
+    уже выдан Certificate (см. _maybe_issue_certificate) - выдаётся
+    автоматически при прохождении всех уроков курса.
+    """
+    permission_classes = [IsAuthenticated, IsDev, IsStudent]
+
+    def get(self, request, slug):
+        course = get_object_or_404(Course, slug=slug)
+        enrollment = Enrollment.objects.filter(
+            user=request.user, course=course, is_active=True,
+        ).first()
+        if not enrollment:
+            return Response({'error': 'Нет доступа к этому курсу'}, status=status.HTTP_403_FORBIDDEN)
+
+        certificate = Certificate.objects.filter(enrollment=enrollment).first()
+        if not certificate:
+            return Response(
+                {'error': 'Сертификат ещё не выдан - пройдите все уроки курса'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        student_name = request.user.username or request.user.email
+        buffer = render_certificate(student_name, course.title, certificate.issued_at)
+        response = HttpResponse(buffer.getvalue(), content_type='image/png')
+        filename = f"certificado-{course.slug}.png"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
 
 
 class LessonProgressView(APIView):
@@ -132,10 +167,24 @@ class LessonProgressView(APIView):
                 )
 
         progress.save()
+
+        if progress.is_completed:
+            _maybe_issue_certificate(enrollment, course)
+
         return Response({
             'is_completed': progress.is_completed,
             'last_position_seconds': progress.last_position_seconds,
         })
+
+
+def _maybe_issue_certificate(enrollment, course):
+    """ Если у enrollment пройдены ВСЕ уроки курса - выдать сертификат (если ещё не выдан). """
+    lessons_total = Lesson.objects.filter(module__course=course).count()
+    if not lessons_total:
+        return
+    completed = LessonProgress.objects.filter(enrollment=enrollment, is_completed=True).count()
+    if completed >= lessons_total:
+        Certificate.objects.get_or_create(enrollment=enrollment)
 
 
 def _student_enrollment_for_assignment(user, assignment):

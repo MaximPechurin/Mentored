@@ -39,6 +39,13 @@
           <div class="esc-progress-bar">
             <div class="esc-progress-fill" :style="{ width: course.progress_percent + '%' }"></div>
           </div>
+          <button
+            v-if="course.has_certificate"
+            class="esc-certificate-btn"
+            @click.stop.prevent="downloadCertificate(course)"
+          >
+            🎓 {{ st('student.descargarCertificado') }}
+          </button>
         </router-link>
       </div>
     </div>
@@ -69,6 +76,21 @@ const userInitials = computed(() => {
   const name = userDisplayName.value
   return name ? name.charAt(0).toUpperCase() : '?'
 })
+
+const downloadCertificate = async (course) => {
+  try {
+    const response = await schoolApi.downloadCertificate(course.slug)
+    const url = URL.createObjectURL(response.data)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `certificado-${course.slug}.png`
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('Error al descargar el certificado:', error)
+    alert('No se pudo descargar el certificado.')
+  }
+}
 
 onMounted(async () => {
   if (!isAuthenticated.value) {
@@ -282,6 +304,25 @@ onMounted(async () => {
   background: #8e1519;
   transition: width 0.3s;
 }
+
+.esc-certificate-btn {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 14px;
+  background: #0e0c0c;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 13.5px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.esc-certificate-btn:hover { background: #2a2525; }
 
 @media (max-width: 920px) {
   .esc-hero { padding: 40px 20px !important; }

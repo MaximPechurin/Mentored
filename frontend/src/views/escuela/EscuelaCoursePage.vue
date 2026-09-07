@@ -16,6 +16,10 @@
     <div class="esc-shell">
       <p v-if="course.description" class="esc-course-description">{{ course.description }}</p>
 
+      <button v-if="course.has_certificate" class="esc-certificate-btn" @click="downloadCertificate">
+        🎓 {{ st('student.descargarCertificado') }}
+      </button>
+
       <div v-for="module in course.modules" :key="module.id" class="esc-module">
         <h2 class="esc-module-title">{{ module.title }}</h2>
 
@@ -68,6 +72,21 @@ const course = ref({ title: '', description: '', modules: [] })
 const snippet = (text) => {
   const t = (text || '').replace(/\s+/g, ' ').trim()
   return t.length > 110 ? t.slice(0, 110) + '…' : t
+}
+
+const downloadCertificate = async () => {
+  try {
+    const response = await schoolApi.downloadCertificate(course.value.slug)
+    const url = URL.createObjectURL(response.data)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `certificado-${course.value.slug}.png`
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('Error al descargar el certificado:', error)
+    alert('No se pudo descargar el certificado.')
+  }
 }
 
 // последовательная блокировка: урок доступен, только если пройден
@@ -189,6 +208,23 @@ onMounted(async () => {
   color: #6b6259;
   margin: 0 0 32px;
 }
+
+.esc-certificate-btn {
+  display: inline-block;
+  margin: -16px 0 32px;
+  background: #0e0c0c;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 14.5px;
+  padding: 11px 22px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.esc-certificate-btn:hover { background: #2a2525; }
 
 .esc-module {
   margin-bottom: 28px;
