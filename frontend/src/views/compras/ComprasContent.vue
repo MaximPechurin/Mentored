@@ -37,12 +37,12 @@
     <!-- Cómo solicitar reembolso -->
     <h2 class="cp-h2">Cómo solicitar un reembolso</h2>
     <p class="cp-p">
-      Escríbenos a <a href="mailto:hola@mentored.com" class="cp-link">hola@mentored.com</a> o por <a href="https://wa.me/51940304595" class="cp-link">WhatsApp</a> indicando tu número de pedido y el motivo. Revisaremos tu solicitud y, si procede, gestionaremos el reembolso por el mismo medio de pago en un plazo de hasta 14 días.
+      Escríbenos a <a href="mailto:info@mentoredgroup.com" class="cp-link">info@mentoredgroup.com</a> o por <a href="https://wa.me/51940304595" class="cp-link">WhatsApp</a> indicando tu número de pedido y el motivo. Revisaremos tu solicitud y, si procede, gestionaremos el reembolso por el mismo medio de pago en un plazo de hasta 14 días.
     </p>
 
     <!-- Botones de contacto -->
     <div class="cp-buttons">
-      <a href="mailto:hola@mentored.com" class="cp-btn-primary">
+      <a href="mailto:info@mentoredgroup.com" class="cp-btn-primary">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
           <rect x="2" y="4" width="20" height="16" rx="2"/>
           <path d="m22 7-10 6L2 7"/>

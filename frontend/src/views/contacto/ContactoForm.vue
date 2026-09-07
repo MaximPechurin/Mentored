@@ -96,7 +96,7 @@
       </a>
 
       <!-- Email -->
-      <a href="mailto:hola@mentored.com" class="ct-block ct-block-email">
+      <a href="mailto:info@mentoredgroup.com" class="ct-block ct-block-email">
         <div class="ct-block-header">
           <span class="ct-block-icon ct-icon-email">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -109,7 +109,7 @@
             <span class="ct-block-sub">Para consultas detalladas</span>
           </div>
         </div>
-        <span class="ct-block-value ct-email-value">hola@mentored.com</span>
+        <span class="ct-block-value ct-email-value">info@mentoredgroup.com</span>
       </a>
 
       <!-- Horario -->
@@ -134,13 +134,13 @@
               <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>
             </svg>
           </a>
-          <a href="https://youtube.com/mentored" aria-label="YouTube">
+          <a href="https://www.youtube.com/@IrinaArbonova" aria-label="YouTube">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">
               <path d="M22.5 6.4a2.8 2.8 0 0 0-1.9-2C18.9 4 12 4 12 4s-6.9 0-8.6.4a2.8 2.8 0 0 0-1.9 2A29 29 0 0 0 1.1 12a29 29 0 0 0 .4 5.6 2.8 2.8 0 0 0 1.9 2C5.1 20 12 20 12 20s6.9 0 8.6-.4a2.8 2.8 0 0 0 1.9-2 29 29 0 0 0 .4-5.6 29 29 0 0 0-.4-5.6z"/>
               <polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="currentColor"/>
             </svg>
           </a>
-          <a href="https://facebook.com/mentored" aria-label="Facebook">
+          <a href="https://www.facebook.com/share/18wT3LwP2q/?mibextid=wwXIfr" aria-label="Facebook">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
             </svg>

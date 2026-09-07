@@ -10,7 +10,7 @@
 
       <h2 class="lg-h2">Datos de contacto</h2>
       <ul class="lg-contact">
-        <li><strong>Correo electrónico:</strong> <a href="mailto:hola@mentored.com">hola@mentored.com</a></li>
+        <li><strong>Correo electrónico:</strong> <a href="mailto:info@mentoredgroup.com">info@mentoredgroup.com</a></li>
         <li><strong>WhatsApp:</strong> <a href="https://wa.me/51940304595">+51 940 304 595</a></li>
       </ul>
 
@@ -91,7 +91,7 @@
 
       <h2 class="lg-h2">Tus derechos</h2>
       <p class="lg-p">
-        Puedes ejercer tus derechos de acceso, rectificación, supresión, oposición, limitación y portabilidad escribiendo a <a href="mailto:hola@mentored.com">hola@mentored.com</a>. También puedes retirar tu consentimiento en cualquier momento y presentar una reclamación ante la autoridad de control competente.
+        Puedes ejercer tus derechos de acceso, rectificación, supresión, oposición, limitación y portabilidad escribiendo a <a href="mailto:info@mentoredgroup.com">info@mentoredgroup.com</a>. También puedes retirar tu consentimiento en cualquier momento y presentar una reclamación ante la autoridad de control competente.
       </p>
 
       <h2 class="lg-h2">Cookies</h2>
