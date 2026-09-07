@@ -15,7 +15,7 @@
       >
         <router-link :to="`/producto/${product.slug || product.id}`" class="t-product-img">
           <img
-            :src="product.image ? `http://localhost:8000${product.image}` : '/images/placeholder.png'"
+            :src="product.image || '/images/placeholder.png'"
             :alt="product.name"
           >
         </router-link>
