@@ -10,9 +10,10 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from .models import Course, Book, Consultation, Membership, BlogCategory, BlogPost, Cart, CartItem, Order, FAQ, OrderItem, ContactMessage
+from .models import Course, Book, Consultation, Membership, BlogCategory, BlogPost, Cart, CartItem, Order, FAQ, OrderItem, ContactMessage, SiteSettings
 from .serializers import RegisterSerializer, ProfileSerializer, CourseSerializer, BookSerializer, ConsultationSerializer, MembershipSerializer, \
-    BlogCategorySerializer, BlogPostSerializer, CartSerializer, CartItemSerializer, OrderSerializer, FAQSerializer, ContactMessageSerializer
+    BlogCategorySerializer, BlogPostSerializer, CartSerializer, CartItemSerializer, OrderSerializer, FAQSerializer, ContactMessageSerializer, \
+    SiteSettingsSerializer
 
 
 class RegisterView(APIView):
@@ -678,6 +679,19 @@ class FAQView(APIView):
         faq = FAQ.objects.filter(is_active=True)
         serializer = FAQSerializer(faq, many=True)
         return Response(serializer.data)
+
+
+class SiteSettingsView(APIView):
+    """
+    GET /site-settings/ - контакты и соцсети для футера/страницы контактов.
+    Публичный (виден и незалогиненным - это просто публичная контактная
+    информация с сайта). Редактируется из /admin/ - MENTORED · Настройки
+    сайта, без деплоя кода.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        return Response(SiteSettingsSerializer(SiteSettings.load()).data)
 
 
 class GetOrderByNumberView(APIView):

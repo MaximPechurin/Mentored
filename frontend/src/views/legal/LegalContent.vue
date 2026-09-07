@@ -10,8 +10,8 @@
 
       <h2 class="lg-h2">Datos de contacto</h2>
       <ul class="lg-contact">
-        <li><strong>Correo electrónico:</strong> <a href="mailto:info@mentoredgroup.com">info@mentoredgroup.com</a></li>
-        <li><strong>WhatsApp:</strong> <a href="https://wa.me/51940304595">+51 940 304 595</a></li>
+        <li><strong>Correo electrónico:</strong> <a :href="`mailto:${settings.contact_email}`">{{ settings.contact_email }}</a></li>
+        <li><strong>WhatsApp:</strong> <a :href="`https://wa.me/${settings.whatsapp_number}`">+{{ settings.whatsapp_number }}</a></li>
       </ul>
 
       <h2 class="lg-h2">Propiedad intelectual</h2>
@@ -91,7 +91,7 @@
 
       <h2 class="lg-h2">Tus derechos</h2>
       <p class="lg-p">
-        Puedes ejercer tus derechos de acceso, rectificación, supresión, oposición, limitación y portabilidad escribiendo a <a href="mailto:info@mentoredgroup.com">info@mentoredgroup.com</a>. También puedes retirar tu consentimiento en cualquier momento y presentar una reclamación ante la autoridad de control competente.
+        Puedes ejercer tus derechos de acceso, rectificación, supresión, oposición, limitación y portabilidad escribiendo a <a :href="`mailto:${settings.contact_email}`">{{ settings.contact_email }}</a>. También puedes retirar tu consentimiento en cualquier momento y presentar una reclamación ante la autoridad de control competente.
       </p>
 
       <h2 class="lg-h2">Cookies</h2>
@@ -103,6 +103,10 @@
 </template>
 
 <script setup>
+import { useSiteSettings } from '../../composables/useSiteSettings'
+
+const { settings } = useSiteSettings()
+
 defineProps({
   tab: {
     type: String,

@@ -3,7 +3,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import User, Role, BlogCategory, BlogPost, FAQ, Testimonial, Product, Book, Course, Consultation, \
-    Membership, Cart, CartItem, Order, OrderItem, ContactMessage
+    Membership, Cart, CartItem, Order, OrderItem, ContactMessage, SiteSettings
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -133,6 +133,15 @@ class FAQSerializer(serializers.ModelSerializer):
     class Meta:
         model = FAQ
         fields = '__all__'
+
+
+class SiteSettingsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SiteSettings
+        fields = [
+            'contact_email', 'whatsapp_number', 'instagram_url',
+            'facebook_url', 'youtube_url', 'linkedin_url',
+        ]
 
 
 class TestimonialSerializer(serializers.ModelSerializer):

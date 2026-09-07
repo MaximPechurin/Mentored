@@ -107,7 +107,8 @@ class CertificateDownloadView(APIView):
             )
 
         student_name = request.user.username or request.user.email
-        buffer = render_certificate(student_name, course.title, certificate.issued_at)
+        template_path = course.certificate_template.path if course.certificate_template else None
+        buffer = render_certificate(student_name, course.title, certificate.issued_at, template_path)
         response = HttpResponse(buffer.getvalue(), content_type='image/png')
         filename = f"certificado-{course.slug}.png"
         response['Content-Disposition'] = f'attachment; filename="{filename}"'

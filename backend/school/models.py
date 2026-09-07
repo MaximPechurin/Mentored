@@ -103,6 +103,17 @@ class Course(models.Model):
         verbose_name='Активен',
         help_text='Можно временно скрыть курс из кабинетов, не удаляя контент и прогресс',
     )
+    certificate_template = models.ImageField(
+        upload_to=get_upload_path,
+        blank=True,
+        null=True,
+        verbose_name='Шаблон сертификата',
+        help_text='Если не загружен - используется общий шаблон по умолчанию. '
+                  'ВАЖНО: картинка должна быть того же размера и разметки, что и '
+                  'шаблон по умолчанию (1280x906, текстовая зона x=75..740) - имя '
+                  'студента/название курса/дата накладываются на фиксированные '
+                  'координаты, другой макет "поедет".',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

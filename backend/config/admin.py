@@ -41,6 +41,9 @@ MENTORED_SECTIONS = [
     ("✉️ Сайт · Обращения", [
         "contactmessage",
     ]),
+    ("⚙️ Сайт · Настройки", [
+        "sitesettings",
+    ]),
 ]
 
 

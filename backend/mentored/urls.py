@@ -4,7 +4,8 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .views import GetProductListView, GetCourseListView, CourseDetailView, GetBookListView, BookDetailView, \
     GetConsultationListView, ConsultationDetailView, GetMembershipListView, MembershipDetailView, RegisterView, \
     ProfileView, GetProductBySlugView, BlogPostListView, BlogPostDetailView, CartView, CartAddItemView, \
-    CartUpdateItemView, CartRemoveItemView, CartClearView, CreateOrderView, GetOrderByNumberView, OrderHistoryView, ContactMessageView
+    CartUpdateItemView, CartRemoveItemView, CartClearView, CreateOrderView, GetOrderByNumberView, OrderHistoryView, \
+    ContactMessageView, SiteSettingsView
 
 
 urlpatterns = [
@@ -37,6 +38,7 @@ urlpatterns = [
 
     # Контакты
     path('contact/', ContactMessageView.as_view(), name='contact'),
+    path('site-settings/', SiteSettingsView.as_view(), name='site-settings'),
     path('orders/', OrderHistoryView.as_view(), name='order-list'),
     path('orders/<str:order_number>/', GetOrderByNumberView.as_view(), name='order-detail'),
 

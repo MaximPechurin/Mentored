@@ -8,25 +8,25 @@
         </div>
         <p class="brand-desc">Crecimiento personal y profesional con propósito.</p>
         <div class="social-links">
-          <a href="https://www.instagram.com/irina.karbonova?utm_source=qr" aria-label="Instagram">
+          <a :href="settings.instagram_url" aria-label="Instagram">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
               <rect x="2" y="2" width="20" height="20" rx="5"/>
               <circle cx="12" cy="12" r="4"/>
               <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>
             </svg>
           </a>
-          <a href="https://www.facebook.com/share/18wT3LwP2q/?mibextid=wwXIfr" aria-label="Facebook">
+          <a :href="settings.facebook_url" aria-label="Facebook">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor">
               <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
             </svg>
           </a>
-          <a href="https://www.youtube.com/@IrinaArbonova" aria-label="YouTube">
+          <a :href="settings.youtube_url" aria-label="YouTube">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">
               <path d="M22.5 6.4a2.8 2.8 0 0 0-1.9-2C18.9 4 12 4 12 4s-6.9 0-8.6.4a2.8 2.8 0 0 0-1.9 2A29 29 0 0 0 1.1 12a29 29 0 0 0 .4 5.6 2.8 2.8 0 0 0 1.9 2C5.1 20 12 20 12 20s6.9 0 8.6-.4a2.8 2.8 0 0 0 1.9-2 29 29 0 0 0 .4-5.6 29 29 0 0 0-.4-5.6z"/>
               <polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="currentColor"/>
             </svg>
           </a>
-          <a href="https://www.linkedin.com/in/irina-karbonova-3a4763101?utm_source=share_via&utm_content=profile&utm_medium=member_ios" aria-label="LinkedIn">
+          <a :href="settings.linkedin_url" aria-label="LinkedIn">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM10 9h3.8v1.7h.05a4.2 4.2 0 0 1 3.75-2c4 0 4.75 2.6 4.75 6V21h-4v-5.3c0-1.3 0-2.9-1.8-2.9s-2 1.4-2 2.8V21h-4z"/>
             </svg>
@@ -63,7 +63,7 @@
         <h4>Contacto</h4>
         <ul>
           <li>
-            <a href="https://wa.me/51940304595" class="contact-link">
+            <a :href="`https://wa.me/${settings.whatsapp_number}`" class="contact-link">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
               </svg>
@@ -71,12 +71,12 @@
             </a>
           </li>
           <li>
-            <a href="mailto:info@mentoredgroup.com" class="contact-link">
+            <a :href="`mailto:${settings.contact_email}`" class="contact-link">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="2" y="4" width="20" height="16" rx="2"/>
                 <path d="m22 7-10 6L2 7"/>
               </svg>
-              info@mentoredgroup.com
+              {{ settings.contact_email }}
             </a>
           </li>
           <li><router-link to="/contacto">Formulario de contacto</router-link></li>
@@ -112,6 +112,10 @@
 </template>
 
 <script setup>
+import { useSiteSettings } from '../composables/useSiteSettings'
+
+const { settings } = useSiteSettings()
+
 const handleSubscribe = () => {
   alert('¡Gracias por suscribirte! Pronto recibirás novedades.')
 }

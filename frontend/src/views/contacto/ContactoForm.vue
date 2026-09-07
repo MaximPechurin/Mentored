@@ -80,7 +80,7 @@
     <!-- Блоки контактов -->
     <div class="ct-contact-blocks">
       <!-- WhatsApp -->
-      <a href="https://wa.me/51940304595" class="ct-block ct-block-whatsapp">
+      <a :href="`https://wa.me/${settings.whatsapp_number}`" class="ct-block ct-block-whatsapp">
         <div class="ct-block-header">
           <span class="ct-block-icon ct-icon-whatsapp">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -92,11 +92,11 @@
             <span class="ct-block-sub">Respuesta más rápida</span>
           </div>
         </div>
-        <span class="ct-block-value">+51 940 304 595</span>
+        <span class="ct-block-value">+{{ settings.whatsapp_number }}</span>
       </a>
 
       <!-- Email -->
-      <a href="mailto:info@mentoredgroup.com" class="ct-block ct-block-email">
+      <a :href="`mailto:${settings.contact_email}`" class="ct-block ct-block-email">
         <div class="ct-block-header">
           <span class="ct-block-icon ct-icon-email">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -109,7 +109,7 @@
             <span class="ct-block-sub">Para consultas detalladas</span>
           </div>
         </div>
-        <span class="ct-block-value ct-email-value">info@mentoredgroup.com</span>
+        <span class="ct-block-value ct-email-value">{{ settings.contact_email }}</span>
       </a>
 
       <!-- Horario -->
@@ -127,20 +127,20 @@
           Lunes a viernes, 9:00 – 18:00<br>Respondemos en 24-48 h hábiles.
         </p>
         <div class="ct-social-links">
-          <a href="https://www.instagram.com/irina.karbonova?utm_source=qr" aria-label="Instagram">
+          <a :href="settings.instagram_url" aria-label="Instagram">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
               <rect x="2" y="2" width="20" height="20" rx="5"/>
               <circle cx="12" cy="12" r="4"/>
               <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>
             </svg>
           </a>
-          <a href="https://www.youtube.com/@IrinaArbonova" aria-label="YouTube">
+          <a :href="settings.youtube_url" aria-label="YouTube">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">
               <path d="M22.5 6.4a2.8 2.8 0 0 0-1.9-2C18.9 4 12 4 12 4s-6.9 0-8.6.4a2.8 2.8 0 0 0-1.9 2A29 29 0 0 0 1.1 12a29 29 0 0 0 .4 5.6 2.8 2.8 0 0 0 1.9 2C5.1 20 12 20 12 20s6.9 0 8.6-.4a2.8 2.8 0 0 0 1.9-2 29 29 0 0 0 .4-5.6 29 29 0 0 0-.4-5.6z"/>
               <polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="currentColor"/>
             </svg>
           </a>
-          <a href="https://www.facebook.com/share/18wT3LwP2q/?mibextid=wwXIfr" aria-label="Facebook">
+          <a :href="settings.facebook_url" aria-label="Facebook">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
             </svg>
@@ -154,6 +154,9 @@
 <script setup>
 import { ref } from 'vue'
 import { contactApi } from '../../api/contact'
+import { useSiteSettings } from '../../composables/useSiteSettings'
+
+const { settings } = useSiteSettings()
 
 const sent = ref(false)
 const sending = ref(false)

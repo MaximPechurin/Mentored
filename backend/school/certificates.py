@@ -53,9 +53,15 @@ def format_date_es(dt):
     return f"{dt.day:02d} de {MONTHS_ES[dt.month - 1]} de {dt.year}"
 
 
-def render_certificate(student_name, course_title, issued_at):
-    """ Возвращает PNG-байты сертификата (BytesIO). """
-    image = Image.open(TEMPLATE_PATH).convert('RGB')
+def render_certificate(student_name, course_title, issued_at, template_path=None):
+    """
+    Возвращает PNG-байты сертификата (BytesIO). template_path - свой
+    шаблон курса (Course.certificate_template), если задан; иначе -
+    общий шаблон по умолчанию. Координаты текста рассчитаны под
+    разметку шаблона по умолчанию (1280x906) - свой шаблон должен
+    повторять её, иначе текст ляжет не туда (см. help_text поля).
+    """
+    image = Image.open(template_path or TEMPLATE_PATH).convert('RGB')
     draw = ImageDraw.Draw(image)
 
     _draw_centered(draw, student_name, TEXT_CENTER_X, NAME_Y, FONT_BOLD, TEXT_MAX_WIDTH, 44, TEXT_COLOR)

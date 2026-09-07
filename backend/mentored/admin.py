@@ -1,9 +1,10 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.shortcuts import redirect
 from django.utils.html import format_html
 
 from .models import User, Role, BlogCategory, BlogPost, FAQ, Testimonial, Book, Course, Consultation, Membership, \
-    Cart, CartItem, ContactMessage, Order, OrderItem
+    Cart, CartItem, ContactMessage, Order, OrderItem, SiteSettings
 
 @admin.register(Role)
 class RoleAdmin(admin.ModelAdmin):
@@ -406,3 +407,21 @@ class OrderAdmin(admin.ModelAdmin):
     date_hierarchy = 'created_at'
     inlines = [OrderItemInline]
     readonly_fields = ('order_number', 'created_at', 'updated_at')
+
+
+@admin.register(SiteSettings)
+class SiteSettingsAdmin(admin.ModelAdmin):
+    """
+    Синглтон - всегда ровно одна строка. Запрещаем добавлять вторую и
+    удалять единственную, а список сразу ведёт на форму редактирования,
+    чтобы не заставлять искать единственную строку в таблице.
+    """
+    def has_add_permission(self, request):
+        return not SiteSettings.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def changelist_view(self, request, extra_context=None):
+        obj = SiteSettings.load()
+        return redirect('admin:mentored_sitesettings_change', obj.pk)

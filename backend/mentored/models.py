@@ -925,3 +925,49 @@ class ContactMessage(models.Model):
 
     def __str__(self):
         return f"{self.name} <{self.email}> - {self.motivo}"
+
+
+# ============================================================
+# НАСТРОЙКИ САЙТА (синглтон - одна строка в таблице)
+# ============================================================
+class SiteSettings(models.Model):
+    """
+    Общие настройки сайта, редактируемые из админки без деплоя кода:
+    контактная почта, соцсети, WhatsApp - раньше это было зашито прямо
+    во фронтенде (Footer.vue и т.п.), из-за чего правка требовала
+    правки кода и деплоя. Синглтон - всегда ровно одна строка (pk=1),
+    см. load()/save().
+    """
+    contact_email = models.EmailField(
+        default='info@mentoredgroup.com',
+        verbose_name='Email для связи',
+    )
+    whatsapp_number = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name='WhatsApp',
+        help_text='В международном формате без плюса и пробелов, например 51940304595',
+    )
+    instagram_url = models.URLField(blank=True, verbose_name='Instagram')
+    facebook_url = models.URLField(blank=True, verbose_name='Facebook')
+    youtube_url = models.URLField(blank=True, verbose_name='YouTube')
+    linkedin_url = models.URLField(blank=True, verbose_name='LinkedIn')
+
+    class Meta:
+        verbose_name = 'Настройки сайта'
+        verbose_name_plural = 'Настройки сайта'
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        pass
+
+    @classmethod
+    def load(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return 'Настройки сайта'
