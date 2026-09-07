@@ -1,8 +1,11 @@
 """
-Кастомный AdminSite: группирует модели приложения `school` в осмысленные
-блоки на главной админки (по умолчанию Django валит все модели приложения
-в один длинный список). Остальные приложения (mentored, payments, auth)
-не трогаем - отображаются как обычно.
+Кастомный AdminSite: группирует модели приложений `mentored` (витрина,
+заказы, блог) и `school` (учебная платформа) в осмысленные блоки на
+главной странице админки - по умолчанию Django валит все модели
+приложения в один длинный список. Модель Payment (приложение `payments`)
+по смыслу относится к заказам - визуально подмешиваем её в блок
+«Заказы и оплата» сайта. Приложение `auth` (группы Django) не трогаем -
+отображается как обычно.
 """
 from django.contrib.admin import AdminSite
 
@@ -13,12 +16,59 @@ SCHOOL_SECTIONS = [
         "assignment", "courseteacher", "productcourseaccess",
     ]),
     ("👤 Школа · Студенты и доступы", [
-        "enrollment", "lessonprogress", "submission", "teacherprofile",
+        "enrollment", "lessonprogress", "submission", "submissioncomment", "teacherprofile",
     ]),
     ("💬 Школа · Общение", [
         "forumthread", "forumpost", "directmessage",
     ]),
 ]
+
+# Разбивка моделей mentored (+ Payment из приложения payments) по блокам.
+MENTORED_SECTIONS = [
+    ("🛍️ Сайт · Витрина (товары)", [
+        "book", "course", "consultation", "membership",
+    ]),
+    ("🧾 Сайт · Заказы и оплата", [
+        "cart", "cartitem", "order", "payment",
+    ]),
+    ("📝 Сайт · Контент", [
+        "blogcategory", "blogpost", "faq", "testimonial",
+    ]),
+    ("👤 Сайт · Пользователи и роли", [
+        "role", "user",
+    ]),
+    ("✉️ Сайт · Обращения", [
+        "contactmessage",
+    ]),
+]
+
+
+def _grouped_sections(models_by_name, sections, leftover_title, app_label, app_url):
+    """ Раскладывает модели по секциям; то, что не попало ни в одну - в «Прочее». """
+    result = []
+    placed = set()
+    for title, names in sections:
+        models = [models_by_name[n] for n in names if n in models_by_name]
+        placed.update(n for n in names if n in models_by_name)
+        if models:
+            result.append({
+                "name": title,
+                "app_label": app_label,
+                "app_url": app_url,
+                "has_module_perms": True,
+                "models": models,
+            })
+
+    leftover = [m for n, m in models_by_name.items() if n not in placed]
+    if leftover:
+        result.append({
+            "name": leftover_title,
+            "app_label": app_label,
+            "app_url": app_url,
+            "has_module_perms": True,
+            "models": leftover,
+        })
+    return result
 
 
 class MentoredAdminSite(AdminSite):
@@ -31,39 +81,30 @@ class MentoredAdminSite(AdminSite):
     def get_app_list(self, request, app_label=None):
         app_list = super().get_app_list(request, app_label)
 
-        # Вытаскиваем приложение school, чтобы разбить его на блоки
         school_app = next((a for a in app_list if a.get("app_label") == "school"), None)
-        if not school_app:
-            return app_list
+        mentored_app = next((a for a in app_list if a.get("app_label") == "mentored"), None)
+        payments_app = next((a for a in app_list if a.get("app_label") == "payments"), None)
+        other = [a for a in app_list if a not in (school_app, mentored_app, payments_app)]
 
-        by_name = {m["object_name"].lower(): m for m in school_app["models"]}
-        other = list(app_list)
-        other.remove(school_app)
+        school_sections = []
+        if school_app:
+            by_name = {m["object_name"].lower(): m for m in school_app["models"]}
+            school_sections = _grouped_sections(
+                by_name, SCHOOL_SECTIONS, "🎓 Школа · Прочее",
+                "school", school_app.get("app_url", "/admin/school/"),
+            )
 
-        sections = []
-        placed = set()
-        for title, names in SCHOOL_SECTIONS:
-            models = [by_name[n] for n in names if n in by_name]
-            placed.update(n for n in names if n in by_name)
-            if models:
-                sections.append({
-                    "name": title,
-                    "app_label": "school",
-                    "app_url": school_app.get("app_url", "/admin/school/"),
-                    "has_module_perms": True,
-                    "models": models,
-                })
+        mentored_sections = []
+        if mentored_app:
+            by_name = {m["object_name"].lower(): m for m in mentored_app["models"]}
+            if payments_app:
+                # Payment визуально живёт в блоке заказов сайта, хотя
+                # физически это отдельное приложение payments
+                by_name.update({m["object_name"].lower(): m for m in payments_app["models"]})
+            mentored_sections = _grouped_sections(
+                by_name, MENTORED_SECTIONS, "🛍️ Сайт · Прочее",
+                "mentored", mentored_app.get("app_url", "/admin/mentored/"),
+            )
 
-        # Модели school, не попавшие ни в один блок - в отдельный «Прочее»
-        leftover = [m for n, m in by_name.items() if n not in placed]
-        if leftover:
-            sections.append({
-                "name": "🎓 Школа · Прочее",
-                "app_label": "school",
-                "app_url": school_app.get("app_url", "/admin/school/"),
-                "has_module_perms": True,
-                "models": leftover,
-            })
-
-        # Блоки школы - первыми, затем остальные приложения
-        return sections + other
+        # Сайт (магазин), затем школа, затем всё остальное (auth и т.п.)
+        return mentored_sections + school_sections + other
