@@ -26,7 +26,31 @@
       </section>
 
       <section class="esc-block">
-        <h2 class="esc-section-title">{{ st('teacher.misCursos') }}</h2>
+        <div class="esc-section-header">
+          <h2 class="esc-section-title">{{ st('teacher.misCursos') }}</h2>
+          <button class="esc-create-course-btn" @click="showCreateForm = !showCreateForm">
+            {{ showCreateForm ? st('teacher.cancelar') : st('teacher.crearCurso') }}
+          </button>
+        </div>
+
+        <div v-if="showCreateForm" class="esc-create-course-form">
+          <input
+            v-model="newCourseTitle"
+            type="text"
+            :placeholder="st('teacher.nombreCurso')"
+            class="esc-create-course-input"
+          />
+          <textarea
+            v-model="newCourseDescription"
+            rows="3"
+            :placeholder="st('teacher.descripcionCurso')"
+            class="esc-create-course-textarea"
+          ></textarea>
+          <p v-if="createError" class="esc-create-course-error">{{ createError }}</p>
+          <button class="esc-btn-approve" :disabled="creatingCourse" @click="createCourse">
+            {{ creatingCourse ? st('teacher.creando') : st('teacher.crear') }}
+          </button>
+        </div>
 
         <div v-if="loadingCourses" class="esc-empty">
           <p class="esc-empty-text">{{ st('common.cargando') }}</p>
@@ -209,6 +233,38 @@ const checking = ref(true)
 const loadingCourses = ref(true)
 const courses = ref([])
 const submissions = ref([])
+
+// создание курса прямо из кабинета преподавателя
+const showCreateForm = ref(false)
+const newCourseTitle = ref('')
+const newCourseDescription = ref('')
+const creatingCourse = ref(false)
+const createError = ref('')
+
+const createCourse = async () => {
+  if (!newCourseTitle.value.trim()) {
+    createError.value = st('teacher.nombreRequerido')
+    return
+  }
+  creatingCourse.value = true
+  createError.value = ''
+  try {
+    await schoolApi.createTeacherCourse({
+      title: newCourseTitle.value.trim(),
+      description: newCourseDescription.value.trim(),
+    })
+    const { data } = await schoolApi.teacherCourses()
+    courses.value = data
+    newCourseTitle.value = ''
+    newCourseDescription.value = ''
+    showCreateForm.value = false
+  } catch (error) {
+    console.error('Error al crear el curso:', error)
+    createError.value = error.response?.data?.error || 'No se pudo crear el curso.'
+  } finally {
+    creatingCourse.value = false
+  }
+}
 
 // сводка ДЗ по студентам (все задания: выполненные и нет)
 const loadingHomework = ref(true)
@@ -437,6 +493,62 @@ onMounted(async () => {
   color: #15110f;
   margin: 0 0 24px;
   letter-spacing: -0.3px;
+}
+
+.esc-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.esc-section-header .esc-section-title { margin: 0; }
+
+.esc-create-course-btn {
+  flex-shrink: 0;
+  background: #0e0c0c;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+.esc-create-course-btn:hover { background: #2a2525; }
+
+.esc-create-course-form {
+  background: #ffffff;
+  border: 1px solid #ece7e1;
+  border-radius: 18px;
+  padding: 22px 24px;
+  margin-bottom: 20px;
+}
+
+.esc-create-course-input,
+.esc-create-course-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #e4ddd2;
+  border-radius: 10px;
+  padding: 12px;
+  font-family: inherit;
+  font-size: 14.5px;
+  color: #15110f;
+  background: #fbf9f6;
+  outline: none;
+  margin-bottom: 12px;
+}
+.esc-create-course-textarea { resize: vertical; }
+.esc-create-course-input:focus,
+.esc-create-course-textarea:focus { border-color: #8e1519; }
+
+.esc-create-course-error {
+  color: #8e1519;
+  font-size: 13.5px;
+  margin: 0 0 12px;
 }
 
 .esc-empty {

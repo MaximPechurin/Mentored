@@ -55,6 +55,11 @@ export const schoolApi = {
     return api.get('/school/teacher/courses/')
   },
 
+  // Создать новый курс из кабинета преподавателя: { title, description }
+  createTeacherCourse(data) {
+    return api.post('/school/teacher/courses/', data)
+  },
+
   // Ростер студентов курса с прогрессом
   teacherCourseStudents(courseId) {
     return api.get(`/school/teacher/courses/${courseId}/students/`)

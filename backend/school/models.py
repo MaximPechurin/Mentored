@@ -103,6 +103,17 @@ class Course(models.Model):
         verbose_name='Активен',
         help_text='Можно временно скрыть курс из кабинетов, не удаляя контент и прогресс',
     )
+    creator = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_courses',
+        limit_choices_to={'roles__codename': 'teacher'},
+        verbose_name='Создатель курса',
+        help_text='Преподаватель, создавший курс из своего кабинета - '
+                  'этот курс автоматически виден ему в «Mis cursos»',
+    )
     certificate_template = models.ImageField(
         upload_to=get_upload_path,
         blank=True,

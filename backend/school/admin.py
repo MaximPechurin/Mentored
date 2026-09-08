@@ -73,7 +73,7 @@ class ProductCourseAccessInline(admin.TabularInline):
 @admin.register(Course)
 class CourseAdmin(TeacherScopedAdminMixin, admin.ModelAdmin):
     course_lookup = ''
-    list_display = ('title', 'is_active', 'created_at')
+    list_display = ('title', 'creator', 'is_active', 'created_at')
     list_filter = ('is_active',)
     search_fields = ('title', 'description')
     prepopulated_fields = {'slug': ('title',)}

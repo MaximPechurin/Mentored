@@ -355,7 +355,15 @@ class SubmissionVisibilityView(APIView):
 
 
 class TeacherCoursesView(APIView):
-    """ GET /school/teacher/courses/ - курсы, которые ведёт этот ментор. """
+    """
+    GET /school/teacher/courses/ - курсы, которые ведёт этот ментор.
+    POST /school/teacher/courses/ - создать новый курс из кабинета
+    преподавателя (title, description). Создатель автоматически
+    становится преподавателем курса (CourseTeacher), поэтому дальше
+    курс просто попадает в тот же список выше - отдельного "мои
+    созданные курсы" не нужно. Модули/уроки/задания и медиа пока
+    добавляются в /admin/ (см. гайд на главной странице админки).
+    """
     permission_classes = [IsAuthenticated, IsTeacher]
 
     def get(self, request):
@@ -363,6 +371,19 @@ class TeacherCoursesView(APIView):
             course_teachers__teacher=request.user,
         ).distinct().order_by('title')
         return Response(TeacherCourseSerializer(courses, many=True).data)
+
+    def post(self, request):
+        title = (request.data.get('title') or '').strip()
+        if not title:
+            return Response({'error': 'Название курса обязательно'}, status=status.HTTP_400_BAD_REQUEST)
+
+        course = Course.objects.create(
+            title=title,
+            description=(request.data.get('description') or '').strip(),
+            creator=request.user,
+        )
+        CourseTeacher.objects.get_or_create(course=course, teacher=request.user)
+        return Response(TeacherCourseSerializer(course).data, status=status.HTTP_201_CREATED)
 
 
 class TeacherCourseStudentsView(APIView):
