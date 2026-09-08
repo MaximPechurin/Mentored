@@ -21,13 +21,11 @@ def grant_course_access_for_order(order):
     перепутать. По найденному товару берём все ProductCourseAccess и на
     каждый связанный курс заводим Enrollment.
     """
-    from mentored.models import Role
     from .models import ProductCourseAccess, Enrollment
 
     if order.status != 'paid':
         return
 
-    student_role = None
     for item in order.items.all():
         if not item.product_type or not item.product_id:
             continue
@@ -51,17 +49,12 @@ def grant_course_access_for_order(order):
                     "School: выдан доступ user=%s course=%s (заказ %s)",
                     order.user_id, link.course_id, order.order_number,
                 )
-                # письмо "доступ открыт" - best-effort, не роняет вебхук
+                # письмо "доступ открыт" - best-effort, не роняет вебхук.
+                # Роль student гарантируется отдельным сигналом на самом
+                # Enrollment (см. on_enrollment_saved) - срабатывает и
+                # тут, и при ручном создании доступа из админки.
                 from .emails import send_course_access_granted
                 send_course_access_granted(order.user, link.course)
-                # Гарантируем роль student - иначе у пользователя будет
-                # доступ, но API школы (permission IsStudent) вернёт 403.
-                # Актуально для юзеров, зарегистрированных до авто-роли.
-                if student_role is None:
-                    student_role, _ = Role.objects.get_or_create(
-                        codename=Role.STUDENT, defaults={'name': 'Студент'},
-                    )
-                order.user.roles.add(student_role)
 
 
 def on_order_saved(sender, instance, **kwargs):
@@ -76,4 +69,32 @@ def on_order_saved(sender, instance, **kwargs):
         logger.exception(
             "School: ошибка выдачи доступа по заказу %s",
             getattr(instance, 'order_number', '?'),
+        )
+
+
+def on_enrollment_saved(sender, instance, **kwargs):
+    """
+    Обработчик post_save для school.Enrollment. Гарантирует роль student
+    у пользователя, если у него есть активный доступ к курсу - иначе
+    доступ формально есть, а API школы (permission IsStudent) и кнопка
+    "Ir a la Escuela" на фронте (смотрят на роль, не на Enrollment)
+    ведут себя так, будто доступа нет.
+
+    Срабатывает НЕЗАВИСИМО от того, как создан Enrollment - через оплату
+    заказа (см. grant_course_access_for_order) или вручную из админки
+    (штатный способ, см. докстринг Enrollment) - раньше роль
+    проставлялась только в первом случае.
+    """
+    if not instance.is_active:
+        return
+    try:
+        from mentored.models import Role
+        student_role, _ = Role.objects.get_or_create(
+            codename=Role.STUDENT, defaults={'name': 'Студент'},
+        )
+        instance.user.roles.add(student_role)
+    except Exception:
+        logger.exception(
+            "School: ошибка назначения роли student для user=%s (enrollment=%s)",
+            instance.user_id, instance.pk,
         )
