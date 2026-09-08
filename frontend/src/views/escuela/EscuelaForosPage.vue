@@ -48,7 +48,7 @@ import { schoolApi } from '../../api/school'
 import { useSchoolLang } from '../../composables/useSchoolLang'
 
 const router = useRouter()
-const { user, isAuthenticated, refreshUser } = useAuth()
+const { isAuthenticated, refreshUser } = useAuth()
 const { st } = useSchoolLang()
 
 const checking = ref(true)
@@ -61,16 +61,7 @@ onMounted(async () => {
     return
   }
 
-  const fresh = await refreshUser()
-  const isDev = fresh?.is_dev ?? user.value?.is_dev ?? false
-
-  // Раздел «Школа» пока закрыт для всех, кроме dev-аккаунтов (тот же
-  // гейт, что и в API - permission IsDev).
-  if (!isDev) {
-    router.replace('/')
-    return
-  }
-
+  await refreshUser()
   checking.value = false
 
   try {

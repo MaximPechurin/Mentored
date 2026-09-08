@@ -135,7 +135,7 @@ const routes = [
   },
   {
     // Форум курса (участники = студенты + преподаватели курса, проверка
-    // на бэкенде). Доступ по is_dev, см. ForoPage.vue.
+    // на бэкенде), см. ForoPage.vue.
     path: '/escuela/foro/:courseId',
     name: 'EscuelaForo',
     component: ForoPage,

@@ -80,13 +80,7 @@ onMounted(async () => {
   }
 
   const fresh = await refreshUser()
-  const isDev = fresh?.is_dev ?? user.value?.is_dev ?? false
   const roles = fresh?.roles ?? user.value?.roles ?? []
-
-  if (!isDev) {
-    router.replace('/')
-    return
-  }
 
   if (!roles.includes('teacher')) {
     router.replace('/cuenta')

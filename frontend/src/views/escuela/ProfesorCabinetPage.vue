@@ -312,15 +312,7 @@ onMounted(async () => {
   // Роли/флаги могут быть устаревшими в localStorage (например, только
   // что назначены из админки) - подтягиваем свежий профиль перед проверкой.
   const fresh = await refreshUser()
-  const isDev = fresh?.is_dev ?? user.value?.is_dev ?? false
   const roles = fresh?.roles ?? user.value?.roles ?? []
-
-  // Раздел «Школа» пока закрыт для всех, кроме dev-аккаунтов (тот же
-  // гейт, что и в API - permission IsDev).
-  if (!isDev) {
-    router.replace('/')
-    return
-  }
 
   if (!roles.includes('teacher')) {
     router.replace('/cuenta')

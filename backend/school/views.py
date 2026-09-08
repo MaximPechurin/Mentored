@@ -16,7 +16,7 @@ from .models import (
     CourseTeacher, is_course_participant, is_course_teacher, can_direct_message,
 )
 from .certificates import render_certificate
-from .permissions import IsStudent, IsTeacher, IsDev
+from .permissions import IsStudent, IsTeacher
 from .serializers import (
     ModuleSerializer, MyCourseSerializer, AssignmentDetailSerializer,
     AnswerFeedSerializer, SubmissionCommentSerializer,
@@ -30,8 +30,7 @@ User = get_user_model()
 
 class MyCoursesView(APIView):
     """ GET /school/my-courses/ - курсы, купленные студентом (активный Enrollment). """
-    # IsDev - временный гейт, пока школа не открыта для всех (см. permissions.py)
-    permission_classes = [IsAuthenticated, IsDev, IsStudent]
+    permission_classes = [IsAuthenticated, IsStudent]
 
     def get(self, request):
         enrollments = Enrollment.objects.filter(
@@ -52,7 +51,7 @@ class CourseDetailView(APIView):
     но урок помечен free preview" - тут это уже неважно, раз Enrollment
     и так есть.
     """
-    permission_classes = [IsAuthenticated, IsDev, IsStudent]
+    permission_classes = [IsAuthenticated, IsStudent]
 
     def get(self, request, slug):
         course = get_object_or_404(Course, slug=slug, is_active=True)
@@ -89,7 +88,7 @@ class CertificateDownloadView(APIView):
     уже выдан Certificate (см. _maybe_issue_certificate) - выдаётся
     автоматически при прохождении всех уроков курса.
     """
-    permission_classes = [IsAuthenticated, IsDev, IsStudent]
+    permission_classes = [IsAuthenticated, IsStudent]
 
     def get(self, request, slug):
         course = get_object_or_404(Course, slug=slug)
@@ -122,7 +121,7 @@ class LessonProgressView(APIView):
     Требует активного Enrollment на курс, которому принадлежит урок -
     иначе можно было бы отмечать прогресс по чужим/некупленным курсам.
     """
-    permission_classes = [IsAuthenticated, IsDev, IsStudent]
+    permission_classes = [IsAuthenticated, IsStudent]
 
     def post(self, request, lesson_id):
         lesson = get_object_or_404(Lesson, id=lesson_id)
@@ -196,7 +195,7 @@ def _student_enrollment_for_assignment(user, assignment):
 
 class AssignmentDetailView(APIView):
     """ GET /school/assignments/<id>/ - задание + мой ответ. Нужен доступ к курсу. """
-    permission_classes = [IsAuthenticated, IsDev, IsStudent]
+    permission_classes = [IsAuthenticated, IsStudent]
 
     def get(self, request, assignment_id):
         assignment = get_object_or_404(Assignment, id=assignment_id)
@@ -227,7 +226,7 @@ class AssignmentSubmitView(APIView):
     прошлую оценку/комментарий), а не плодит новые записи. Пересдать
     после проверки можно всегда - на случай доработки.
     """
-    permission_classes = [IsAuthenticated, IsDev, IsStudent]
+    permission_classes = [IsAuthenticated, IsStudent]
     # Глобально в проекте только JSONParser (см. settings), а тут нужен
     # приём файла - разрешаем multipart/form-data точечно на этой вью.
     parser_classes = [MultiPartParser, FormParser, JSONParser]
@@ -275,7 +274,7 @@ class AssignmentAnswersView(APIView):
     Доступ: участник курса (студент с активным Enrollment или его
     преподаватель).
     """
-    permission_classes = [IsAuthenticated, IsDev]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, assignment_id):
         assignment = get_object_or_404(
@@ -304,7 +303,7 @@ class SubmissionCommentsView(APIView):
     ответу. Тело: {"text": str}. Могут: автор ответа, преподаватели
     курса, а если ответ открыт (is_public) - любой активный студент курса.
     """
-    permission_classes = [IsAuthenticated, IsDev]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, submission_id):
         submission = get_object_or_404(
@@ -341,7 +340,7 @@ class SubmissionVisibilityView(APIView):
     POST /school/submissions/<id>/visibility/ - открыть/скрыть свой ответ
     для других учеников курса. Тело: {"is_public": bool}. Только автор.
     """
-    permission_classes = [IsAuthenticated, IsDev, IsStudent]
+    permission_classes = [IsAuthenticated, IsStudent]
 
     def post(self, request, submission_id):
         submission = get_object_or_404(
@@ -357,7 +356,7 @@ class SubmissionVisibilityView(APIView):
 
 class TeacherCoursesView(APIView):
     """ GET /school/teacher/courses/ - курсы, которые ведёт этот ментор. """
-    permission_classes = [IsAuthenticated, IsDev, IsTeacher]
+    permission_classes = [IsAuthenticated, IsTeacher]
 
     def get(self, request):
         courses = Course.objects.filter(
@@ -371,7 +370,7 @@ class TeacherCourseStudentsView(APIView):
     GET /school/teacher/courses/<course_id>/students/ - ростер студентов
     курса с прогрессом. Только для ментора этого курса, иначе 403.
     """
-    permission_classes = [IsAuthenticated, IsDev, IsTeacher]
+    permission_classes = [IsAuthenticated, IsTeacher]
 
     def get(self, request, course_id):
         course = get_object_or_404(Course, id=course_id)
@@ -399,7 +398,7 @@ class TeacherStudentCourseDetailView(APIView):
     собственному Enrollment (для студента), тут же прогресс смотрит
     преподаватель по чужому Enrollment (студента из ростера).
     """
-    permission_classes = [IsAuthenticated, IsDev, IsTeacher]
+    permission_classes = [IsAuthenticated, IsTeacher]
 
     def get(self, request, course_id, user_id):
         course = get_object_or_404(Course, id=course_id)
@@ -444,7 +443,7 @@ class TeacherSubmissionsView(APIView):
     По умолчанию только status='submitted' (ждут проверки); ?status=all
     - все, ?status=<value> - конкретный статус.
     """
-    permission_classes = [IsAuthenticated, IsDev, IsTeacher]
+    permission_classes = [IsAuthenticated, IsTeacher]
 
     def get(self, request):
         qs = Submission.objects.filter(
@@ -466,7 +465,7 @@ class TeacherSubmissionReviewView(APIView):
     Тело: {"status": "reviewed"|"needs_revision", "score": int|null,
     "mentor_comment": str}. Разрешено только ментору этого курса.
     """
-    permission_classes = [IsAuthenticated, IsDev, IsTeacher]
+    permission_classes = [IsAuthenticated, IsTeacher]
 
     def post(self, request, submission_id):
         submission = get_object_or_404(
@@ -526,7 +525,7 @@ class TeacherHomeworkView(APIView):
     выполнено» (и статусом проверки). В отличие от TeacherSubmissionsView
     (только очередь на проверку) тут видно и тех, кто задание ещё не сдал.
     """
-    permission_classes = [IsAuthenticated, IsDev, IsTeacher]
+    permission_classes = [IsAuthenticated, IsTeacher]
 
     def get(self, request):
         courses = Course.objects.filter(
@@ -609,7 +608,7 @@ class ForumsListView(APIView):
     он активный студент и/или преподаватель, со счётчиком тем. Точка
     входа для кнопки «Форумы» в навигации школы.
     """
-    permission_classes = [IsAuthenticated, IsDev]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         me = request.user
@@ -636,7 +635,7 @@ class CourseThreadsView(APIView):
     POST /school/courses/<course_id>/threads/ - создать тему {title, content}.
     Доступ - только участникам курса (студенты + преподаватели).
     """
-    permission_classes = [IsAuthenticated, IsDev]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, course_id):
         course = get_object_or_404(Course, id=course_id)
@@ -660,7 +659,7 @@ class CourseThreadsView(APIView):
 
 class ThreadDetailView(APIView):
     """ GET /school/threads/<id>/ - тема + все сообщения. """
-    permission_classes = [IsAuthenticated, IsDev]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, thread_id):
         thread = get_object_or_404(ForumThread.objects.select_related('course'), id=thread_id)
@@ -675,7 +674,7 @@ class ThreadPostsView(APIView):
     POST /school/threads/<id>/posts/ - ответить в теме {content}.
     В закрытой (is_locked) теме отвечать могут только преподаватели.
     """
-    permission_classes = [IsAuthenticated, IsDev]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, thread_id):
         thread = get_object_or_404(ForumThread.objects.select_related('course'), id=thread_id)
@@ -698,7 +697,7 @@ class ThreadModerateView(APIView):
     POST /school/threads/<id>/moderate/ - закрепить/закрыть тему.
     Тело: {"is_pinned": bool} и/или {"is_locked": bool}. Только препод курса.
     """
-    permission_classes = [IsAuthenticated, IsDev, IsTeacher]
+    permission_classes = [IsAuthenticated, IsTeacher]
 
     def post(self, request, thread_id):
         thread = get_object_or_404(ForumThread.objects.select_related('course'), id=thread_id)
@@ -718,7 +717,7 @@ class ThreadModerateView(APIView):
 
 class ConversationsView(APIView):
     """ GET /school/messages/ - список диалогов (собеседник + последнее сообщение + непрочитанные). """
-    permission_classes = [IsAuthenticated, IsDev]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         me = request.user
@@ -750,7 +749,7 @@ class ConversationView(APIView):
     POST /school/messages/<user_id>/ - отправить сообщение {content}.
     Разрешено только между студентом и преподавателем с общим курсом.
     """
-    permission_classes = [IsAuthenticated, IsDev]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, user_id):
         other = get_object_or_404(User, id=user_id)
@@ -787,7 +786,7 @@ class TeacherCourseAnalyticsView(APIView):
     для его преподавателя: студенты, средний прогресс, распределение
     (завершили/в процессе/не начали), статистика по домашкам.
     """
-    permission_classes = [IsAuthenticated, IsDev, IsTeacher]
+    permission_classes = [IsAuthenticated, IsTeacher]
 
     def get(self, request, course_id):
         course = get_object_or_404(Course, id=course_id)
@@ -836,7 +835,7 @@ class TeacherCourseAnalyticsView(APIView):
 class PlatformAnalyticsView(APIView):
     """
     GET /school/analytics/overview/ - общая аналитика по школе.
-    Только суперюзер (без IsDev/IsTeacher - это админский обзор).
+    Только суперюзер (без IsTeacher - это админский обзор).
     """
     permission_classes = [IsAuthenticated]
 
@@ -879,7 +878,7 @@ class ChatDirectoryView(APIView):
     - студент: курсы -> преподаватели (unread)
     Тред/отправка/пометка прочитанным - через /school/messages/<user_id>/.
     """
-    permission_classes = [IsAuthenticated, IsDev]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         from collections import Counter

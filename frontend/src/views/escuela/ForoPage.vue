@@ -150,9 +150,7 @@ const moderate = async (field, value) => {
 
 onMounted(async () => {
   if (!isAuthenticated.value) { router.replace('/login'); return }
-  const fresh = await refreshUser()
-  const isDev = fresh?.is_dev ?? user.value?.is_dev ?? false
-  if (!isDev) { router.replace('/'); return }
+  await refreshUser()
   checking.value = false
   await loadThreads()
 })

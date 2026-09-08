@@ -21,9 +21,9 @@
       <!-- Действия -->
       <div class="actions">
         <!-- Заметная кнопка входа в учебную платформу. Видна только тем,
-             у кого есть доступ к школе (is_dev + роль student/teacher).
-             Ведёт в панель препода, если он преподаватель, иначе - в
-             кабинет студента. -->
+             у кого есть роль student/teacher (появляется после первой
+             оплаченной покупки курса). Ведёт в панель препода, если он
+             преподаватель, иначе - в кабинет студента. -->
         <router-link v-if="hasSchool" :to="schoolHome" class="btn-escuela">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="m2 7 10-5 10 5-10 5z"/><path d="M6 9.5V15c0 1.5 2.7 3 6 3s6-1.5 6-3V9.5"/>
@@ -100,12 +100,12 @@ const { settings } = useSiteSettings()
 // обновления профиля на любой другой странице) - здесь сознательно не
 // дёргаем API при каждой отрисовке хедера.
 const { user } = useAuth()
-const isDev = computed(() => !!user.value?.is_dev)
 const isSuperuser = computed(() => !!user.value?.is_superuser)
 const isStudent = computed(() => !!user.value?.roles?.includes('student'))
 const isTeacher = computed(() => !!user.value?.roles?.includes('teacher'))
-// Доступ к школе: dev-аккаунт с ролью студента или преподавателя
-const hasSchool = computed(() => isDev.value && (isStudent.value || isTeacher.value))
+// Доступ к школе: роль студента или преподавателя (сама роль student
+// назначается автоматически при первой оплаченной покупке курса)
+const hasSchool = computed(() => isStudent.value || isTeacher.value)
 const schoolHome = computed(() => (isTeacher.value ? '/escuela/profesor' : '/escuela/estudiante'))
 </script>
 
