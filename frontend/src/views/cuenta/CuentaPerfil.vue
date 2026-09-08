@@ -19,7 +19,7 @@
         </div>
         <div>
           <span class="ac-label">Miembro desde</span>
-          <span class="ac-value">{{ formatDate(user.date_joined) }}</span>
+          <span class="ac-value">{{ formatDate(user.created_at) }}</span>
         </div>
       </div>
       <div v-else class="ac-loading">
@@ -46,8 +46,9 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useAuth } from '../../composables/useAuth'
+import { orderApi } from '../../api/orders'
 
 const { user, refreshUser } = useAuth()
 const stats = ref({
@@ -66,16 +67,26 @@ const formatDate = (dateString) => {
   })
 }
 
-// Загружаем статистику (позже заменим на реальные данные с бэка)
+// Считаем статистику по реальным заказам (эндпоинта школы тут не берём -
+// он недоступен обычным пользователям, пока школа под флагом is_dev)
 const loadStats = async () => {
   try {
-    // TODO: заменить на реальные API запросы
-    // const response = await userApi.getStats()
-    // stats.value = response.data
+    const { data: orders } = await orderApi.listOrders()
+    const paidOrders = orders.filter((o) => o.status !== 'pending' && o.status !== 'cancelled')
+
+    const courseIds = new Set()
+    let consultas = 0
+    for (const order of paidOrders) {
+      for (const item of order.items || []) {
+        if (item.product_type === 'course') courseIds.add(item.product_id)
+        if (item.product_type === 'consultation') consultas += 1
+      }
+    }
+
     stats.value = {
-      cursos: 3,
-      pedidos: 7,
-      consultas: 2,
+      cursos: courseIds.size,
+      pedidos: orders.length,
+      consultas,
     }
   } catch (error) {
     console.error('Ошибка загрузки статистики:', error)
