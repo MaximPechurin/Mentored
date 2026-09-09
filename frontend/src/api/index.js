@@ -25,9 +25,15 @@ api.interceptors.request.use(
     }
     // Для загрузки файлов (FormData) убираем дефолтный
     // Content-Type: application/json - иначе браузер не проставит
-    // multipart-границу и файл не долетит до сервера.
+    // multipart-границу и файл не долетит до сервера. Также увеличиваем
+    // timeout - глобальные 10с достаточны для обычных запросов, но большой
+    // видеофайл грузится намного дольше и axios обрывал запрос сам, ещё до
+    // ответа сервера (в логах nginx это виднелось как код 499 - клиент
+    // закрыл соединение). 600000мс = 10 мин, как proxy_read/send_timeout в
+    // nginx для school-эндпоинтов.
     if (config.data instanceof FormData) {
       delete config.headers['Content-Type']
+      config.timeout = 600000
     }
     console.log('📤 Запрос:', config.method.toUpperCase(), config.url)
     return config
