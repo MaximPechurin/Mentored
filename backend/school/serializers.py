@@ -23,7 +23,28 @@ class LessonAssignmentBriefSerializer(serializers.ModelSerializer):
     """ Короткая карточка задания в списке уроков (без ответа студента). """
     class Meta:
         model = Assignment
-        fields = ['id', 'title', 'max_score']
+        fields = ['id', 'title', 'max_score', 'is_required']
+
+
+class TeacherLessonEditSerializer(serializers.ModelSerializer):
+    """ Урок с точки зрения преподавателя-редактора (без прогресса студента). """
+    materials = LessonMaterialSerializer(many=True, read_only=True)
+    assignments = LessonAssignmentBriefSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Lesson
+        fields = [
+            'id', 'title', 'order', 'video_file', 'video_url', 'content',
+            'duration_minutes', 'is_free_preview', 'materials', 'assignments',
+        ]
+
+
+class TeacherModuleEditSerializer(serializers.ModelSerializer):
+    lessons = TeacherLessonEditSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Module
+        fields = ['id', 'title', 'order', 'lessons']
 
 
 class LessonSerializer(serializers.ModelSerializer):
@@ -177,7 +198,7 @@ class AssignmentDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Assignment
-        fields = ['id', 'title', 'description', 'max_score', 'my_submission']
+        fields = ['id', 'title', 'description', 'max_score', 'is_required', 'my_submission']
 
     def get_my_submission(self, obj):
         sub = self.context.get('my_submission')

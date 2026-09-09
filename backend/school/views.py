@@ -11,7 +11,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Q
 
 from .models import (
-    Course, Enrollment, Lesson, LessonProgress, Assignment, Submission,
+    Course, Module, Enrollment, Lesson, LessonProgress, Assignment, Submission,
     SubmissionComment, Certificate, ForumThread, ForumPost, DirectMessage,
     CourseTeacher, is_course_participant, is_course_teacher, can_direct_message,
 )
@@ -21,8 +21,10 @@ from .serializers import (
     ModuleSerializer, MyCourseSerializer, AssignmentDetailSerializer,
     AnswerFeedSerializer, SubmissionCommentSerializer,
     TeacherSubmissionSerializer, TeacherCourseSerializer,
-    TeacherStudentProgressSerializer, ForumThreadListSerializer,
-    ForumThreadDetailSerializer, ForumPostSerializer, DirectMessageSerializer,
+    TeacherStudentProgressSerializer, TeacherModuleEditSerializer,
+    TeacherLessonEditSerializer, LessonAssignmentBriefSerializer,
+    ForumThreadListSerializer, ForumThreadDetailSerializer,
+    ForumPostSerializer, DirectMessageSerializer,
 )
 
 User = get_user_model()
@@ -138,11 +140,12 @@ class LessonProgressView(APIView):
         last_position_seconds = request.data.get('last_position_seconds')
 
         if is_completed:
-            # Урок с домашним заданием нельзя отметить пройденным, пока
-            # студент не отправил ответ хотя бы по каждому заданию урока
-            # (оценка/проверка ментором для этого не нужна - достаточно
-            # самого факта отправки).
-            assignment_ids = list(lesson.assignments.values_list('id', flat=True))
+            # Урок с ОБЯЗАТЕЛЬНЫМ домашним заданием нельзя отметить
+            # пройденным, пока студент не отправил ответ хотя бы по
+            # каждому такому заданию (оценка/проверка ментором для этого
+            # не нужна - достаточно самого факта отправки). Необязательные
+            # задания (is_required=False) прохождению урока не мешают.
+            assignment_ids = list(lesson.assignments.filter(is_required=True).values_list('id', flat=True))
             if assignment_ids:
                 submitted_ids = set(Submission.objects.filter(
                     assignment_id__in=assignment_ids, enrollment=enrollment,
@@ -361,8 +364,8 @@ class TeacherCoursesView(APIView):
     преподавателя (title, description). Создатель автоматически
     становится преподавателем курса (CourseTeacher), поэтому дальше
     курс просто попадает в тот же список выше - отдельного "мои
-    созданные курсы" не нужно. Модули/уроки/задания и медиа пока
-    добавляются в /admin/ (см. гайд на главной странице админки).
+    созданные курсы" не нужно. Уроки/задания к курсу добавляются через
+    TeacherCourseEditView и связанные вью ниже.
     """
     permission_classes = [IsAuthenticated, IsTeacher]
 
@@ -384,6 +387,188 @@ class TeacherCoursesView(APIView):
         )
         CourseTeacher.objects.get_or_create(course=course, teacher=request.user)
         return Response(TeacherCourseSerializer(course).data, status=status.HTTP_201_CREATED)
+
+
+def _int_or_none(value):
+    if value in (None, ''):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+class TeacherCourseEditView(APIView):
+    """
+    GET /school/teacher/courses/<course_id>/edit/ - курс + разделы/уроки/
+    задания для редактирования преподавателем (не прогресс студентов -
+    за этим см. TeacherCourseStudentsView).
+    PATCH - обновить название/описание курса.
+    Доступно только преподавателю этого курса (is_course_teacher).
+    """
+    permission_classes = [IsAuthenticated, IsTeacher]
+
+    def get(self, request, course_id):
+        course = get_object_or_404(Course, id=course_id)
+        if not is_course_teacher(request.user, course):
+            return Response({'error': 'Это не ваш курс'}, status=status.HTTP_403_FORBIDDEN)
+
+        modules = course.modules.prefetch_related(
+            'lessons__materials', 'lessons__assignments',
+        ).order_by('order')
+        return Response({
+            'id': course.id,
+            'title': course.title,
+            'description': course.description,
+            'modules': TeacherModuleEditSerializer(modules, many=True).data,
+        })
+
+    def patch(self, request, course_id):
+        course = get_object_or_404(Course, id=course_id)
+        if not is_course_teacher(request.user, course):
+            return Response({'error': 'Это не ваш курс'}, status=status.HTTP_403_FORBIDDEN)
+
+        if 'title' in request.data:
+            title = (request.data.get('title') or '').strip()
+            if not title:
+                return Response({'error': 'Название курса обязательно'}, status=status.HTTP_400_BAD_REQUEST)
+            course.title = title
+        if 'description' in request.data:
+            course.description = request.data.get('description') or ''
+        course.save()
+        return Response(TeacherCourseSerializer(course).data)
+
+
+class TeacherLessonsView(APIView):
+    """
+    POST /school/teacher/courses/<course_id>/lessons/ - добавить урок в
+    курс. Тело (multipart, чтобы можно было приложить видеофайл): title,
+    content, duration_minutes, video_file и/или video_url.
+
+    Разделы курса (Module) от преподавателя в этом упрощённом кабинете
+    скрыты - все уроки, добавленные отсюда, складываются в единственный
+    раздел курса, который создаётся при первом уроке.
+    """
+    permission_classes = [IsAuthenticated, IsTeacher]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def post(self, request, course_id):
+        course = get_object_or_404(Course, id=course_id)
+        if not is_course_teacher(request.user, course):
+            return Response({'error': 'Это не ваш курс'}, status=status.HTTP_403_FORBIDDEN)
+
+        title = (request.data.get('title') or '').strip()
+        if not title:
+            return Response({'error': 'Название урока обязательно'}, status=status.HTTP_400_BAD_REQUEST)
+
+        module = course.modules.order_by('order').first()
+        if not module:
+            module = Module.objects.create(course=course, title=course.title, order=1)
+
+        lesson = Lesson.objects.create(
+            module=module,
+            title=title,
+            order=module.lessons.count() + 1,
+            content=(request.data.get('content') or '').strip(),
+            video_url=(request.data.get('video_url') or '').strip() or None,
+            duration_minutes=_int_or_none(request.data.get('duration_minutes')),
+        )
+        if request.data.get('video_file'):
+            lesson.video_file = request.data['video_file']
+            lesson.save()
+
+        return Response(TeacherLessonEditSerializer(lesson).data, status=status.HTTP_201_CREATED)
+
+
+class TeacherLessonDetailView(APIView):
+    """
+    PATCH /school/teacher/lessons/<lesson_id>/ - обновить урок (title,
+    content, duration_minutes, video_file, video_url). Доступно только
+    преподавателю курса, которому принадлежит урок.
+    """
+    permission_classes = [IsAuthenticated, IsTeacher]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def patch(self, request, lesson_id):
+        lesson = get_object_or_404(Lesson.objects.select_related('module__course'), id=lesson_id)
+        course = lesson.module.course
+        if not is_course_teacher(request.user, course):
+            return Response({'error': 'Это не ваш курс'}, status=status.HTTP_403_FORBIDDEN)
+
+        if 'title' in request.data:
+            title = (request.data.get('title') or '').strip()
+            if not title:
+                return Response({'error': 'Название урока обязательно'}, status=status.HTTP_400_BAD_REQUEST)
+            lesson.title = title
+        if 'content' in request.data:
+            lesson.content = request.data.get('content') or ''
+        if 'duration_minutes' in request.data:
+            lesson.duration_minutes = _int_or_none(request.data.get('duration_minutes'))
+        if 'video_url' in request.data:
+            lesson.video_url = (request.data.get('video_url') or '').strip() or None
+        if request.data.get('video_file'):
+            lesson.video_file = request.data['video_file']
+        lesson.save()
+        return Response(TeacherLessonEditSerializer(lesson).data)
+
+
+class TeacherLessonAssignmentsView(APIView):
+    """
+    POST /school/teacher/lessons/<lesson_id>/assignments/ - добавить
+    домашнее задание к уроку. Тело: title, description, max_score,
+    is_required (bool, по умолчанию true - обязательное; см. help_text
+    поля Assignment.is_required).
+    """
+    permission_classes = [IsAuthenticated, IsTeacher]
+
+    def post(self, request, lesson_id):
+        lesson = get_object_or_404(Lesson.objects.select_related('module__course'), id=lesson_id)
+        course = lesson.module.course
+        if not is_course_teacher(request.user, course):
+            return Response({'error': 'Это не ваш курс'}, status=status.HTTP_403_FORBIDDEN)
+
+        title = (request.data.get('title') or '').strip()
+        if not title:
+            return Response({'error': 'Название задания обязательно'}, status=status.HTTP_400_BAD_REQUEST)
+
+        assignment = Assignment.objects.create(
+            lesson=lesson,
+            title=title,
+            description=(request.data.get('description') or '').strip(),
+            max_score=_int_or_none(request.data.get('max_score')) or 100,
+            is_required=bool(request.data.get('is_required', True)),
+        )
+        return Response(LessonAssignmentBriefSerializer(assignment).data, status=status.HTTP_201_CREATED)
+
+
+class TeacherAssignmentDetailView(APIView):
+    """
+    PATCH /school/teacher/assignments/<assignment_id>/ - обновить
+    домашнее задание (в т.ч. переключить is_required).
+    """
+    permission_classes = [IsAuthenticated, IsTeacher]
+
+    def patch(self, request, assignment_id):
+        assignment = get_object_or_404(
+            Assignment.objects.select_related('lesson__module__course'), id=assignment_id,
+        )
+        course = assignment.lesson.module.course
+        if not is_course_teacher(request.user, course):
+            return Response({'error': 'Это не ваш курс'}, status=status.HTTP_403_FORBIDDEN)
+
+        if 'title' in request.data:
+            title = (request.data.get('title') or '').strip()
+            if not title:
+                return Response({'error': 'Название задания обязательно'}, status=status.HTTP_400_BAD_REQUEST)
+            assignment.title = title
+        if 'description' in request.data:
+            assignment.description = request.data.get('description') or ''
+        if 'max_score' in request.data:
+            assignment.max_score = _int_or_none(request.data.get('max_score')) or 100
+        if 'is_required' in request.data:
+            assignment.is_required = bool(request.data.get('is_required'))
+        assignment.save()
+        return Response(LessonAssignmentBriefSerializer(assignment).data)
 
 
 class TeacherCourseStudentsView(APIView):

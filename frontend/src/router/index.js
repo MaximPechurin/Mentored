@@ -22,6 +22,7 @@ import EscuelaLeccionPage from "../views/escuela/EscuelaLeccionPage.vue";
 import EscuelaAlumnoProgresoPage from "../views/escuela/EscuelaAlumnoProgresoPage.vue";
 import ForoPage from "../views/escuela/ForoPage.vue";
 import EscuelaForosPage from "../views/escuela/EscuelaForosPage.vue";
+import EscuelaProfesorCursoEditarPage from "../views/escuela/EscuelaProfesorCursoEditarPage.vue";
 
 const routes = [
   {
@@ -132,6 +133,14 @@ const routes = [
     path: '/escuela/profesor/curso/:courseId/alumno/:userId',
     name: 'EscuelaAlumnoProgreso',
     component: EscuelaAlumnoProgresoPage,
+  },
+  {
+    // Редактирование курса преподавателем: название/описание, уроки,
+    // видео, домашние задания - доступ по роли teacher + CourseTeacher
+    // на бэкенде, см. EscuelaProfesorCursoEditarPage.vue.
+    path: '/escuela/profesor/curso/:courseId/editar',
+    name: 'EscuelaProfesorCursoEditar',
+    component: EscuelaProfesorCursoEditarPage,
   },
   {
     // Форум курса (участники = студенты + преподаватели курса, проверка

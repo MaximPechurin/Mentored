@@ -72,6 +72,10 @@
             </button>
 
             <div v-if="activeCourseId === course.id" class="esc-roster">
+              <router-link :to="`/escuela/profesor/curso/${course.id}/editar`" class="esc-edit-course-link">
+                ✏️ {{ st('teacher.editarCurso') }}
+              </router-link>
+
               <!-- аналитика курса -->
               <div v-if="analytics" class="stats-grid stats-grid--course">
                 <div class="stat-card"><span class="stat-num">{{ analytics.avg_progress }}%</span><span class="stat-lbl">{{ st('stats.avgProgress') }}</span></div>
@@ -637,6 +641,20 @@ onMounted(async () => {
   border-top: 1px solid #ece7e1;
   padding: 12px 24px 20px;
 }
+
+.esc-edit-course-link {
+  display: inline-block;
+  margin-bottom: 14px;
+  background: #faf8f5;
+  border: 1px solid #ece7e1;
+  border-radius: 999px;
+  padding: 7px 16px;
+  color: #8e1519;
+  font-weight: 600;
+  font-size: 13.5px;
+  text-decoration: none;
+}
+.esc-edit-course-link:hover { border-color: #8e1519; }
 
 /* --- карточки аналитики --- */
 .stats-grid {

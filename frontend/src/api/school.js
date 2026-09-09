@@ -60,6 +60,34 @@ export const schoolApi = {
     return api.post('/school/teacher/courses/', data)
   },
 
+  // Курс + разделы/уроки/задания для редактирования преподавателем
+  teacherCourseEdit(courseId) {
+    return api.get(`/school/teacher/courses/${courseId}/edit/`)
+  },
+  // Обновить название/описание курса: { title, description }
+  updateTeacherCourse(courseId, data) {
+    return api.patch(`/school/teacher/courses/${courseId}/edit/`, data)
+  },
+
+  // Добавить урок в курс. formData: FormData с title/content/duration_minutes
+  // и video_file (файл) и/или video_url
+  createTeacherLesson(courseId, formData) {
+    return api.post(`/school/teacher/courses/${courseId}/lessons/`, formData)
+  },
+  // Обновить урок (formData - как выше, только изменённые поля)
+  updateTeacherLesson(lessonId, formData) {
+    return api.patch(`/school/teacher/lessons/${lessonId}/`, formData)
+  },
+
+  // Добавить домашнее задание к уроку: { title, description, max_score, is_required }
+  createTeacherAssignment(lessonId, data) {
+    return api.post(`/school/teacher/lessons/${lessonId}/assignments/`, data)
+  },
+  // Обновить задание (в т.ч. переключить is_required)
+  updateTeacherAssignment(assignmentId, data) {
+    return api.patch(`/school/teacher/assignments/${assignmentId}/`, data)
+  },
+
   // Ростер студентов курса с прогрессом
   teacherCourseStudents(courseId) {
     return api.get(`/school/teacher/courses/${courseId}/students/`)

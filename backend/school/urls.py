@@ -4,7 +4,9 @@ from .views import (
     MyCoursesView, CourseDetailView, LessonProgressView, CertificateDownloadView,
     AssignmentDetailView, AssignmentSubmitView, AssignmentAnswersView,
     SubmissionCommentsView, SubmissionVisibilityView,
-    TeacherCoursesView, TeacherCourseStudentsView, TeacherStudentCourseDetailView,
+    TeacherCoursesView, TeacherCourseEditView, TeacherLessonsView,
+    TeacherLessonDetailView, TeacherLessonAssignmentsView, TeacherAssignmentDetailView,
+    TeacherCourseStudentsView, TeacherStudentCourseDetailView,
     TeacherSubmissionsView, TeacherSubmissionReviewView, TeacherHomeworkView,
     CourseThreadsView, ThreadDetailView, ThreadPostsView, ThreadModerateView,
     ForumsListView,
@@ -30,6 +32,11 @@ urlpatterns = [
 
     # Преподаватель
     path('teacher/courses/', TeacherCoursesView.as_view(), name='school-teacher-courses'),
+    path('teacher/courses/<int:course_id>/edit/', TeacherCourseEditView.as_view(), name='school-teacher-course-edit'),
+    path('teacher/courses/<int:course_id>/lessons/', TeacherLessonsView.as_view(), name='school-teacher-lessons'),
+    path('teacher/lessons/<int:lesson_id>/', TeacherLessonDetailView.as_view(), name='school-teacher-lesson-detail'),
+    path('teacher/lessons/<int:lesson_id>/assignments/', TeacherLessonAssignmentsView.as_view(), name='school-teacher-lesson-assignments'),
+    path('teacher/assignments/<int:assignment_id>/', TeacherAssignmentDetailView.as_view(), name='school-teacher-assignment-detail'),
     path('teacher/courses/<int:course_id>/students/', TeacherCourseStudentsView.as_view(), name='school-teacher-course-students'),
     path('teacher/courses/<int:course_id>/students/<int:user_id>/', TeacherStudentCourseDetailView.as_view(), name='school-teacher-student-course-detail'),
     path('teacher/courses/<int:course_id>/analytics/', TeacherCourseAnalyticsView.as_view(), name='school-teacher-course-analytics'),

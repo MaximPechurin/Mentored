@@ -438,6 +438,13 @@ class Assignment(models.Model):
     title = models.CharField(max_length=255, verbose_name='Название задания')
     description = models.TextField(verbose_name='Описание задания')
     max_score = models.PositiveIntegerField(default=100, verbose_name='Максимальный балл')
+    is_required = models.BooleanField(
+        default=True,
+        verbose_name='Обязательное',
+        help_text='Пока не выключено - урок нельзя отметить пройденным, пока '
+                  'студент не отправит ответ на это задание. Если выключить - '
+                  'задание необязательное, урок можно завершить и без него.',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
