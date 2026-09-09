@@ -11,7 +11,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Q
 
 from .models import (
-    Course, Module, Enrollment, Lesson, LessonProgress, Assignment, Submission,
+    Course, Module, Enrollment, Lesson, LessonMaterial, LessonProgress, Assignment, Submission,
     SubmissionComment, Certificate, ForumThread, ForumPost, DirectMessage,
     CourseTeacher, is_course_participant, is_course_teacher, can_direct_message,
 )
@@ -23,6 +23,7 @@ from .serializers import (
     TeacherSubmissionSerializer, TeacherCourseSerializer,
     TeacherStudentProgressSerializer, TeacherModuleEditSerializer,
     TeacherLessonEditSerializer, LessonAssignmentBriefSerializer,
+    LessonMaterialSerializer,
     ForumThreadListSerializer, ForumThreadDetailSerializer,
     ForumPostSerializer, DirectMessageSerializer,
 )
@@ -569,6 +570,46 @@ class TeacherAssignmentDetailView(APIView):
             assignment.is_required = bool(request.data.get('is_required'))
         assignment.save()
         return Response(LessonAssignmentBriefSerializer(assignment).data)
+
+
+class TeacherLessonMaterialsView(APIView):
+    """
+    POST /school/teacher/lessons/<lesson_id>/materials/ - приложить к
+    уроку файл-материал (PDF, рабочая тетрадь и т.п.). Тело (multipart):
+    title, file.
+    """
+    permission_classes = [IsAuthenticated, IsTeacher]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def post(self, request, lesson_id):
+        lesson = get_object_or_404(Lesson.objects.select_related('module__course'), id=lesson_id)
+        course = lesson.module.course
+        if not is_course_teacher(request.user, course):
+            return Response({'error': 'Это не ваш курс'}, status=status.HTTP_403_FORBIDDEN)
+
+        title = (request.data.get('title') or '').strip()
+        file = request.data.get('file')
+        if not title or not file:
+            return Response({'error': 'Название и файл материала обязательны'}, status=status.HTTP_400_BAD_REQUEST)
+
+        material = LessonMaterial.objects.create(lesson=lesson, title=title, file=file)
+        return Response(LessonMaterialSerializer(material).data, status=status.HTTP_201_CREATED)
+
+
+class TeacherMaterialDetailView(APIView):
+    """ DELETE /school/teacher/materials/<material_id>/ - удалить материал урока. """
+    permission_classes = [IsAuthenticated, IsTeacher]
+
+    def delete(self, request, material_id):
+        material = get_object_or_404(
+            LessonMaterial.objects.select_related('lesson__module__course'), id=material_id,
+        )
+        course = material.lesson.module.course
+        if not is_course_teacher(request.user, course):
+            return Response({'error': 'Это не ваш курс'}, status=status.HTTP_403_FORBIDDEN)
+
+        material.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class TeacherCourseStudentsView(APIView):

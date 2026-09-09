@@ -107,11 +107,19 @@
 
         <p v-if="lesson.content" class="esc-lesson-content">{{ lesson.content }}</p>
 
-        <ul v-if="lesson.materials && lesson.materials.length" class="esc-materials">
-          <li v-for="material in lesson.materials" :key="material.id">
-            📎 <a :href="material.file" target="_blank" rel="noopener">{{ material.title }}</a>
-          </li>
-        </ul>
+        <div v-if="lesson.materials && lesson.materials.length" class="esc-materials">
+          <div v-for="material in lesson.materials" :key="material.id" class="esc-material">
+            <p class="esc-material-label">
+              📎 <a :href="material.file" target="_blank" rel="noopener">{{ material.title }}</a>
+            </p>
+            <iframe
+              v-if="isPdf(material)"
+              :src="material.file"
+              class="esc-material-pdf"
+              :title="material.title"
+            ></iframe>
+          </div>
+        </div>
 
         <button
           class="esc-complete-btn"
@@ -416,6 +424,8 @@ const embedUrl = (url) => {
   if (vimeo) return `https://player.vimeo.com/video/${vimeo[1]}`
   return null
 }
+
+const isPdf = (material) => (material.file || '').toLowerCase().endsWith('.pdf')
 
 const toggleComplete = async () => {
   savingProgress.value = true
@@ -848,15 +858,21 @@ onMounted(async () => {
 .esc-materials {
   margin: 0 0 18px;
   padding-left: 4px;
-  list-style: none;
 }
-.esc-materials li { margin-bottom: 6px; }
-.esc-materials a {
+.esc-material { margin-bottom: 18px; }
+.esc-material-label { margin: 0 0 8px; }
+.esc-material-label a {
   color: #8e1519;
   text-decoration: none;
   font-weight: 500;
 }
-.esc-materials a:hover { text-decoration: underline; }
+.esc-material-label a:hover { text-decoration: underline; }
+.esc-material-pdf {
+  width: 100%;
+  height: 70vh;
+  border: 1px solid #ece7e1;
+  border-radius: 12px;
+}
 
 /* --- задание --- */
 .esc-task-block { margin-bottom: 40px; }

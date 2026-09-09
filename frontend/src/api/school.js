@@ -88,6 +88,15 @@ export const schoolApi = {
     return api.patch(`/school/teacher/assignments/${assignmentId}/`, data)
   },
 
+  // Приложить материал к уроку (PDF и т.п.). formData: FormData с title/file
+  createTeacherMaterial(lessonId, formData) {
+    return api.post(`/school/teacher/lessons/${lessonId}/materials/`, formData)
+  },
+  // Удалить материал урока
+  deleteTeacherMaterial(materialId) {
+    return api.delete(`/school/teacher/materials/${materialId}/`)
+  },
+
   // Ростер студентов курса с прогрессом
   teacherCourseStudents(courseId) {
     return api.get(`/school/teacher/courses/${courseId}/students/`)

@@ -146,6 +146,40 @@
                     {{ st('teacher.anadirTarea') }}
                   </button>
                 </div>
+
+                <!-- материалы урока (PDF и т.п.) -->
+                <div class="esc-assignments-block">
+                  <h3 class="esc-assignments-title">{{ st('teacher.materiales') }}</h3>
+
+                  <p v-if="!lesson.materials || !lesson.materials.length" class="esc-muted">
+                    {{ st('teacher.sinMateriales') }}
+                  </p>
+                  <div v-for="m in lesson.materials" :key="m.id" class="esc-assignment-row">
+                    <a :href="m.file" target="_blank" rel="noopener" class="esc-assignment-title">📎 {{ m.title }}</a>
+                    <button class="esc-edit-btn esc-edit-btn--small" @click="deleteMaterial(m.id)">
+                      {{ st('teacher.eliminar') }}
+                    </button>
+                  </div>
+
+                  <div v-if="materialFormLessonId === lesson.id" class="esc-assignment-row esc-assignment-row--new">
+                    <input v-model="materialForm.title" type="text" class="esc-input" :placeholder="st('teacher.nombreMaterial')" />
+                    <input type="file" class="esc-file" @change="onMaterialFileChange" />
+                    <p v-if="materialFormError" class="esc-create-course-error">{{ materialFormError }}</p>
+                    <div class="esc-form-actions">
+                      <button class="esc-btn-approve" :disabled="savingMaterialForm" @click="submitMaterialForm(lesson.id)">
+                        {{ savingMaterialForm ? st('teacher.guardando') : st('teacher.anadir') }}
+                      </button>
+                      <button class="esc-btn-return" @click="closeMaterialForm">{{ st('teacher.cancelar') }}</button>
+                    </div>
+                  </div>
+                  <button
+                    v-else
+                    class="esc-create-course-btn esc-create-course-btn--small"
+                    @click="openNewMaterialForm(lesson.id)"
+                  >
+                    {{ st('teacher.anadirMaterial') }}
+                  </button>
+                </div>
               </template>
             </div>
           </div>
@@ -181,6 +215,7 @@ const toggleLesson = (id) => {
   activeLessonId.value = activeLessonId.value === id ? null : id
   closeLessonForm()
   closeAssignmentForm()
+  closeMaterialForm()
 }
 
 // --- название/описание курса ---
@@ -329,6 +364,51 @@ const toggleAssignmentRequired = async (a) => {
     await loadCourse()
   } catch (error) {
     console.error('Error al cambiar la obligatoriedad:', error)
+  }
+}
+
+// --- материалы урока (PDF и т.п.) ---
+const materialFormLessonId = ref(null)
+const materialForm = reactive({ title: '', file: null })
+const savingMaterialForm = ref(false)
+const materialFormError = ref('')
+
+const openNewMaterialForm = (lessonId) => {
+  Object.assign(materialForm, { title: '', file: null })
+  materialFormLessonId.value = lessonId
+  materialFormError.value = ''
+}
+const closeMaterialForm = () => { materialFormLessonId.value = null }
+const onMaterialFileChange = (e) => { materialForm.file = e.target.files[0] || null }
+
+const submitMaterialForm = async (lessonId) => {
+  if (!materialForm.title.trim() || !materialForm.file) {
+    materialFormError.value = st('teacher.nombreRequerido')
+    return
+  }
+  savingMaterialForm.value = true
+  materialFormError.value = ''
+  try {
+    const fd = new FormData()
+    fd.append('title', materialForm.title.trim())
+    fd.append('file', materialForm.file)
+    await schoolApi.createTeacherMaterial(lessonId, fd)
+    await loadCourse()
+    closeMaterialForm()
+  } catch (error) {
+    console.error('Error al guardar el material:', error)
+    materialFormError.value = error.response?.data?.error || 'Error al guardar el material.'
+  } finally {
+    savingMaterialForm.value = false
+  }
+}
+
+const deleteMaterial = async (materialId) => {
+  try {
+    await schoolApi.deleteTeacherMaterial(materialId)
+    await loadCourse()
+  } catch (error) {
+    console.error('Error al eliminar el material:', error)
   }
 }
 
