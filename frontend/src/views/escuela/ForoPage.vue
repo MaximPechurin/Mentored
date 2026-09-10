@@ -167,9 +167,9 @@ onMounted(async () => {
 .esc-hero-title { font-family: 'Playfair Display', serif; font-size: 30px; font-weight: 600; color: #fff; margin: 0; }
 .esc-shell { max-width: 820px; margin: 0 auto; padding: 32px 32px 88px; }
 
-.esc-textarea { width: 100%; box-sizing: border-box; border: 1px solid #e4ddd2; border-radius: 10px; padding: 10px 12px; font-family: inherit; font-size: 14.5px; background: #fbf9f6; outline: none; resize: vertical; margin-bottom: 10px; }
+.esc-textarea { width: 100%; box-sizing: border-box; border: 1px solid #e4ddd2; border-radius: 10px; padding: 10px 12px; font-family: inherit; font-size: 14.5px; color: #15110f; background: #fbf9f6; outline: none; resize: vertical; margin-bottom: 10px; }
 .esc-textarea:focus { border-color: #8e1519; }
-.foro-input { width: 100%; box-sizing: border-box; border: 1px solid #e4ddd2; border-radius: 10px; padding: 11px 12px; font-family: inherit; font-size: 15px; background: #fbf9f6; outline: none; margin-bottom: 10px; }
+.foro-input { width: 100%; box-sizing: border-box; border: 1px solid #e4ddd2; border-radius: 10px; padding: 11px 12px; font-family: inherit; font-size: 15px; color: #15110f; background: #fbf9f6; outline: none; margin-bottom: 10px; }
 .foro-input:focus { border-color: #8e1519; }
 .esc-complete-btn { background: #0e0c0c; color: #fff; border: none; border-radius: 999px; font-weight: 600; font-size: 14.5px; padding: 10px 22px; cursor: pointer; font-family: inherit; }
 .esc-complete-btn:disabled { opacity: 0.5; cursor: not-allowed; }

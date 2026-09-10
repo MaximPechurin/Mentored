@@ -1023,6 +1023,7 @@ onMounted(async () => {
   padding: 9px 16px;
   font-family: inherit;
   font-size: 14px;
+  color: #15110f;
   background: #fbf9f6;
   outline: none;
 }

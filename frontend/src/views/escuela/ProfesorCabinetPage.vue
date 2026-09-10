@@ -802,6 +802,7 @@ onMounted(async () => {
   padding: 8px 10px;
   font-family: inherit;
   font-size: 15px;
+  color: #15110f;
   background: #fbf9f6;
   outline: none;
 }
@@ -816,6 +817,7 @@ onMounted(async () => {
   padding: 10px 12px;
   font-family: inherit;
   font-size: 14.5px;
+  color: #15110f;
   background: #fbf9f6;
   outline: none;
   resize: vertical;
