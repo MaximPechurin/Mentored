@@ -1,10 +1,50 @@
+from django import forms
 from django.contrib import admin
+from django.contrib.contenttypes.models import ContentType
+
+from mentored.models import Course as StoreCourse
 
 from .models import (
     TeacherProfile, Course, ProductCourseAccess, CourseTeacher, Module, Lesson,
     LessonMaterial, Enrollment, LessonProgress, Assignment, Submission,
     SubmissionComment, Certificate, ForumThread, ForumPost, DirectMessage,
 )
+
+
+class ProductChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        return f'{obj.name} — S/ {obj.price} (ID {obj.pk})'
+
+
+class ProductCourseAccessForm(forms.ModelForm):
+    """
+    Вместо голого "Тип товара" + "ID товара" - выпадающий список реальных
+    товаров с названием и ценой. Пока в магазине единственный тип товара,
+    который можно связать с учебным курсом, - mentored.Course (см. модель
+    ProductCourseAccess) - когда появится второй тип, этот список нужно
+    будет расширить (например, отдельным полем "тип товара" над списком).
+    """
+    product = ProductChoiceField(
+        queryset=StoreCourse.objects.all().order_by('name'),
+        label='Товар (курс в магазине)',
+    )
+
+    class Meta:
+        model = ProductCourseAccess
+        fields = ['product', 'course']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk and self.instance.object_id:
+            self.fields['product'].initial = self.instance.object_id
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.content_type = ContentType.objects.get_for_model(StoreCourse)
+        instance.object_id = self.cleaned_data['product'].pk
+        if commit:
+            instance.save()
+        return instance
 
 
 class TeacherScopedAdminMixin:
@@ -66,8 +106,9 @@ class ProductCourseAccessInline(admin.TabularInline):
     же, где заводится сам курс.
     """
     model = ProductCourseAccess
+    form = ProductCourseAccessForm
     extra = 0
-    fields = ('content_type', 'object_id')
+    fields = ('product',)
 
 
 @admin.register(Course)
@@ -87,14 +128,16 @@ class ProductCourseAccessAdmin(TeacherScopedAdminMixin, admin.ModelAdmin):
     """
     Отдельный экран на случай, когда удобнее искать не "от курса", а "от
     товара" - например, у какого-то товара уже есть привязка или нет.
-    Выбор товара пока через content_type + object_id (тип + ID) - без
-    красивого автокомплита, это можно улучшить отдельно, когда появится
-    реальная потребность (сейчас только один тип товара - mentored.Course).
     """
-    list_display = ('course', 'content_type', 'object_id', 'created_at')
-    list_filter = ('content_type', 'course')
+    form = ProductCourseAccessForm
+    list_display = ('course', 'product_display', 'created_at')
+    list_filter = ('course',)
     search_fields = ('course__title',)
     readonly_fields = ('created_at',)
+
+    def product_display(self, obj):
+        return str(obj.product) if obj.product else '—'
+    product_display.short_description = 'Товар'
 
 
 @admin.register(CourseTeacher)
