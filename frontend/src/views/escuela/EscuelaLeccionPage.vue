@@ -422,6 +422,12 @@ const embedUrl = (url) => {
   if (url.includes('youtube.com/embed/')) return url
   const vimeo = url.match(/vimeo\.com\/(\d+)/)
   if (vimeo) return `https://player.vimeo.com/video/${vimeo[1]}`
+  // Bunny Stream (mediadelivery.net): и ссылка вида .../embed/<lib>/<id>,
+  // и .../play/<lib>/<id> ведут к одному видео - приводим к каноничному
+  // embed-виду, который штатно встраивается в iframe. Заголовки самого
+  // Bunny (проверено) не запрещают встраивание (нет X-Frame-Options).
+  const bunny = url.match(/mediadelivery\.net\/(?:embed|play)\/(\d+)\/([\w-]+)/)
+  if (bunny) return `https://iframe.mediadelivery.net/embed/${bunny[1]}/${bunny[2]}`
   return null
 }
 

@@ -21,7 +21,7 @@
       v-model="form.videoUrl"
       type="text"
       class="esc-input"
-      placeholder="https://youtube.com/... o https://vimeo.com/..."
+      placeholder="YouTube, Vimeo o Bunny (mediadelivery.net)"
     />
   </div>
 </template>
