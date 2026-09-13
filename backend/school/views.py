@@ -572,6 +572,36 @@ class TeacherAssignmentDetailView(APIView):
         return Response(LessonAssignmentBriefSerializer(assignment).data)
 
 
+class TeacherInlineImageView(APIView):
+    """
+    POST /school/teacher/inline-image/ - загрузить картинку из
+    визуального редактора текста урока и получить её URL для вставки в
+    HTML-контент. Не привязано к конкретному уроку (урок при создании
+    ещё может не иметь id) - просто сохраняем файл в media и отдаём URL.
+    Доступно любому преподавателю.
+    """
+    permission_classes = [IsAuthenticated, IsTeacher]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        from django.core.files.storage import default_storage
+        from django.utils import timezone as _tz
+        image = request.data.get('image') or request.data.get('file')
+        if not image:
+            return Response({'error': 'Файл не передан'}, status=status.HTTP_400_BAD_REQUEST)
+        content_type = getattr(image, 'content_type', '') or ''
+        if not content_type.startswith('image/'):
+            return Response({'error': 'Можно загружать только изображения'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # media/lesson_content/<год>/<месяц>/<имя> - отдельная папка, чтобы не
+        # смешивать с материалами/видео уроков.
+        stamp = _tz.now()
+        safe_name = image.name.replace('/', '_').replace('\\', '_')
+        path = f'lesson_content/{stamp:%Y/%m}/{safe_name}'
+        saved_path = default_storage.save(path, image)
+        return Response({'url': default_storage.url(saved_path)}, status=status.HTTP_201_CREATED)
+
+
 class TeacherLessonMaterialsView(APIView):
     """
     POST /school/teacher/lessons/<lesson_id>/materials/ - приложить к

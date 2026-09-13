@@ -1,7 +1,7 @@
 <template>
   <div class="esc-lesson-fields">
     <input v-model="form.title" type="text" class="esc-input" :placeholder="st('teacher.nombreLeccion')" />
-    <textarea v-model="form.content" rows="4" class="esc-textarea" :placeholder="st('teacher.contenidoLeccion')"></textarea>
+    <RichTextEditor v-model="form.content" :placeholder="st('teacher.contenidoLeccion')" />
     <input v-model="form.duration_minutes" type="number" min="0" class="esc-input esc-input--short" :placeholder="st('teacher.duracionMin')" />
 
     <div class="esc-video-mode">
@@ -27,6 +27,13 @@
 </template>
 
 <script setup>
+import { defineAsyncComponent } from 'vue'
+
+// Ленивая загрузка: Quill (~230КБ) попадает в отдельный чанк и грузится
+// только когда препод открывает форму урока, а не всем подряд (студенты
+// редактор не видят вовсе).
+const RichTextEditor = defineAsyncComponent(() => import('./RichTextEditor.vue'))
+
 defineProps({
   form: { type: Object, required: true },
   st: { type: Function, required: true },

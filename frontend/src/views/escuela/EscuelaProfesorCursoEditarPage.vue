@@ -97,7 +97,12 @@
               <template v-else>
                 <button class="esc-edit-btn" @click="openEditLessonForm(lesson)">{{ st('teacher.editarLeccion') }}</button>
 
-                <p v-if="lesson.content" class="esc-lesson-content-preview">{{ lesson.content }}</p>
+                <div
+                  v-if="lesson.content && isHtmlContent(lesson.content)"
+                  class="esc-lesson-content-preview esc-lesson-content-preview--rich"
+                  v-html="sanitizeLessonHtml(lesson.content)"
+                ></div>
+                <p v-else-if="lesson.content" class="esc-lesson-content-preview">{{ lesson.content }}</p>
 
                 <!-- задания урока -->
                 <div class="esc-assignments-block">
@@ -197,6 +202,7 @@ import { schoolApi } from '../../api/school'
 import { useSchoolLang } from '../../composables/useSchoolLang'
 import LessonFormFields from './components/LessonFormFields.vue'
 import AssignmentFormFields from './components/AssignmentFormFields.vue'
+import { isHtmlContent, sanitizeLessonHtml } from '../../composables/useLessonContent'
 
 
 const route = useRoute()
@@ -622,6 +628,10 @@ onMounted(async () => {
   margin: 12px 0;
   white-space: pre-line;
 }
+.esc-lesson-content-preview--rich { white-space: normal; }
+.esc-lesson-content-preview--rich :deep(img) { max-width: 100%; height: auto; border-radius: 8px; margin: 6px 0; }
+.esc-lesson-content-preview--rich :deep(ul),
+.esc-lesson-content-preview--rich :deep(ol) { padding-left: 22px; }
 
 .esc-video-mode { display: flex; gap: 18px; margin-bottom: 12px; font-size: 14px; color: #3f3a35; }
 .esc-video-mode label { display: flex; align-items: center; gap: 6px; cursor: pointer; }

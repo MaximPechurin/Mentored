@@ -97,6 +97,11 @@ export const schoolApi = {
     return api.delete(`/school/teacher/materials/${materialId}/`)
   },
 
+  // Загрузить картинку из визуального редактора текста урока, вернуть {url}
+  uploadInlineImage(formData) {
+    return api.post('/school/teacher/inline-image/', formData)
+  },
+
   // Ростер студентов курса с прогрессом
   teacherCourseStudents(courseId) {
     return api.get(`/school/teacher/courses/${courseId}/students/`)

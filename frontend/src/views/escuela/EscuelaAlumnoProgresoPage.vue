@@ -30,7 +30,12 @@
             </button>
 
             <div v-if="activeLessonId === lesson.id" class="esc-lesson-body">
-              <p v-if="lesson.content" class="esc-lesson-content">{{ lesson.content }}</p>
+              <div
+                v-if="lesson.content && isHtmlContent(lesson.content)"
+                class="esc-lesson-content esc-lesson-content--rich"
+                v-html="sanitizeLessonHtml(lesson.content)"
+              ></div>
+              <p v-else-if="lesson.content" class="esc-lesson-content">{{ lesson.content }}</p>
 
               <ul v-if="lesson.materials.length" class="esc-materials">
                 <li v-for="material in lesson.materials" :key="material.id">
@@ -57,6 +62,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '../../composables/useAuth'
 import { schoolApi } from '../../api/school'
 import { useSchoolLang } from '../../composables/useSchoolLang'
+import { isHtmlContent, sanitizeLessonHtml } from '../../composables/useLessonContent'
 
 const route = useRoute()
 const router = useRouter()
@@ -254,6 +260,10 @@ onMounted(async () => {
   margin: 0 0 16px;
   white-space: pre-line;
 }
+.esc-lesson-content--rich { white-space: normal; }
+.esc-lesson-content--rich :deep(img) { max-width: 100%; height: auto; border-radius: 8px; margin: 6px 0; }
+.esc-lesson-content--rich :deep(ul),
+.esc-lesson-content--rich :deep(ol) { padding-left: 22px; }
 
 .esc-materials {
   margin: 0 0 16px;

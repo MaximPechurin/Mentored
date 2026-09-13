@@ -105,7 +105,12 @@
           {{ st('course.verVideo') }}
         </a>
 
-        <p v-if="lesson.content" class="esc-lesson-content">{{ lesson.content }}</p>
+        <div
+          v-if="lesson.content && isHtmlContent(lesson.content)"
+          class="esc-lesson-content esc-lesson-content--rich"
+          v-html="sanitizeLessonHtml(lesson.content)"
+        ></div>
+        <p v-else-if="lesson.content" class="esc-lesson-content">{{ lesson.content }}</p>
 
         <div v-if="lesson.materials && lesson.materials.length" class="esc-materials">
           <div v-for="material in lesson.materials" :key="material.id" class="esc-material">
@@ -280,6 +285,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '../../composables/useAuth'
 import { schoolApi } from '../../api/school'
 import { useSchoolLang } from '../../composables/useSchoolLang'
+import { isHtmlContent, sanitizeLessonHtml } from '../../composables/useLessonContent'
 
 const route = useRoute()
 const router = useRouter()
@@ -860,6 +866,30 @@ onMounted(async () => {
   margin: 0 0 16px;
   white-space: pre-line;
 }
+
+/* Форматированный (HTML) текст урока из визуального редактора - тут
+   white-space обычный, а не pre-line, иначе теги + переносы дают двойные
+   отступы. */
+.esc-lesson-content--rich { white-space: normal; }
+.esc-lesson-content--rich :deep(img) {
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  margin: 8px 0;
+}
+.esc-lesson-content--rich :deep(h1),
+.esc-lesson-content--rich :deep(h2),
+.esc-lesson-content--rich :deep(h3) {
+  font-family: 'Playfair Display', serif;
+  color: #15110f;
+  margin: 18px 0 8px;
+}
+.esc-lesson-content--rich :deep(a) { color: #8e1519; }
+.esc-lesson-content--rich :deep(ul),
+.esc-lesson-content--rich :deep(ol) { padding-left: 22px; margin: 8px 0; }
+.esc-lesson-content--rich :deep(.ql-align-center) { text-align: center; }
+.esc-lesson-content--rich :deep(.ql-align-right) { text-align: right; }
+.esc-lesson-content--rich :deep(.ql-align-justify) { text-align: justify; }
 
 .esc-materials {
   margin: 0 0 18px;
