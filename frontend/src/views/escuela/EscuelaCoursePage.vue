@@ -57,6 +57,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '../../composables/useAuth'
 import { schoolApi } from '../../api/school'
 import { useSchoolLang } from '../../composables/useSchoolLang'
+import { stripHtml } from '../../composables/useLessonContent'
 
 const route = useRoute()
 const router = useRouter()
@@ -68,9 +69,11 @@ const loading = ref(true)
 const forbidden = ref(false)
 const course = ref({ title: '', description: '', modules: [] })
 
-// короткий анонс под названием урока в списке (как в референсе)
+// короткий анонс под названием урока в списке (как в референсе).
+// stripHtml - на случай, если контент урока сделан визуальным редактором
+// (HTML): в превью показываем чистый текст без тегов.
 const snippet = (text) => {
-  const t = (text || '').replace(/\s+/g, ' ').trim()
+  const t = stripHtml(text).replace(/\s+/g, ' ').trim()
   return t.length > 110 ? t.slice(0, 110) + '…' : t
 }
 

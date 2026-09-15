@@ -10,6 +10,18 @@ export function isHtmlContent(content) {
   return !!content && HTML_RE.test(content)
 }
 
+// Чистый текст из контента урока (для коротких превью в списке уроков).
+// Из HTML вырезаем все теги, но сначала заменяем закрытия блоков на
+// пробел, чтобы слова из соседних абзацев/пунктов не слипались. Для
+// старого plain-text контента вернётся он же. DOMPurify с пустым списком
+// тегов отдаёт только текст (и декодирует HTML-сущности).
+export function stripHtml(content) {
+  const withSpaces = (content || '')
+    .replace(/<\/(p|div|li|h[1-6]|ul|ol|blockquote)>/gi, ' ')
+    .replace(/<br\s*\/?>/gi, ' ')
+  return DOMPurify.sanitize(withSpaces, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] })
+}
+
 // Безопасный HTML для вставки через v-html. Разрешаем только
 // форматирование, которое умеет наш редактор (Quill), + картинки со
 // ссылкой; скрипты/обработчики событий DOMPurify вырезает.
