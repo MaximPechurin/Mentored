@@ -20,10 +20,15 @@ class LessonMaterialSerializer(serializers.ModelSerializer):
 
 
 class LessonAssignmentBriefSerializer(serializers.ModelSerializer):
-    """ Короткая карточка задания в списке уроков (без ответа студента). """
+    """
+    Короткая карточка задания в списке уроков (без ответа студента).
+    description нужен форме редактирования в кабинете преподавателя
+    (подставить сохранённый текст при «Editar»); студенту он не мешает -
+    то же описание он и так видит на странице задания.
+    """
     class Meta:
         model = Assignment
-        fields = ['id', 'title', 'max_score', 'is_required']
+        fields = ['id', 'title', 'description', 'max_score', 'is_required']
 
 
 class TeacherLessonEditSerializer(serializers.ModelSerializer):
