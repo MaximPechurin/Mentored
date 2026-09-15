@@ -281,7 +281,19 @@ const openEditLessonForm = (lesson) => {
   lessonFormError.value = ''
 }
 const closeLessonForm = () => { lessonFormMode.value = null }
-const onLessonVideoFileChange = (e) => { lessonForm.videoFile = e.target.files[0] || null }
+const onLessonVideoFileChange = (e) => {
+  const file = e.target.files[0] || null
+  // В слот видео - только видео. Если выбрали не то (напр. PDF) - предупреждаем
+  // и сбрасываем, чтобы не улетел на сервер и не появился пустой плеер. Для
+  // PDF и прочего есть блок «Материалы».
+  if (file && file.type && !file.type.startsWith('video/')) {
+    alert(st('teacher.soloVideo'))
+    e.target.value = ''
+    lessonForm.videoFile = null
+    return
+  }
+  lessonForm.videoFile = file
+}
 
 const submitLessonForm = async () => {
   if (!lessonForm.title.trim()) {

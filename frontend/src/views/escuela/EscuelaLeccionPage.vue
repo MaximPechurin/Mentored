@@ -78,8 +78,10 @@
       <template v-else>
       <!-- Тело материала: видео, текст, вложения -->
       <div class="esc-lesson-content-card">
-        <!-- видеофайл, загруженный в админке - плеер сам сохраняет позицию просмотра -->
-        <div v-if="lesson.video_file" class="esc-video-wrapper">
+        <!-- видеофайл, загруженный в админке - плеер сам сохраняет позицию просмотра.
+             isVideoFile - защита: если в поле видео случайно оказался не-видео файл
+             (напр. PDF), не рисуем пустой чёрный плеер. -->
+        <div v-if="lesson.video_file && isVideoFile(lesson.video_file)" class="esc-video-wrapper">
           <video
             :key="lesson.id"
             ref="videoEl"
@@ -438,6 +440,12 @@ const embedUrl = (url) => {
 }
 
 const isPdf = (material) => (material.file || '').toLowerCase().endsWith('.pdf')
+
+const VIDEO_EXT = ['.mp4', '.webm', '.mov', '.m4v', '.ogg', '.ogv', '.avi', '.mkv']
+const isVideoFile = (url) => {
+  const u = (url || '').toLowerCase()
+  return VIDEO_EXT.some((ext) => u.endsWith(ext))
+}
 
 const toggleComplete = async () => {
   savingProgress.value = true

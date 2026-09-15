@@ -399,6 +399,21 @@ def _int_or_none(value):
         return None
 
 
+_VIDEO_EXT = ('.mp4', '.webm', '.mov', '.m4v', '.ogg', '.ogv', '.avi', '.mkv')
+
+
+def _is_video_upload(uploaded):
+    """
+    Проверка, что в поле видео урока действительно видео, а не, например,
+    PDF (был реальный случай: препод загрузил PDF в слот видео - на
+    странице урока рисовался пустой чёрный плеер). Смотрим content_type
+    и/или расширение - достаточно одного признака «видео».
+    """
+    ctype = (getattr(uploaded, 'content_type', '') or '').lower()
+    name = (getattr(uploaded, 'name', '') or '').lower()
+    return ctype.startswith('video/') or name.endswith(_VIDEO_EXT)
+
+
 class TeacherCourseEditView(APIView):
     """
     GET /school/teacher/courses/<course_id>/edit/ - курс + разделы/уроки/
@@ -462,6 +477,13 @@ class TeacherLessonsView(APIView):
         if not title:
             return Response({'error': 'Название урока обязательно'}, status=status.HTTP_400_BAD_REQUEST)
 
+        video_file = request.data.get('video_file')
+        if video_file and not _is_video_upload(video_file):
+            return Response(
+                {'error': 'В поле видео можно загрузить только видеофайл. Для PDF и других файлов используйте «Материалы».'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         module = course.modules.order_by('order').first()
         if not module:
             module = Module.objects.create(course=course, title=course.title, order=1)
@@ -474,8 +496,8 @@ class TeacherLessonsView(APIView):
             video_url=(request.data.get('video_url') or '').strip() or None,
             duration_minutes=_int_or_none(request.data.get('duration_minutes')),
         )
-        if request.data.get('video_file'):
-            lesson.video_file = request.data['video_file']
+        if video_file:
+            lesson.video_file = video_file
             lesson.save()
 
         return Response(TeacherLessonEditSerializer(lesson).data, status=status.HTTP_201_CREATED)
@@ -508,6 +530,11 @@ class TeacherLessonDetailView(APIView):
         if 'video_url' in request.data:
             lesson.video_url = (request.data.get('video_url') or '').strip() or None
         if request.data.get('video_file'):
+            if not _is_video_upload(request.data['video_file']):
+                return Response(
+                    {'error': 'В поле видео можно загрузить только видеофайл. Для PDF и других файлов используйте «Материалы».'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             lesson.video_file = request.data['video_file']
         lesson.save()
         return Response(TeacherLessonEditSerializer(lesson).data)
