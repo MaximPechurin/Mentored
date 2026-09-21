@@ -36,7 +36,7 @@ def _frontend_base_url(request):
     return request.build_absolute_uri('/').rstrip('/').replace(':8000', ':5173')
 
 
-def create_payment_preference(request, order):
+def create_payment_preference(request, order, back_urls=None):
     """
     Создаёт preference в Mercado Pago для заказа, заводит/обновляет Payment и
     возвращает init_point (ссылку на оплату Checkout Pro).
@@ -44,6 +44,10 @@ def create_payment_preference(request, order):
     Общий код для обычной оплаты (CreatePaymentPreferenceView) и «магической
     ссылки» (QuickBuyView). Бросает PreferenceError при любой неудаче -
     вызывающий сам решает, какой HTTP-ответ отдать.
+
+    back_urls: куда MP вернёт покупателя. По умолчанию - на страницу заказа
+    (обычная оплата залогиненным). Для гостевой покупки передаём публичную
+    страницу «спасибо» (QuickBuyView) - гость на /order/<n> не авторизован.
     """
     if not order.items.exists():
         raise PreferenceError('В заказе нет товаров')
@@ -56,12 +60,13 @@ def create_payment_preference(request, order):
         "currency_id": settings.MERCADOPAGO_CURRENCY,
     } for order_item in order.items.all()]
 
-    frontend_url = _frontend_base_url(request)
-    back_urls = {
-        "success": f"{frontend_url}/order/{order.order_number}?payment=success",
-        "failure": f"{frontend_url}/order/{order.order_number}?payment=failure",
-        "pending": f"{frontend_url}/order/{order.order_number}?payment=pending",
-    }
+    if back_urls is None:
+        frontend_url = _frontend_base_url(request)
+        back_urls = {
+            "success": f"{frontend_url}/order/{order.order_number}?payment=success",
+            "failure": f"{frontend_url}/order/{order.order_number}?payment=failure",
+            "pending": f"{frontend_url}/order/{order.order_number}?payment=pending",
+        }
 
     preference_data = {
         "items": items,
@@ -336,8 +341,20 @@ class QuickBuyView(APIView):
         user, created, raw_password = get_or_create_buyer(email)
         order = create_single_item_order(user, product, content_type)
 
+        # Гость после оплаты возвращается на ПУБЛИЧНУЮ страницу «спасибо»
+        # (/order/<n> требует авторизации). new=1 - новому клиенту ушёл пароль
+        # на почту, тогда текст «спасибо» об этом скажет; new=0 - у клиента уже
+        # был аккаунт, пароль не отправляли.
+        frontend_url = _frontend_base_url(request)
+        new_flag = '1' if created else '0'
+        back_urls = {
+            "success": f"{frontend_url}/compra-exitosa?status=success&new={new_flag}",
+            "failure": f"{frontend_url}/compra-exitosa?status=failure&new={new_flag}",
+            "pending": f"{frontend_url}/compra-exitosa?status=pending&new={new_flag}",
+        }
+
         try:
-            init_point = create_payment_preference(request, order)
+            init_point = create_payment_preference(request, order, back_urls=back_urls)
         except PreferenceError:
             # Заказ уже создан в статусе pending - оставляем, менеджер увидит
             # его в админке; пользователю показываем ошибку платежа.

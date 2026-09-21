@@ -23,6 +23,8 @@ import EscuelaAlumnoProgresoPage from "../views/escuela/EscuelaAlumnoProgresoPag
 import ForoPage from "../views/escuela/ForoPage.vue";
 import EscuelaForosPage from "../views/escuela/EscuelaForosPage.vue";
 import EscuelaProfesorCursoEditarPage from "../views/escuela/EscuelaProfesorCursoEditarPage.vue";
+import CompraRapidaPage from "../views/compra/CompraRapidaPage.vue";
+import CompraExitosaPage from "../views/compra/CompraExitosaPage.vue";
 
 const routes = [
   {
@@ -74,6 +76,18 @@ const routes = [
     path: '/producto/:id',
     name: 'Producto',
     component: ProductoPage
+  },
+  {
+    // «Магическая ссылка» - лендинг быстрой покупки товара без регистрации.
+    path: '/comprar/:productType/:slug',
+    name: 'CompraRapida',
+    component: CompraRapidaPage
+  },
+  {
+    // Публичная страница «спасибо» после оплаты (гость не авторизован).
+    path: '/compra-exitosa',
+    name: 'CompraExitosa',
+    component: CompraExitosaPage
   },
     {
     path: '/login',
