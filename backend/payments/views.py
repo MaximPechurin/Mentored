@@ -4,17 +4,103 @@ import logging
 
 import mercadopago
 from django.conf import settings
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.validators import validate_email
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from mentored.models import Order
+from mentored.services import (
+    resolve_product, get_or_create_buyer, create_single_item_order,
+    send_buyer_credentials, ProductNotFound,
+)
 from .models import Payment
 
 logger = logging.getLogger(__name__)
+
+
+class PreferenceError(Exception):
+    """Не удалось создать preference в Mercado Pago."""
+
+
+def _frontend_base_url(request):
+    """
+    Базовый URL фронта. В деве бэкенд на :8000, фронт на :5173 - подменяем порт;
+    в проде порта в host нет, замена ничего не делает.
+    """
+    return request.build_absolute_uri('/').rstrip('/').replace(':8000', ':5173')
+
+
+def create_payment_preference(request, order):
+    """
+    Создаёт preference в Mercado Pago для заказа, заводит/обновляет Payment и
+    возвращает init_point (ссылку на оплату Checkout Pro).
+
+    Общий код для обычной оплаты (CreatePaymentPreferenceView) и «магической
+    ссылки» (QuickBuyView). Бросает PreferenceError при любой неудаче -
+    вызывающий сам решает, какой HTTP-ответ отдать.
+    """
+    if not order.items.exists():
+        raise PreferenceError('В заказе нет товаров')
+
+    items = [{
+        "id": str(order_item.product_id),
+        "title": order_item.product_name[:255],
+        "quantity": order_item.quantity,
+        "unit_price": float(order_item.product_price),
+        "currency_id": settings.MERCADOPAGO_CURRENCY,
+    } for order_item in order.items.all()]
+
+    frontend_url = _frontend_base_url(request)
+    back_urls = {
+        "success": f"{frontend_url}/order/{order.order_number}?payment=success",
+        "failure": f"{frontend_url}/order/{order.order_number}?payment=failure",
+        "pending": f"{frontend_url}/order/{order.order_number}?payment=pending",
+    }
+
+    preference_data = {
+        "items": items,
+        "back_urls": back_urls,
+        "auto_return": "approved",
+        "notification_url": request.build_absolute_uri('/payment/webhook/'),
+        "external_reference": order.order_number,
+    }
+
+    try:
+        preference_response = sdk.preference().create(preference_data)
+    except Exception:
+        logger.exception("Mercado Pago: ошибка создания preference для заказа %s", order.order_number)
+        raise PreferenceError('Не удалось создать платёж')
+
+    preference = preference_response.get("response", {})
+    preference_id = preference.get("id")
+    init_point = preference.get("init_point")
+
+    if preference_response.get("status") not in (200, 201) or not init_point:
+        logger.error(
+            "Mercado Pago: неожиданный ответ на создание preference (заказ %s): %s",
+            order.order_number, preference_response,
+        )
+        raise PreferenceError('Не удалось создать платёж')
+
+    # id preference храним как временный transaction_id, реальный payment id
+    # перезапишется вебхуком после фактической оплаты.
+    Payment.objects.update_or_create(
+        order=order,
+        defaults={
+            'user': order.user,
+            'transaction_id': preference_id,
+            'amount': order.total,
+            'status': 'pending',
+        },
+    )
+
+    return init_point
 
 # Инициализируем SDK с ACCESS_TOKEN
 sdk = mercadopago.SDK(settings.MERCADOPAGO_ACCESS_TOKEN)
@@ -68,70 +154,14 @@ class CreatePaymentPreferenceView(APIView):
         if not order:
             return Response({'error': 'Заказ не найден'}, status=404)
 
-        if not order.items.exists():
-            return Response({'error': 'В заказе нет товаров'}, status=400)
-
-        # Формируем данные для Mercado Pago
-        items = []
-        for order_item in order.items.all():
-            items.append({
-                "id": str(order_item.product_id),
-                "title": order_item.product_name[:255],
-                "quantity": order_item.quantity,
-                "unit_price": float(order_item.product_price),
-                "currency_id": settings.MERCADOPAGO_CURRENCY,
-            })
-
-        # Ссылки для возврата — ведём на уже существующую страницу заказа
-        # (frontend/src/views/order/OrderPage.vue, роут /order/:orderNumber),
-        # т.к. отдельного /payment/success|failure|pending роута во фронте нет,
-        # а заводить его нельзя: nginx проксирует весь префикс /payment/... на
-        # бэкенд (см. frontend/nginx.conf), так что /payment/success ушёл бы в
-        # Django и словил 404 вместо SPA.
-        frontend_url = request.build_absolute_uri('/').rstrip('/').replace(':8000', ':5173')
-        back_urls = {
-            "success": f"{frontend_url}/order/{order.order_number}?payment=success",
-            "failure": f"{frontend_url}/order/{order.order_number}?payment=failure",
-            "pending": f"{frontend_url}/order/{order.order_number}?payment=pending",
-        }
-
-        preference_data = {
-            "items": items,
-            "back_urls": back_urls,
-            "auto_return": "approved",
-            "notification_url": request.build_absolute_uri('/payment/webhook/'),
-            "external_reference": order.order_number,
-        }
-
         try:
-            preference_response = sdk.preference().create(preference_data)
-        except Exception:
-            logger.exception("Mercado Pago: ошибка создания preference для заказа %s", order.order_number)
-            return Response({'error': 'Не удалось создать платёж. Попробуйте позже.'}, status=502)
-
-        preference = preference_response.get("response", {})
-        preference_id = preference.get("id")
-        init_point = preference.get("init_point")
-
-        if preference_response.get("status") not in (200, 201) or not init_point:
-            logger.error(
-                "Mercado Pago: неожиданный ответ на создание preference (заказ %s): %s",
-                order.order_number, preference_response,
-            )
-            return Response({'error': 'Не удалось создать платёж. Попробуйте позже.'}, status=502)
-
-        # Заводим/обновляем Payment — Order.transaction_id не существует как поле,
-        # id preference храним здесь как временный transaction_id, реальный
-        # payment id перезапишется вебхуком после фактической оплаты.
-        Payment.objects.update_or_create(
-            order=order,
-            defaults={
-                'user': request.user,
-                'transaction_id': preference_id,
-                'amount': order.total,
-                'status': 'pending',
-            },
-        )
+            init_point = create_payment_preference(request, order)
+        except PreferenceError as exc:
+            # «В заказе нет товаров» - это 400 (проблема данных заказа), всё
+            # остальное - 502 (сбой на стороне платёжного шлюза).
+            code = 400 if 'нет товаров' in str(exc) else 502
+            msg = str(exc) if code == 400 else 'Не удалось создать платёж. Попробуйте позже.'
+            return Response({'error': msg}, status=code)
 
         return Response({
             "init_point": init_point,
@@ -255,3 +285,107 @@ def payment_webhook(request):
 
     logger.info("Webhook Mercado Pago: заказ %s -> %s (payment_id=%s)", order_number, order_status, data_id)
     return JsonResponse({"status": "ok"})
+
+
+# ============================================================
+# «МАГИЧЕСКАЯ ССЫЛКА» — быстрая покупка одного товара без регистрации
+# ============================================================
+class QuickBuyView(APIView):
+    """
+    POST /payment/quick-buy/ — покупка одного товара по прямой ссылке, без
+    предварительной регистрации.
+
+    Тело: {product_type, email, product_id | slug}.
+      - product_type: 'course' | 'book' | 'consultation' | 'membership'
+      - товар задаётся product_id ИЛИ slug (для читаемой ссылки удобнее slug)
+      - email: куда привязать покупку (и куда отправить доступ новому клиенту)
+
+    Что делает: находит/создаёт аккаунт по email, создаёт заказ на 1 товар и
+    возвращает init_point (ссылку на оплату Mercado Pago). Доступ к учебному
+    курсу после оплаты откроется автоматически (сигнал оплата → Enrollment).
+    Новому пользователю уходит письмо с паролем (когда подключён SMTP).
+
+    Публичный эндпоинт (ссылку встраивают на внешних площадках), поэтому стоит
+    троттлинг от спама аккаунтами/письмами.
+    """
+    permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'quick_buy'
+
+    def post(self, request):
+        email = (request.data.get('email') or '').strip()
+        product_type = request.data.get('product_type')
+        product_id = request.data.get('product_id')
+        slug = request.data.get('slug')
+
+        try:
+            validate_email(email)
+        except DjangoValidationError:
+            return Response(
+                {'error': 'Introduce un correo electrónico válido.'},
+                status=400,
+            )
+
+        try:
+            product, content_type = resolve_product(
+                product_type, product_id=product_id, slug=slug,
+            )
+        except ProductNotFound as exc:
+            return Response({'error': str(exc)}, status=404)
+
+        user, created, raw_password = get_or_create_buyer(email)
+        order = create_single_item_order(user, product, content_type)
+
+        try:
+            init_point = create_payment_preference(request, order)
+        except PreferenceError:
+            # Заказ уже создан в статусе pending - оставляем, менеджер увидит
+            # его в админке; пользователю показываем ошибку платежа.
+            return Response(
+                {'error': 'No se pudo iniciar el pago. Inténtalo de nuevo más tarde.'},
+                status=502,
+            )
+
+        if created:
+            send_buyer_credentials(
+                user, raw_password, login_url=f"{_frontend_base_url(request)}/login",
+            )
+
+        # is_new_user отдаём, чтобы фронт мог показать нужную подсказку («мы
+        # отправили доступ на почту» / «войдите под своим паролем»). Это слегка
+        # раскрывает, был ли email в системе - осознанный компромисс ради UX.
+        return Response({
+            'init_point': init_point,
+            'order_number': order.order_number,
+            'is_new_user': created,
+        })
+
+
+class QuickBuyProductView(APIView):
+    """
+    GET /payment/quick-buy/product/<product_type>/<slug>/ — публичная карточка
+    товара для лендинга «магической ссылки» (без авторизации): название, цена,
+    описание, картинка. Фронт по ней рисует страницу до ввода email.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, product_type, slug):
+        from mentored.serializers import (
+            BookSerializer, CourseSerializer, ConsultationSerializer, MembershipSerializer,
+        )
+        serializer_map = {
+            'course': CourseSerializer,
+            'book': BookSerializer,
+            'consultation': ConsultationSerializer,
+            'membership': MembershipSerializer,
+        }
+        try:
+            product, _ = resolve_product(product_type, slug=slug)
+        except ProductNotFound as exc:
+            return Response({'error': str(exc)}, status=404)
+
+        serializer_cls = serializer_map[product_type]
+        return Response({
+            'product_type': product_type,
+            'product': serializer_cls(product, context={'request': request}).data,
+        })

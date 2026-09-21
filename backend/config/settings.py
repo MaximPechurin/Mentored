@@ -102,6 +102,12 @@ REST_FRAMEWORK = {
     'DEFAULT_PARSER_CLASSES': [
         'rest_framework.parsers.JSONParser',
     ],
+    # Троттлинг только для помеченных ScopedRateThrottle вьюх (глобально ничего
+    # не троттлим). quick_buy - публичная «магическая ссылка», защищаем от спама
+    # аккаунтами/письмами.
+    'DEFAULT_THROTTLE_RATES': {
+        'quick_buy': '20/hour',
+    },
 }
 
 DATABASES = {
