@@ -92,6 +92,13 @@ CSRF_TRUSTED_ORIGINS = [
     'https://www.mentoredgroup.com',
 ]
 
+# Публичный адрес фронта - нужен там, где строим абсолютные ссылки без запроса
+# от пользователя (например, «магическая ссылка» товара в админке). В отличие
+# от _frontend_base_url() в payments/views.py (которая строится из текущего
+# request и поэтому подстраивается под дев :5173), тут запроса на выбор порта
+# нет - значение задаётся явно и одно на всё окружение.
+SITE_URL = config('SITE_URL', default='https://www.mentoredgroup.com')
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',

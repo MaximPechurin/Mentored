@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.shortcuts import redirect
@@ -167,7 +168,7 @@ class TestimonialAdmin(admin.ModelAdmin):
 
 class BaseProductAdmin(admin.ModelAdmin):
     """Базовый класс для всех товаров"""
-    readonly_fields = ('created_at', 'updated_at', 'image_preview')
+    readonly_fields = ('created_at', 'updated_at', 'image_preview', 'magic_link_display')
     list_editable = ('price', 'old_price', 'is_active', 'is_featured')
     search_fields = ('name', 'short_description', 'description')
     prepopulated_fields = {'slug': ('name',)}
@@ -180,6 +181,44 @@ class BaseProductAdmin(admin.ModelAdmin):
             )
         return '—'
     image_preview.short_description = 'Превью'
+
+    def magic_link_display(self, obj):
+        """
+        Готовая ссылка на лендинг быстрой покупки этого товара без
+        регистрации (frontend/src/views/compra/CompraRapidaPage.vue,
+        payments.QuickBuyView) - строится из типа товара (имя модели: book/
+        course/consultation/membership - ровно те ключи, что понимает
+        mentored.services.PRODUCT_MODEL_MAP) и slug, ничего сохранять в БД не
+        нужно - при смене slug ссылка сама пересчитается заново.
+        """
+        if not obj.pk:
+            return 'Сохраните товар, чтобы получить ссылку.'
+
+        product_type = obj._meta.model_name
+        url = f'{settings.SITE_URL}/comprar/{product_type}/{obj.slug}'
+        field_id = f'magic-link-{obj.pk}'
+
+        warning = '' if obj.is_active else format_html(
+            '<p style="color:#a94442;font-size:12px;margin:6px 0 0;">'
+            '⚠ Товар не активен - ссылка откроется как «недоступно», пока не включите «Активен».'
+            '</p>'
+        )
+
+        return format_html(
+            '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+            '<input id="{field_id}" type="text" readonly value="{url}" '
+            'onclick="this.select();" '
+            'style="width:420px;max-width:100%;padding:6px 8px;font-family:monospace;'
+            'font-size:13px;border:1px solid #ccc;border-radius:4px;" />'
+            '<button type="button" style="padding:6px 14px;cursor:pointer;" '
+            'onclick="navigator.clipboard.writeText(document.getElementById(\'{field_id}\').value);'
+            'this.textContent=\'✓ Copiado\';setTimeout(()=>{{this.textContent=\'Copiar\';}},1500);">'
+            'Copiar</button>'
+            '<a href="{url}" target="_blank" rel="noopener">Abrir ↗</a>'
+            '</div>{warning}',
+            field_id=field_id, url=url, warning=warning,
+        )
+    magic_link_display.short_description = 'Enlace mágico (compra directa sin registro)'
 
 
 @admin.register(Book)
@@ -201,6 +240,10 @@ class BookAdmin(BaseProductAdmin):
     fieldsets = (
         ('Основное', {
             'fields': ('name', 'slug', 'short_description', 'description', 'long_description')
+        }),
+        ('Enlace mágico', {
+            'fields': ('magic_link_display',),
+            'description': 'Enlace directo para compartir en redes/anuncios - compra sin registro previo.',
         }),
         ('Цены', {
             'fields': ('price', 'old_price')
@@ -245,6 +288,10 @@ class CourseAdmin(BaseProductAdmin):
         ('Основное', {
             'fields': ('name', 'slug', 'short_description', 'description', 'long_description')
         }),
+        ('Enlace mágico', {
+            'fields': ('magic_link_display',),
+            'description': 'Enlace directo para compartir en redes/anuncios - compra sin registro previo.',
+        }),
         ('Цены', {
             'fields': ('price', 'old_price')
         }),
@@ -287,6 +334,10 @@ class ConsultationAdmin(BaseProductAdmin):
         ('Основное', {
             'fields': ('name', 'slug', 'short_description', 'description', 'long_description')
         }),
+        ('Enlace mágico', {
+            'fields': ('magic_link_display',),
+            'description': 'Enlace directo para compartir en redes/anuncios - compra sin registro previo.',
+        }),
         ('Цены', {
             'fields': ('price', 'old_price')
         }),
@@ -328,6 +379,10 @@ class MembershipAdmin(BaseProductAdmin):
     fieldsets = (
         ('Основное', {
             'fields': ('name', 'slug', 'short_description', 'description', 'long_description')
+        }),
+        ('Enlace mágico', {
+            'fields': ('magic_link_display',),
+            'description': 'Enlace directo para compartir en redes/anuncios - compra sin registro previo.',
         }),
         ('Цены', {
             'fields': ('price', 'old_price')
