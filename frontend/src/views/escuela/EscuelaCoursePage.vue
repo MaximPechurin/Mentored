@@ -20,6 +20,16 @@
         🎓 {{ st('student.descargarCertificado') }}
       </button>
 
+      <a
+        v-if="course.whatsapp_group_url"
+        :href="course.whatsapp_group_url"
+        target="_blank"
+        rel="noopener"
+        class="esc-whatsapp-btn"
+      >
+        💬 {{ st('course.grupoWhatsapp') }}
+      </a>
+
       <div v-for="module in course.modules" :key="module.id" class="esc-module">
         <h2 class="esc-module-title">{{ module.title }}</h2>
 
@@ -220,6 +230,24 @@ onMounted(async () => {
 }
 
 .esc-certificate-btn:hover { background: #2a2525; }
+
+.esc-whatsapp-btn {
+  display: inline-block;
+  margin: -16px 0 32px;
+  background: #2f7a3a;
+  color: #fff;
+  text-decoration: none;
+  border: none;
+  border-radius: 999px;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 14.5px;
+  padding: 11px 22px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.esc-whatsapp-btn:hover { background: #256030; }
 
 .esc-module {
   margin-bottom: 28px;

@@ -239,7 +239,10 @@ class TeacherCourseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Course
-        fields = ['id', 'slug', 'title', 'is_active', 'students_count', 'pending_submissions_count']
+        fields = [
+            'id', 'slug', 'title', 'is_active', 'whatsapp_group_url',
+            'students_count', 'pending_submissions_count',
+        ]
 
     def get_students_count(self, obj):
         return obj.enrollments.filter(is_active=True).count()

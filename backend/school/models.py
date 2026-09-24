@@ -103,6 +103,12 @@ class Course(models.Model):
         verbose_name='Активен',
         help_text='Можно временно скрыть курс из кабинетов, не удаляя контент и прогресс',
     )
+    whatsapp_group_url = models.URLField(
+        blank=True,
+        verbose_name='Ссылка на группу WhatsApp',
+        help_text='Если заполнено - студент увидит на странице курса блок '
+                  '«Группа WhatsApp», клик по которому открывает эту ссылку.',
+    )
     creator = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

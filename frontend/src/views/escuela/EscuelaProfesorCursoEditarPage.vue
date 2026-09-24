@@ -26,11 +26,15 @@
         <div v-if="!editingCourseInfo" class="esc-info-card">
           <p v-if="course.description" class="esc-info-desc">{{ course.description }}</p>
           <p v-else class="esc-muted">{{ st('teacher.sinDescripcion') }}</p>
+          <p v-if="course.whatsapp_group_url" class="esc-whatsapp-line">
+            💬 <a :href="course.whatsapp_group_url" target="_blank" rel="noopener">{{ st('course.grupoWhatsapp') }}</a>
+          </p>
         </div>
 
         <div v-else class="esc-info-card">
           <input v-model="courseTitleDraft" type="text" class="esc-input" :placeholder="st('teacher.nombreCurso')" />
           <textarea v-model="courseDescriptionDraft" rows="3" class="esc-textarea" :placeholder="st('teacher.descripcionCurso')"></textarea>
+          <input v-model="courseWhatsappDraft" type="text" class="esc-input" :placeholder="st('teacher.grupoWhatsapp')" />
           <div class="esc-form-actions">
             <button class="esc-btn-approve" :disabled="savingCourseInfo" @click="saveCourseInfo">
               {{ savingCourseInfo ? st('teacher.guardando') : st('teacher.guardar') }}
@@ -213,7 +217,7 @@ const { st } = useSchoolLang()
 const checking = ref(true)
 const loading = ref(true)
 const forbidden = ref(false)
-const course = ref({ id: null, title: '', description: '', modules: [] })
+const course = ref({ id: null, title: '', description: '', whatsapp_group_url: '', modules: [] })
 const lessons = computed(() => course.value.modules.flatMap((m) => m.lessons || []))
 
 const activeLessonId = ref(null)
@@ -228,11 +232,13 @@ const toggleLesson = (id) => {
 const editingCourseInfo = ref(false)
 const courseTitleDraft = ref('')
 const courseDescriptionDraft = ref('')
+const courseWhatsappDraft = ref('')
 const savingCourseInfo = ref(false)
 
 const startEditCourseInfo = () => {
   courseTitleDraft.value = course.value.title
   courseDescriptionDraft.value = course.value.description
+  courseWhatsappDraft.value = course.value.whatsapp_group_url || ''
   editingCourseInfo.value = true
 }
 const saveCourseInfo = async () => {
@@ -242,9 +248,11 @@ const saveCourseInfo = async () => {
     await schoolApi.updateTeacherCourse(course.value.id, {
       title: courseTitleDraft.value.trim(),
       description: courseDescriptionDraft.value.trim(),
+      whatsapp_group_url: courseWhatsappDraft.value.trim(),
     })
     course.value.title = courseTitleDraft.value.trim()
     course.value.description = courseDescriptionDraft.value.trim()
+    course.value.whatsapp_group_url = courseWhatsappDraft.value.trim()
     editingCourseInfo.value = false
   } catch (error) {
     console.error('Error al actualizar el curso:', error)
@@ -561,6 +569,9 @@ onMounted(async () => {
 
 .esc-info-desc { font-size: 15px; line-height: 1.6; color: #3f3a35; margin: 0; white-space: pre-line; }
 .esc-muted { color: #8a8079; margin: 0; }
+.esc-whatsapp-line { margin: 12px 0 0; font-size: 14.5px; }
+.esc-whatsapp-line a { color: #2f7a3a; font-weight: 600; text-decoration: none; }
+.esc-whatsapp-line a:hover { text-decoration: underline; }
 
 .esc-input, .esc-textarea {
   width: 100%;

@@ -79,6 +79,7 @@ class CourseDetailView(APIView):
             'slug': course.slug,
             'title': course.title,
             'description': course.description,
+            'whatsapp_group_url': course.whatsapp_group_url,
             'modules': modules_data,
             'has_certificate': Certificate.objects.filter(enrollment=enrollment).exists(),
         })
@@ -384,6 +385,7 @@ class TeacherCoursesView(APIView):
         course = Course.objects.create(
             title=title,
             description=(request.data.get('description') or '').strip(),
+            whatsapp_group_url=(request.data.get('whatsapp_group_url') or '').strip(),
             creator=request.user,
         )
         CourseTeacher.objects.get_or_create(course=course, teacher=request.user)
@@ -436,6 +438,7 @@ class TeacherCourseEditView(APIView):
             'id': course.id,
             'title': course.title,
             'description': course.description,
+            'whatsapp_group_url': course.whatsapp_group_url,
             'modules': TeacherModuleEditSerializer(modules, many=True).data,
         })
 
@@ -451,6 +454,8 @@ class TeacherCourseEditView(APIView):
             course.title = title
         if 'description' in request.data:
             course.description = request.data.get('description') or ''
+        if 'whatsapp_group_url' in request.data:
+            course.whatsapp_group_url = (request.data.get('whatsapp_group_url') or '').strip()
         course.save()
         return Response(TeacherCourseSerializer(course).data)
 

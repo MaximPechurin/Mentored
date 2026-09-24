@@ -46,6 +46,12 @@
             :placeholder="st('teacher.descripcionCurso')"
             class="esc-create-course-textarea"
           ></textarea>
+          <input
+            v-model="newCourseWhatsapp"
+            type="text"
+            :placeholder="st('teacher.grupoWhatsapp')"
+            class="esc-create-course-input"
+          />
           <p v-if="createError" class="esc-create-course-error">{{ createError }}</p>
           <button class="esc-btn-approve" :disabled="creatingCourse" @click="createCourse">
             {{ creatingCourse ? st('teacher.creando') : st('teacher.crear') }}
@@ -242,6 +248,7 @@ const submissions = ref([])
 const showCreateForm = ref(false)
 const newCourseTitle = ref('')
 const newCourseDescription = ref('')
+const newCourseWhatsapp = ref('')
 const creatingCourse = ref(false)
 const createError = ref('')
 
@@ -256,11 +263,13 @@ const createCourse = async () => {
     await schoolApi.createTeacherCourse({
       title: newCourseTitle.value.trim(),
       description: newCourseDescription.value.trim(),
+      whatsapp_group_url: newCourseWhatsapp.value.trim(),
     })
     const { data } = await schoolApi.teacherCourses()
     courses.value = data
     newCourseTitle.value = ''
     newCourseDescription.value = ''
+    newCourseWhatsapp.value = ''
     showCreateForm.value = false
   } catch (error) {
     console.error('Error al crear el curso:', error)
