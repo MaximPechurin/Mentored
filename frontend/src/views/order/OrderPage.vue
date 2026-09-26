@@ -82,7 +82,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { orderApi } from '../../api/orders'
 import { paymentApi } from '../../api/payments'
@@ -93,17 +93,38 @@ const router = useRouter()
 const order = ref(null)
 const loading = ref(true)
 const paying = ref(false)
+const pollExhausted = ref(false)
 
-// Баннер о результате оплаты. Mercado Pago возвращает сюда же
-// (/order/:orderNumber?payment=success|failure|pending) после Checkout Pro -
-// см. back_urls в backend/payments/views.py::CreatePaymentPreferenceView.
+// Баннер de resultado de pago - basado en el estado REAL del pedido
+// (order.status), no en el parámetro ?payment=... de la URL. Ese parámetro
+// es solo una foto del momento del redirect de Mercado Pago y puede quedar
+// desactualizado: el webhook que confirma el pago (backend/payments/views.py
+// payment_webhook) suele llegar en segundos, pero si aún no llegó cuando se
+// cargó esta página, antes se mostraba para siempre "pago no completado"
+// aunque el dinero ya se hubiera cobrado - de ahí el bug reportado por
+// usuarias reales. Ahora se sondea el pedido (pollOrderStatus) mientras siga
+// "pending" y venimos de un redirect de MP.
 const paymentBanner = computed(() => {
-  const map = {
-    success: { type: 'success', text: 'Pago recibido. Estamos confirmando el estado con Mercado Pago.' },
-    pending: { type: 'pending', text: 'Tu pago está pendiente de confirmación.' },
-    failure: { type: 'failure', text: 'El pago no se pudo completar. Podés intentarlo de nuevo.' },
+  if (!order.value) return null
+  const status = order.value.status
+
+  if (['paid', 'processing', 'completed'].includes(status)) {
+    return { type: 'success', text: '¡Pago recibido! Gracias por tu compra.' }
   }
-  return map[route.query.payment] || null
+  if (['cancelled', 'refunded'].includes(status)) {
+    return { type: 'failure', text: 'El pago no se pudo completar. Podés intentarlo de nuevo.' }
+  }
+  if (status === 'pending' && route.query.payment) {
+    if (pollExhausted.value) {
+      return {
+        type: 'pending',
+        text: 'Tu pago sigue en verificación con Mercado Pago. Si ya pagaste, no te preocupes: '
+          + 'en cuanto se confirme verás el acceso automáticamente. Si tarda demasiado, escríbenos.',
+      }
+    }
+    return { type: 'pending', text: 'Estamos confirmando tu pago con Mercado Pago. No cierres esta página...' }
+  }
+  return null
 })
 
 const formatPrice = (amount) => {
@@ -135,23 +156,28 @@ const getStatusLabel = (status) => {
   return map[status] || status
 }
 
-const loadOrder = async () => {
+// Без переключения loading - используется и при первой загрузке (после
+// собственного показа спиннера), и при фоновом опросе (poll), где спиннер на
+// весь экран был бы лишним морганием поверх уже показанного заказа.
+const fetchOrder = async () => {
   const orderNumber = route.params.orderNumber
   if (!orderNumber) {
     router.push('/tienda')
     return
   }
-
-  loading.value = true
   try {
     const response = await orderApi.getOrder(orderNumber)
     order.value = response.data
   } catch (error) {
     console.error('Ошибка загрузки заказа:', error)
     order.value = null
-  } finally {
-    loading.value = false
   }
+}
+
+const loadOrder = async () => {
+  loading.value = true
+  await fetchOrder()
+  loading.value = false
 }
 
 const goToPayment = async () => {
@@ -169,8 +195,41 @@ const goToPayment = async () => {
   }
 }
 
-onMounted(() => {
-  loadOrder()
+// Пока webhook не отработал, статус заказа может ненадолго остаться
+// "pending" даже после реально успешной оплаты - опрашиваем сервер, вместо
+// того чтобы один раз показать (возможно устаревший) статус и забыть.
+// Останавливаемся, как только статус перестал быть pending, или после
+// разумного числа попыток (10 x 3с = 30с - вебхук почти всегда быстрее).
+let pollTimer = null
+let pollAttempts = 0
+const MAX_POLL_ATTEMPTS = 10
+
+const stopPolling = () => {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
+}
+
+const startPollingIfNeeded = () => {
+  if (!route.query.payment || !order.value || order.value.status !== 'pending') return
+  pollTimer = setInterval(async () => {
+    pollAttempts += 1
+    await fetchOrder()
+    if (order.value?.status !== 'pending' || pollAttempts >= MAX_POLL_ATTEMPTS) {
+      if (pollAttempts >= MAX_POLL_ATTEMPTS) pollExhausted.value = true
+      stopPolling()
+    }
+  }, 3000)
+}
+
+onMounted(async () => {
+  await loadOrder()
+  startPollingIfNeeded()
+})
+
+onUnmounted(() => {
+  stopPolling()
 })
 </script>
 
