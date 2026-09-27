@@ -11,4 +11,9 @@ urlpatterns = [
         views.QuickBuyProductView.as_view(),
         name='quick_buy_product',
     ),
+    path(
+        'quick-buy/order-status/<str:order_number>/',
+        views.QuickBuyOrderStatusView.as_view(),
+        name='quick_buy_order_status',
+    ),
 ]

@@ -15,4 +15,10 @@ export const paymentApi = {
   quickBuy(payload) {
     return api.post('/payment/quick-buy/', payload)
   },
+
+  // Публичный (без авторизации) статус заказа - для страницы «спасибо» после
+  // покупки по магической ссылке, где покупатель ещё гость без токена.
+  quickBuyOrderStatus(orderNumber) {
+    return api.get(`/payment/quick-buy/order-status/${orderNumber}/`)
+  },
 }

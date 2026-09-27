@@ -347,10 +347,16 @@ class QuickBuyView(APIView):
         # был аккаунт, пароль не отправляли.
         frontend_url = _frontend_base_url(request)
         new_flag = '1' if created else '0'
+        # order_number en la URL - la página "спасибо" (invitado, sin sesión)
+        # no puede llamar a un endpoint autenticado para saber el estado real;
+        # con esto puede consultar /payment/quick-buy/order-status/<n>/ y no
+        # quedarse mostrando para siempre el status=... de esta URL (foto del
+        # momento del redirect de MP, no el estado final real - ver el bug de
+        # OrderPage.vue reportado en producción, la misma causa aplica aquí).
         back_urls = {
-            "success": f"{frontend_url}/compra-exitosa?status=success&new={new_flag}",
-            "failure": f"{frontend_url}/compra-exitosa?status=failure&new={new_flag}",
-            "pending": f"{frontend_url}/compra-exitosa?status=pending&new={new_flag}",
+            "success": f"{frontend_url}/compra-exitosa?status=success&new={new_flag}&order={order.order_number}",
+            "failure": f"{frontend_url}/compra-exitosa?status=failure&new={new_flag}&order={order.order_number}",
+            "pending": f"{frontend_url}/compra-exitosa?status=pending&new={new_flag}&order={order.order_number}",
         }
 
         try:
@@ -406,3 +412,27 @@ class QuickBuyProductView(APIView):
             'product_type': product_type,
             'product': serializer_cls(product, context={'request': request}).data,
         })
+
+
+class QuickBuyOrderStatusView(APIView):
+    """
+    GET /payment/quick-buy/order-status/<order_number>/ — estado real del
+    pedido para la página pública «спасибо» (CompraExitosaPage.vue). El
+    comprador ahí es un invitado sin sesión (o recién creado, sin token en el
+    navegador), así que no puede llamar al endpoint autenticado de pedidos -
+    de ahí este endpoint público, deliberadamente mínimo (solo status, sin
+    datos personales) para no repetir el bug de OrderPage.vue: esa página
+    mostraba para siempre el ?payment=... de la URL de retorno de Mercado
+    Pago (una foto del momento del redirect) en vez del estado real, y las
+    usuarias veían "pago no completado" aunque el dinero ya se hubiera
+    cobrado y el pedido terminara en paid segundos después por el webhook.
+    """
+    permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'quick_buy'
+
+    def get(self, request, order_number):
+        order = Order.objects.filter(order_number=order_number).first()
+        if not order:
+            return Response({'error': 'Pedido no encontrado'}, status=404)
+        return Response({'status': order.status})
