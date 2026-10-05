@@ -102,8 +102,8 @@ class EmailService:
 
         # Базовый контекст (доступен во всех шаблонах)
         base_context = {
-            'site_url': getattr(settings, 'FRONTEND_URL', 'https://mentored.com'),
-            'support_email': getattr(settings, 'SUPPORT_EMAIL', 'hola@mentored.com'),
+            'site_url': getattr(settings, 'FRONTEND_URL', 'https://mentoredgroup.com/'),
+            'support_email': getattr(settings, 'SUPPORT_EMAIL', 'info@mentoredgroup.com'),
             'logo_url': getattr(settings, 'EMAIL_LOGO_URL', ''),
             'current_year': timezone.now().year,
         }
