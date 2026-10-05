@@ -14,6 +14,7 @@ from .models import Course, Book, Consultation, Membership, BlogCategory, BlogPo
 from .serializers import RegisterSerializer, ProfileSerializer, CourseSerializer, BookSerializer, ConsultationSerializer, MembershipSerializer, \
     BlogCategorySerializer, BlogPostSerializer, CartSerializer, CartItemSerializer, OrderSerializer, FAQSerializer, ContactMessageSerializer, \
     SiteSettingsSerializer
+from notifications.services import EmailService
 
 
 class RegisterView(APIView):
@@ -24,6 +25,22 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
+            # ОТПРАВЛЯЕМ ПИСЬМО ПОСЛЕ УСПЕШНОЙ РЕГИСТРАЦИИ
+            try:
+                EmailService.send(
+                    email_type='registration',
+                    recipient=user,
+                    context={
+                        'nombre': user.username or user.email,
+                        'link_cuenta': settings.SITE_URL + '/cuenta'
+                    }
+                )
+            except Exception as e:
+                # Ошибка письма не должна ломать регистрацию
+                logger.exception(
+                    f"Не удалось отправить приветственное письмо для {user.email}: {e}"
+                )
+
             return Response({
                 'id': user.id,
                 'email': user.email,

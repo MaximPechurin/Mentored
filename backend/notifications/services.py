@@ -106,10 +106,6 @@ class EmailService:
             'support_email': getattr(settings, 'SUPPORT_EMAIL', 'info@mentoredgroup.com'),
             'logo_url': getattr(settings, 'EMAIL_LOGO_URL', ''),
             'current_year': timezone.now().year,
-
-            # АВТОМАТИЧЕСКИЕ ССЫЛКИ
-            'link_cuenta': f"{getattr(settings, 'FRONTEND_URL', 'https://mentoredgroup.com')}/cuenta",
-            'link_tienda': f"{getattr(settings, 'FRONTEND_URL', 'https://mentoredgroup.com')}/tienda",
         }
         base_context.update(context)
 
