@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'mentored',
     'payments',
     'school',
+    'notifications'
 ]
 
 MIDDLEWARE = [

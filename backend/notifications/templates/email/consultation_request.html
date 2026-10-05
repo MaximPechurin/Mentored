@@ -1,0 +1,57 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Recibimos tu solicitud{% endblock %}
+
+{% block content %}
+<h1 style="font-family:Georgia,serif;font-size:28px;font-weight:600;color:#15110f;margin:0 0 20px;line-height:1.2;">
+    ¡Recibimos tu solicitud, {{ nombre }}!
+</h1>
+
+<p style="font-size:16px;color:#5d544c;margin:0 0 24px;">
+    Gracias por solicitar una consulta en MENTORED.
+    Hemos recibido tu solicitud con la siguiente información:
+</p>
+
+<!-- Детали заявки -->
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#faf6f0;border-radius:12px;margin:24px 0;">
+    <tr>
+        <td style="padding:24px;">
+            <h2 style="font-family:Georgia,serif;font-size:18px;font-weight:600;color:#15110f;margin:0 0 16px;">
+                Detalles de tu solicitud
+            </h2>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                {% if nombre_mentor %}
+                <tr>
+                    <td style="padding:6px 0;font-size:15px;color:#6b6259;">Mentor/a:</td>
+                    <td style="padding:6px 0;font-size:15px;color:#15110f;font-weight:600;text-align:right;">{{ nombre_mentor }}</td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <td style="padding:6px 0;font-size:15px;color:#6b6259;">Tema de consulta:</td>
+                    <td style="padding:6px 0;font-size:15px;color:#15110f;font-weight:600;text-align:right;">{{ tema_consulta }}</td>
+                </tr>
+                {% if fecha_solicitada %}
+                <tr>
+                    <td style="padding:6px 0;font-size:15px;color:#6b6259;">Fecha solicitada:</td>
+                    <td style="padding:6px 0;font-size:15px;color:#15110f;font-weight:600;text-align:right;">{{ fecha_solicitada }}</td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <td style="padding:6px 0;font-size:15px;color:#6b6259;">Estado:</td>
+                    <td style="padding:6px 0;font-size:15px;color:#c49a3f;font-weight:600;text-align:right;">Pendiente de confirmación</td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+
+<p style="font-size:16px;color:#5d544c;margin:0 0 20px;">
+    Nuestro equipo revisará tu solicitud y se pondrá en contacto contigo
+    para confirmar los detalles.
+</p>
+
+<p style="font-size:15px;color:#8a8079;margin:0;">
+    Si tienes alguna pregunta, escríbenos a
+    <a href="mailto:{{ support_email }}" style="color:#8e1519;">{{ support_email }}</a>.
+</p>
+{% endblock %}

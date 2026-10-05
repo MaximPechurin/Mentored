@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}MENTORED{% endblock %}</title>
+</head>
+<body style="margin:0;padding:0;background:#f5eee3;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#1c1c1c;line-height:1.6;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f5eee3;padding:40px 20px;">
+        <tr>
+            <td align="center">
+                <!-- Контейнер письма -->
+                <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 10px 40px -20px rgba(0,0,0,0.15);">
+
+                    <!-- Шапка -->
+                    <tr>
+                        <td style="background:#0e0c0c;padding:32px 40px;text-align:center;">
+                            {% if logo_url %}
+                                <img src="{{ logo_url }}" alt="MENTORED" style="height:38px;width:auto;">
+                            {% else %}
+                                <span style="font-family:'Playfair Display',Georgia,serif;font-size:26px;font-weight:600;color:#ffffff;letter-spacing:0.5px;">MENTORED</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+
+                    <!-- Контент -->
+                    <tr>
+                        <td style="padding:40px;">
+                            {% block content %}{% endblock %}
+                        </td>
+                    </tr>
+
+                    <!-- Подпись -->
+                    <tr>
+                        <td style="background:#faf6f0;padding:32px 40px;text-align:center;border-top:1px solid #eee3d6;">
+                            <p style="margin:0 0 12px;font-family:Georgia,serif;font-style:italic;font-size:16px;color:#3a2f28;">
+                                Con cariño,<br>Equipo MENTORED
+                            </p>
+                            <p style="margin:16px 0 0;font-size:14px;color:#8a8079;">
+                                ¿Necesitas ayuda? Escríbenos:
+                                <a href="mailto:{{ support_email }}" style="color:#8e1519;text-decoration:none;">{{ support_email }}</a>
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Футер -->
+                    <tr>
+                        <td style="background:#0e0c0c;padding:24px 40px;text-align:center;">
+                            <p style="margin:0;font-size:13px;color:#6f6862;">
+                                © {{ current_year }} MENTORED. Todos los derechos reservados.
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

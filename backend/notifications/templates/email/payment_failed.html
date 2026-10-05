@@ -1,0 +1,46 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Tu pago no fue completado{% endblock %}
+
+{% block content %}
+<h1 style="font-family:Georgia,serif;font-size:28px;font-weight:600;color:#15110f;margin:0 0 20px;line-height:1.2;">
+    Hola, {{ nombre }}
+</h1>
+
+<p style="font-size:16px;color:#5d544c;margin:0 0 20px;">
+    Vimos que tu compra de <strong style="color:#8e1519;">{{ nombre_producto }}</strong>
+    aún no fue completada.
+</p>
+
+<!-- Предупреждение -->
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#fff3f3;border-left:4px solid #8e1519;border-radius:0 8px 8px 0;margin:24px 0;">
+    <tr>
+        <td style="padding:16px 20px;">
+            <p style="margin:0;font-size:15px;color:#5d544c;">
+                Tu pedido quedó en estado <strong>pendiente de pago</strong>.
+                Puedes finalizarlo cuando quieras.
+            </p>
+        </td>
+    </tr>
+</table>
+
+<!-- CTA -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:32px 0;">
+    <tr>
+        <td style="background:#8e1519;border-radius:12px;">
+            <a href="{{ link_pago }}" style="display:inline-block;padding:16px 32px;color:#ffffff;text-decoration:none;font-weight:600;font-size:16px;">
+                Finalizar mi pago
+            </a>
+        </td>
+    </tr>
+</table>
+
+<p style="font-size:16px;color:#5d544c;margin:0 0 20px;">
+    Si tuviste algún problema con el pago, escríbenos y te ayudaremos.
+</p>
+
+<p style="font-size:15px;color:#8a8079;margin:0;">
+    Contacto de soporte:
+    <a href="mailto:{{ support_email }}" style="color:#8e1519;">{{ support_email }}</a>
+</p>
+{% endblock %}

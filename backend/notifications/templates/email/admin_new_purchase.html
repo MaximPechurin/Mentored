@@ -1,0 +1,90 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Nueva compra{% endblock %}
+
+{% block content %}
+<h1 style="font-family:Georgia,serif;font-size:28px;font-weight:600;color:#15110f;margin:0 0 20px;line-height:1.2;">
+    🛒 Nueva compra registrada
+</h1>
+
+<p style="font-size:16px;color:#5d544c;margin:0 0 24px;">
+    En la plataforma MENTORED se ha registrado una nueva compra.
+</p>
+
+<!-- Данные клиента -->
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#faf6f0;border-radius:12px;margin:24px 0;">
+    <tr>
+        <td style="padding:24px;">
+            <h2 style="font-family:Georgia,serif;font-size:16px;font-weight:600;color:#15110f;margin:0 0 12px;text-transform:uppercase;letter-spacing:1px;color:#8e1519;">
+                Cliente
+            </h2>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                    <td style="padding:4px 0;font-size:15px;color:#6b6259;">Nombre:</td>
+                    <td style="padding:4px 0;font-size:15px;color:#15110f;font-weight:600;text-align:right;">{{ nombre_cliente }}</td>
+                </tr>
+                <tr>
+                    <td style="padding:4px 0;font-size:15px;color:#6b6259;">Email:</td>
+                    <td style="padding:4px 0;font-size:15px;color:#15110f;font-weight:600;text-align:right;">{{ email_cliente }}</td>
+                </tr>
+                {% if telefono_cliente %}
+                <tr>
+                    <td style="padding:4px 0;font-size:15px;color:#6b6259;">Teléfono/WhatsApp:</td>
+                    <td style="padding:4px 0;font-size:15px;color:#15110f;font-weight:600;text-align:right;">{{ telefono_cliente }}</td>
+                </tr>
+                {% endif %}
+            </table>
+        </td>
+    </tr>
+</table>
+
+<!-- Детали заказа -->
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#faf6f0;border-radius:12px;margin:24px 0;">
+    <tr>
+        <td style="padding:24px;">
+            <h2 style="font-family:Georgia,serif;font-size:16px;font-weight:600;color:#8e1519;margin:0 0 12px;text-transform:uppercase;letter-spacing:1px;">
+                Pedido
+            </h2>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                    <td style="padding:4px 0;font-size:15px;color:#6b6259;">Producto:</td>
+                    <td style="padding:4px 0;font-size:15px;color:#15110f;font-weight:600;text-align:right;">{{ nombre_producto }}</td>
+                </tr>
+                <tr>
+                    <td style="padding:4px 0;font-size:15px;color:#6b6259;">Pedido:</td>
+                    <td style="padding:4px 0;font-size:15px;color:#15110f;font-weight:600;text-align:right;">{{ numero_pedido }}</td>
+                </tr>
+                <tr>
+                    <td style="padding:4px 0;font-size:15px;color:#6b6259;">Monto:</td>
+                    <td style="padding:4px 0;font-size:15px;color:#15110f;font-weight:600;text-align:right;">{{ monto }} {{ moneda }}</td>
+                </tr>
+                <tr>
+                    <td style="padding:4px 0;font-size:15px;color:#6b6259;">Método de pago:</td>
+                    <td style="padding:4px 0;font-size:15px;color:#15110f;font-weight:600;text-align:right;">{{ metodo_pago }}</td>
+                </tr>
+                <tr>
+                    <td style="padding:4px 0;font-size:15px;color:#6b6259;">Estado:</td>
+                    <td style="padding:4px 0;font-size:15px;color:#1f7a3d;font-weight:600;text-align:right;">{{ estado_pago }}</td>
+                </tr>
+                <tr>
+                    <td style="padding:4px 0;font-size:15px;color:#6b6259;">Fecha:</td>
+                    <td style="padding:4px 0;font-size:15px;color:#15110f;font-weight:600;text-align:right;">{{ fecha_pago }}</td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+
+<!-- CTA в админку -->
+{% if link_admin_pedido %}
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:32px 0;">
+    <tr>
+        <td style="background:#0e0c0c;border-radius:12px;">
+            <a href="{{ link_admin_pedido }}" style="display:inline-block;padding:14px 28px;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;">
+                Revisar pedido en admin
+            </a>
+        </td>
+    </tr>
+</table>
+{% endif %}
+{% endblock %}

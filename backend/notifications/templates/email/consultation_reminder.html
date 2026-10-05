@@ -1,0 +1,54 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Recordatorio de tu consulta{% endblock %}
+
+{% block content %}
+<h1 style="font-family:Georgia,serif;font-size:28px;font-weight:600;color:#15110f;margin:0 0 20px;line-height:1.2;">
+    Recordatorio de tu consulta
+</h1>
+
+<p style="font-size:16px;color:#5d544c;margin:0 0 24px;">
+    Hola, {{ nombre }}. Te recordamos que tu consulta con
+    <strong style="color:#8e1519;">{{ nombre_mentor }}</strong> será:
+</p>
+
+<!-- Дата и время -->
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#faf6f0;border-radius:12px;margin:24px 0;">
+    <tr>
+        <td style="padding:24px;text-align:center;">
+            <p style="margin:0 0 8px;font-size:14px;color:#8a8079;text-transform:uppercase;letter-spacing:1px;">
+                Fecha
+            </p>
+            <p style="margin:0 0 16px;font-family:Georgia,serif;font-size:24px;color:#15110f;font-weight:600;">
+                {{ fecha_consulta }}
+            </p>
+            <p style="margin:0 0 8px;font-size:14px;color:#8a8079;text-transform:uppercase;letter-spacing:1px;">
+                Hora
+            </p>
+            <p style="margin:0;font-family:Georgia,serif;font-size:24px;color:#15110f;font-weight:600;">
+                {{ hora_consulta }}
+            </p>
+        </td>
+    </tr>
+</table>
+
+<!-- Ссылка -->
+{% if link_reunion %}
+<p style="font-size:16px;color:#5d544c;margin:0 0 16px;">
+    Puedes ingresar desde este enlace:
+</p>
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:24px 0;">
+    <tr>
+        <td style="background:#8e1519;border-radius:12px;">
+            <a href="{{ link_reunion }}" style="display:inline-block;padding:16px 32px;color:#ffffff;text-decoration:none;font-weight:600;font-size:16px;">
+                Unirme a la consulta
+            </a>
+        </td>
+    </tr>
+</table>
+{% endif %}
+
+<p style="font-size:16px;color:#5d544c;margin:24px 0 0;">
+    Nos vemos pronto. 🎯
+</p>
+{% endblock %}

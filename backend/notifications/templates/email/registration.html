@@ -1,0 +1,34 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Bienvenido/a a MENTORED{% endblock %}
+
+{% block content %}
+<h1 style="font-family:Georgia,serif;font-size:28px;font-weight:600;color:#15110f;margin:0 0 20px;line-height:1.2;">
+    ¡Bienvenido/a, {{ nombre }}!
+</h1>
+
+<p style="font-size:16px;color:#5d544c;margin:0 0 20px;">
+    Gracias por registrarte en MENTORED.
+</p>
+
+<p style="font-size:16px;color:#5d544c;margin:0 0 20px;">
+    Tu cuenta fue creada correctamente. Desde tu perfil podrás ver tus compras,
+    acceder a tus cursos, materiales digitales y futuras consultas.
+</p>
+
+<!-- CTA -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:32px 0;">
+    <tr>
+        <td style="background:#8e1519;border-radius:12px;">
+            <a href="{{ link_cuenta }}" style="display:inline-block;padding:16px 32px;color:#ffffff;text-decoration:none;font-weight:600;font-size:16px;">
+                Ingresar a mi cuenta
+            </a>
+        </td>
+    </tr>
+</table>
+
+<p style="font-size:15px;color:#8a8079;margin:0;">
+    Si tienes alguna pregunta, puedes escribirnos a
+    <a href="mailto:{{ support_email }}" style="color:#8e1519;">{{ support_email }}</a>.
+</p>
+{% endblock %}

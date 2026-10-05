@@ -1,0 +1,71 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Tu consulta ha sido confirmada{% endblock %}
+
+{% block content %}
+<h1 style="font-family:Georgia,serif;font-size:28px;font-weight:600;color:#15110f;margin:0 0 20px;line-height:1.2;">
+    ¡Tu consulta está confirmada, {{ nombre }}!
+</h1>
+
+<p style="font-size:16px;color:#5d544c;margin:0 0 24px;">
+    Tu consulta con <strong style="color:#8e1519;">{{ nombre_mentor }}</strong>
+    ha sido confirmada.
+</p>
+
+<!-- Детали сессии -->
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#faf6f0;border-radius:12px;margin:24px 0;">
+    <tr>
+        <td style="padding:24px;">
+            <h2 style="font-family:Georgia,serif;font-size:18px;font-weight:600;color:#15110f;margin:0 0 16px;">
+                Detalles de la sesión
+            </h2>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                    <td style="padding:6px 0;font-size:15px;color:#6b6259;">Fecha:</td>
+                    <td style="padding:6px 0;font-size:15px;color:#15110f;font-weight:600;text-align:right;">{{ fecha_consulta }}</td>
+                </tr>
+                <tr>
+                    <td style="padding:6px 0;font-size:15px;color:#6b6259;">Hora:</td>
+                    <td style="padding:6px 0;font-size:15px;color:#15110f;font-weight:600;text-align:right;">{{ hora_consulta }}</td>
+                </tr>
+                {% if duracion %}
+                <tr>
+                    <td style="padding:6px 0;font-size:15px;color:#6b6259;">Duración:</td>
+                    <td style="padding:6px 0;font-size:15px;color:#15110f;font-weight:600;text-align:right;">{{ duracion }}</td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <td style="padding:6px 0;font-size:15px;color:#6b6259;">Modalidad:</td>
+                    <td style="padding:6px 0;font-size:15px;color:#15110f;font-weight:600;text-align:right;">Online</td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+
+<!-- Ссылка на встречу -->
+{% if link_reunion %}
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#fff9f0;border:1px solid #f6edd9;border-radius:12px;margin:24px 0;">
+    <tr>
+        <td style="padding:20px;">
+            <p style="margin:0 0 12px;font-size:15px;color:#6b6259;font-weight:600;">
+                Enlace de acceso:
+            </p>
+            <p style="margin:0;font-size:15px;word-break:break-all;">
+                <a href="{{ link_reunion }}" style="color:#8e1519;">{{ link_reunion }}</a>
+            </p>
+        </td>
+    </tr>
+</table>
+{% endif %}
+
+<p style="font-size:16px;color:#5d544c;margin:0 0 20px;">
+    Te recomendamos conectarte unos minutos antes y tener a mano
+    tus preguntas o temas principales.
+</p>
+
+<p style="font-size:15px;color:#8a8079;margin:0;">
+    Si necesitas reprogramar, escríbenos a
+    <a href="mailto:{{ support_email }}" style="color:#8e1519;">{{ support_email }}</a>.
+</p>
+{% endblock %}
