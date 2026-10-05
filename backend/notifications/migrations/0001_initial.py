@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('mentored', '0010_alter_sitesettings_id'),
+        ('mentored', '0009_sitesettings'),
         ('school', '0009_course_whatsapp_group_url'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
