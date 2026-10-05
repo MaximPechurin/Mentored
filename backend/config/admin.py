@@ -47,6 +47,17 @@ MENTORED_SECTIONS = [
 ]
 
 
+# Уведомления и сообщения
+NOTIFICATIONS_SECTIONS = [
+    ("📨 Уведомления · Журнал писем", [
+        "emaillog",
+    ]),
+    ("📝 Уведомления · Шаблоны", [
+        "emailtemplate",
+    ]),
+]
+
+
 def _grouped_sections(models_by_name, sections, leftover_title, app_label, app_url):
     """ Раскладывает модели по секциям; то, что не попало ни в одну - в «Прочее». """
     result = []
@@ -88,7 +99,8 @@ class MentoredAdminSite(AdminSite):
         school_app = next((a for a in app_list if a.get("app_label") == "school"), None)
         mentored_app = next((a for a in app_list if a.get("app_label") == "mentored"), None)
         payments_app = next((a for a in app_list if a.get("app_label") == "payments"), None)
-        other = [a for a in app_list if a not in (school_app, mentored_app, payments_app)]
+        notifications_app = next((a for a in app_list if a.get("app_label") == "notifications"), None)
+        other = [a for a in app_list if a not in (school_app, mentored_app, payments_app, notifications_app)]
 
         school_sections = []
         if school_app:
@@ -110,5 +122,13 @@ class MentoredAdminSite(AdminSite):
                 "mentored", mentored_app.get("app_url", "/admin/mentored/"),
             )
 
-        # Сайт (магазин), затем школа, затем всё остальное (auth и т.п.)
-        return mentored_sections + school_sections + other
+        notifications_sections = []
+        if notifications_app:
+            by_name = {m["object_name"].lower(): m for m in notifications_app["models"]}
+            notifications_sections = _grouped_sections(
+                by_name, NOTIFICATIONS_SECTIONS, "📨 Уведомления · Прочее",
+                "notifications", notifications_app.get("app_url", "/admin/notifications/"),
+            )
+
+        # Сайт (магазин), затем школа, после уведомления, затем всё остальное (auth и т.п.)
+        return mentored_sections + school_sections + notifications_sections + other
