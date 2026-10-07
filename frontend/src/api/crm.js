@@ -34,4 +34,7 @@ export const crmApi = {
   getOrder(id) {
     return api.get(`/crm/orders/${id}/`)
   },
+  getPayments(params = {}) {
+    return api.get('/crm/payments/', { params })
+  },
 }

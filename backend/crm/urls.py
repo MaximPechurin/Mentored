@@ -17,7 +17,7 @@ urlpatterns = [
     path('teachers/<int:pk>/', TeacherDetailView.as_view(), name='teacher-detail'),
     path('orders/', OrderListView.as_view(), name='orders'),
     path('orders/<int:pk>/', OrderDetailView.as_view(), name='order-detail'),
-    # path('payments/', PaymentListView.as_view(), name='payments'),
+    path('payments/', PaymentListView.as_view(), name='payments'),
     # path('contact-messages/', ContactMessageListView.as_view(), name='contact-messages'),
     # path('submissions/', SubmissionListView.as_view(), name='submissions'),
 ]

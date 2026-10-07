@@ -1245,3 +1245,96 @@ def _serialize_order_row(order):
         'created_at': order.created_at,
         'paid_at': order.paid_at,
     }
+
+
+# ============================================================
+# PAYMENTS (Pagos)
+# ============================================================
+
+class PaymentListView(APIView):
+    """
+    GET /crm/payments/
+
+    Список платежей с фильтрами и пагинацией. Фокус — на транзакциях
+    (transaction_id, метод, статус). Клик по строке ведёт на карточку
+    заказа, а не платежа.
+
+    Query-параметры:
+      - search        — transaction_id, order.order_number, user.email, user.username
+      - status        — approved / pending / rejected / cancelled / refunded
+      - method        — visa, master, mercadopago, ... (Payment.payment_method)
+      - date_from     — YYYY-MM-DD (по paid_at, иначе created_at)
+      - date_to       — YYYY-MM-DD
+      - ordering      — created_at, -created_at, paid_at, -paid_at, amount, -amount
+      - page, page_size
+    """
+    permission_classes = [IsSuperuser]
+
+    def get(self, request):
+        qs = (
+            Payment.objects
+            .select_related('user', 'order')
+        )
+
+        # --- Поиск ---
+        search = (request.query_params.get('search') or '').strip()
+        if search:
+            qs = qs.filter(
+                Q(transaction_id__icontains=search) |
+                Q(order__order_number__icontains=search) |
+                Q(user__email__icontains=search) |
+                Q(user__username__icontains=search)
+            )
+
+        # --- Статус ---
+        status = request.query_params.get('status')
+        if status:
+            qs = qs.filter(status=status)
+
+        # --- Метод ---
+        method = request.query_params.get('method')
+        if method:
+            qs = qs.filter(payment_method=method)
+
+        # --- Даты ---
+        date_from = request.query_params.get('date_from')
+        if date_from:
+            qs = qs.filter(created_at__date__gte=date_from)
+        date_to = request.query_params.get('date_to')
+        if date_to:
+            qs = qs.filter(created_at__date__lte=date_to)
+
+        # --- Сортировка ---
+        ordering = request.query_params.get('ordering', '-created_at')
+        allowed = {
+            'created_at', '-created_at',
+            'paid_at', '-paid_at',
+            'amount', '-amount',
+        }
+        if ordering not in allowed:
+            ordering = '-created_at'
+        qs = qs.order_by(ordering)
+
+        # --- Пагинация ---
+        paginator = CrmPagination()
+        page = paginator.paginate_queryset(qs, request, view=self)
+
+        results = []
+        for p in page:
+            results.append({
+                'id': p.id,
+                'transaction_id': p.transaction_id,
+                'order_id': p.order.id if p.order else None,
+                'order_number': p.order.order_number if p.order else '—',
+                'user_name': p.user.username or p.user.email,
+                'user_email': p.user.email,
+                'amount': f"{p.amount:.2f}",
+                'currency': 'USD',
+                'method': p.payment_method or '—',
+                'status': p.status,
+                'status_display': STATUS_ES_PAYMENT.get(p.status, p.status),
+                'paid_at': p.paid_at,
+                'created_at': p.created_at,
+            })
+
+        return paginator.get_paginated_response(results)
