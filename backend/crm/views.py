@@ -6,7 +6,8 @@ from django.utils import timezone
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from mentored.models import ContactMessage, Order, Payment, Role
+from mentored.models import ContactMessage, Order, Role
+from payments.models import Payment
 from school.models import Course, Enrollment, LessonProgress, Submission
 
 from .permissions import IsSuperuser
