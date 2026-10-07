@@ -13,8 +13,8 @@
 </template>
 
 <script setup>
-import CrmHeader from './components/CrmHeader.vue'
-import CrmSidebar from './components/CrmSidebar.vue'
+import CrmHeader from "./CrmHeader.vue";
+import CrmSidebar from "./CrmSidebar.vue";
 </script>
 
 <style scoped>
