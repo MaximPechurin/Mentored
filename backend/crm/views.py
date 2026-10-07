@@ -9,15 +9,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
 
-from mentored.models import ContactMessage, Order, Role
+from mentored.models import ContactMessage, Order, Role, OrderItem, User
 from payments.models import Payment
 from school.models import Course, Enrollment, LessonProgress, Submission, Lesson, Certificate, ProductCourseAccess, \
-    Module
-from mentored.models import OrderItem, Order
+    Module, CourseTeacher
 
 from .permissions import IsSuperuser
-
-User = get_user_model()
 
 
 class DashboardView(APIView):
@@ -843,3 +840,205 @@ def _serialize_course_orders(orders):
             'items': [i.product_name for i in o.items.all()],
         })
     return result
+
+
+# ============================================================
+# TEACHERS (Profesores)
+# ============================================================
+
+class TeacherListView(APIView):
+    """
+    GET /crm/teachers/
+
+    Список всех пользователей с ролью 'teacher'.
+    Агрегаты: кол-во назначенных курсов, кол-во уникальных учеников.
+
+    Query-параметры:
+      - search       — по username, email, phone
+      - status       — 'active' | 'inactive'
+      - ordering     — username, -username, email, -email,
+                       courses_count, -courses_count,
+                       students_count, -students_count,
+                       created_at, -created_at
+      - page, page_size
+    """
+    permission_classes = [IsSuperuser]
+
+    def get(self, request):
+        # Все юзеры с ролью teacher
+        qs = (
+            User.objects
+            .filter(is_active=True, roles__codename=Role.TEACHER)
+            .distinct()
+        )
+
+        # --- Поиск ---
+        search = (request.query_params.get('search') or '').strip()
+        if search:
+            qs = qs.filter(
+                Q(username__icontains=search) |
+                Q(email__icontains=search) |
+                Q(phone__icontains=search)
+            )
+
+        # --- Статус ---
+        status = request.query_params.get('status')
+        if status == 'active':
+            qs = qs.filter(is_active=True)
+        elif status == 'inactive':
+            qs = qs.filter(is_active=False)
+
+        # --- Аннотации: кол-во курсов и учеников ---
+        # courses_count — кол-во CourseTeacher
+        # students_count — уникальные user_id через CourseTeacher → Enrollment
+        qs = qs.annotate(
+            courses_count=Count(
+                'taught_courses',
+                distinct=True,
+            ),
+            students_count=Count(
+                'taught_courses__course__enrollments__user',
+                filter=Q(taught_courses__course__enrollments__is_active=True),
+                distinct=True,
+            ),
+        )
+
+        # --- Сортировка ---
+        ordering = request.query_params.get('ordering', 'username')
+        allowed = {
+            'username', '-username',
+            'email', '-email',
+            'courses_count', '-courses_count',
+            'students_count', '-students_count',
+            'created_at', '-created_at',
+        }
+        if ordering not in allowed:
+            ordering = 'username'
+        qs = qs.order_by(ordering)
+
+        # --- Пагинация ---
+        paginator = CrmPagination()
+        page = paginator.paginate_queryset(qs, request, view=self)
+
+        results = [
+            {
+                'id': u.id,
+                'username': u.username or u.email,
+                'email': u.email,
+                'phone': u.phone,
+                'is_active': u.is_active,
+                'created_at': u.created_at,
+                'courses_count': u.courses_count,
+                'students_count': u.students_count,
+                'specialization': (
+                    getattr(u.teacher_profile, 'specialization', '')
+                    if hasattr(u, 'teacher_profile') else ''
+                ),
+                'photo': (
+                    u.teacher_profile.photo.url
+                    if hasattr(u, 'teacher_profile') and u.teacher_profile.photo
+                    else None
+                ),
+            }
+            for u in page
+        ]
+
+        return paginator.get_paginated_response(results)
+
+
+class TeacherDetailView(APIView):
+    """
+    GET /crm/teachers/<id>/
+
+    Карточка преподавателя:
+      - хедер (фото, имя, email, телефон, специализация, bio)
+      - статистика (курсы, ученики, группы)
+      - список назначенных курсов с прогрессом и кол-вом учеников
+    """
+    permission_classes = [IsSuperuser]
+
+    def get(self, request, pk):
+        teacher = (
+            User.objects
+            .filter(pk=pk, roles__codename=Role.TEACHER)
+            .distinct()
+            .first()
+        )
+        if not teacher:
+            return Response({'detail': 'Profesor no encontrado.'}, status=404)
+
+        # --- Профиль ---
+        profile = getattr(teacher, 'teacher_profile', None)
+
+        # --- Курсы, которые ведёт ---
+        course_links = (
+            CourseTeacher.objects
+            .filter(teacher=teacher)
+            .select_related('course')
+            .order_by('-assigned_at')
+        )
+
+        courses_data = []
+        all_student_ids = set()
+        for link in course_links:
+            course = link.course
+
+            students_count = Enrollment.objects.filter(
+                course=course, is_active=True,
+            ).count()
+
+            student_ids = list(
+                Enrollment.objects
+                .filter(course=course, is_active=True)
+                .values_list('user_id', flat=True)
+            )
+            all_student_ids.update(student_ids)
+
+            total_lessons = Lesson.objects.filter(module__course=course).count()
+            completed_lessons = LessonProgress.objects.filter(
+                enrollment__course=course, is_completed=True,
+            ).count()
+
+            avg_progress = 0
+            if total_lessons > 0 and students_count > 0:
+                avg_progress = int(round(
+                    (completed_lessons / (total_lessons * students_count)) * 100
+                ))
+                avg_progress = min(avg_progress, 100)
+
+            courses_data.append({
+                'course_id': course.id,
+                'course_title': course.title,
+                'course_slug': course.slug,
+                'is_active': course.is_active,
+                'assigned_at': link.assigned_at,
+                'students_count': students_count,
+                'avg_progress': avg_progress,
+            })
+
+        # --- Статистика ---
+        stats = {
+            'courses_count': len(courses_data),
+            'students_count': len(all_student_ids),
+            'groups_count': len(courses_data),  # пока = кол-во курсов
+        }
+
+        return Response({
+            'id': teacher.id,
+            'username': teacher.username or teacher.email,
+            'email': teacher.email,
+            'phone': teacher.phone,
+            'avatar': teacher.avatar.url if teacher.avatar else None,
+            'is_active': teacher.is_active,
+            'created_at': teacher.created_at,
+            'last_login': teacher.last_login,
+            'roles': [r.codename for r in teacher.roles.all()],
+            'profile': {
+                'photo': profile.photo.url if profile and profile.photo else None,
+                'specialization': profile.specialization if profile else '',
+                'bio': profile.bio if profile else '',
+                'is_public': profile.is_public if profile else False,
+            } if profile else None,
+            'stats': stats,
+            'courses': courses_data,
+        })

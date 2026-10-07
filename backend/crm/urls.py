@@ -1,7 +1,7 @@
 from django.urls import path
 
 from .views import DashboardView, StudentListView, StudentDetailView, CourseListView, CourseDetailView, CourseStudentsView, \
-    CourseOrdersView
+    CourseOrdersView, TeacherListView, TeacherDetailView
 
 app_name = 'crm'
 
@@ -13,8 +13,8 @@ urlpatterns = [
     path('courses/<int:pk>/', CourseDetailView.as_view(), name='course-detail'),
     path('courses/<int:pk>/students/', CourseStudentsView.as_view(), name='course-students'),
     path('courses/<int:pk>/orders/', CourseOrdersView.as_view(), name='course-orders'),
-    # path('teachers/', TeacherListView.as_view(), name='teachers'),
-    # path('teachers/<int:pk>/', TeacherDetailView.as_view(), name='teacher-detail'),
+    path('teachers/', TeacherListView.as_view(), name='teachers'),
+    path('teachers/<int:pk>/', TeacherDetailView.as_view(), name='teacher-detail'),
     # path('orders/', OrderListView.as_view(), name='orders'),
     # path('orders/<str:order_number>/', OrderDetailView.as_view(), name='order-detail'),
     # path('payments/', PaymentListView.as_view(), name='payments'),

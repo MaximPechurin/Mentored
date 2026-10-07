@@ -22,4 +22,10 @@ export const crmApi = {
   getCourseOrders(id, params = {}) {
     return api.get(`/crm/courses/${id}/orders/`, { params })
   },
+  getTeachers(params = {}) {
+    return api.get('/crm/teachers/', { params })
+  },
+  getTeacher(id) {
+    return api.get(`/crm/teachers/${id}/`)
+  },
 }
