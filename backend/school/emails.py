@@ -4,11 +4,20 @@ ContactMessageView Этапа 1): SMTP не настроен или упал - �
 живём дальше, основную операцию (оплату/ревью) никогда не роняем.
 
 Тексты на испанском - язык аудитории платформы.
+
+ВАЖНО (история): письмо "доступ к курсу" раньше слалось простым
+send_mail() с plain-text прямо отсюда - это дублировало наш общий
+EmailService и не попадало в журнал EmailLog. Теперь оно уходит через
+EmailService (HTML-шаблон, лог в админке, единый стиль MENTORED).
+Письмо "работа проверена" пока оставлено как было - для него нет
+отдельного HTML-шаблона в ТЗ, при необходимости переведём позже.
 """
 import logging
 
 from django.conf import settings
 from django.core.mail import send_mail
+
+from notifications.services import EmailService
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +25,7 @@ SITE_URL = 'https://www.mentoredgroup.com'
 
 
 def _send(subject, message, recipient):
+    """ Устаревший helper для plain-text писем (оставлен для send_submission_reviewed). """
     if not settings.EMAIL_HOST_USER:
         logger.warning(
             "EMAIL_HOST_USER не настроен - письмо '%s' для %s не отправлено.",
@@ -35,24 +45,45 @@ def _send(subject, message, recipient):
 
 
 def send_course_access_granted(user, course):
-    """ Доступ к курсу открыт (после оплаты или вручную из админки). """
-    name = user.username or user.email
-    _send(
-        subject=f'¡Ya tienes acceso al curso «{course.title}»!',
-        message=(
-            f'Hola {name},\n\n'
-            f'Tu acceso al curso «{course.title}» ya está activo.\n'
-            f'Puedes empezar cuando quieras desde tu panel de estudiante:\n'
-            f'{SITE_URL}/escuela/estudiante\n\n'
-            f'¡Buen aprendizaje!\n'
-            f'Equipo Mentored'
-        ),
-        recipient=user.email,
+    """
+    Доступ к курсу открыт (после оплаты или вручную из админки).
+
+    Уходит через общий EmailService: HTML-шаблон emails/course_access.html,
+    лог в EmailLog, единый стиль MENTORED.
+    """
+    #name = user.username or user.email
+    #_send(
+    #    subject=f'¡Ya tienes acceso al curso «{course.title}»!',
+    #    message=(
+    #        f'Hola {name},\n\n'
+    #        f'Tu acceso al curso «{course.title}» ya está activo.\n'
+    #        f'Puedes empezar cuando quieras desde tu panel de estudiante:\n'
+    #        f'{SITE_URL}/escuela/estudiante\n\n'
+    #        f'¡Buen aprendizaje!\n'
+    #        f'Equipo Mentored'
+    #    ),
+    #    recipient=user.email,
+    #)
+
+    EmailService.send(
+        email_type='course_access',
+        recipient=user,
+        context={
+            'nombre': user.username or user.email,
+            'nombre_curso': course.title,
+            'link_curso': f'{SITE_URL}/escuela/curso/{course.slug}',
+        },
+        related_course=course,
     )
 
 
 def send_submission_reviewed(submission):
-    """ Домашняя работа проверена ментором (reviewed / needs_revision). """
+    """
+    Домашняя работа проверена ментором (reviewed / needs_revision).
+
+    Пока остаётся plain-text через send_mail() - отдельного HTML-шаблона
+    для этого письма в ТЗ нет.
+    """
     user = submission.enrollment.user
     name = user.username or user.email
     assignment = submission.assignment
