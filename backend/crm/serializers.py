@@ -75,3 +75,23 @@ class StudentListSerializer(serializers.Serializer):
     has_access = serializers.BooleanField()
     roles = serializers.ListField(child=serializers.CharField())
 
+
+class CourseListSerializer(serializers.Serializer):
+    """
+    Строка списка курсов на /crm/courses/.
+    Агрегаты (alumnos, completados, прогресс, pagos, ventas) считаем
+    на бэке через annotate/Subquery в StudentCourseListView.
+    """
+    id = serializers.IntegerField()
+    title = serializers.CharField()
+    slug = serializers.CharField()
+    is_active = serializers.BooleanField()
+    created_at = serializers.DateTimeField()
+
+    has_whatsapp = serializers.BooleanField()
+
+    students_count = serializers.IntegerField()
+    completions_count = serializers.IntegerField()
+    avg_progress = serializers.IntegerField()      # процент, целое 0-100
+    payments_count = serializers.IntegerField()
+    revenue_usd = serializers.CharField()          # строка, чтобы Decimal не терялся

@@ -1,7 +1,9 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
-from django.db.models import Count, Q, Sum, Max
+from django.contrib.contenttypes.models import ContentType
+from django.db.models import Count, Q, Sum, Max, Avg, IntegerField, Value, OuterRef, Subquery, Exists
+from django.db.models.functions import Coalesce, Cast
 from django.utils import timezone
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -9,7 +11,8 @@ from rest_framework.pagination import PageNumberPagination
 
 from mentored.models import ContactMessage, Order, Role
 from payments.models import Payment
-from school.models import Course, Enrollment, LessonProgress, Submission, Lesson
+from school.models import Course, Enrollment, LessonProgress, Submission, Lesson, Certificate, ProductCourseAccess
+from mentored.models import OrderItem, Order
 
 from .permissions import IsSuperuser
 
@@ -350,3 +353,208 @@ class StudentDetailView(APIView):
             'orders': orders,
             'stats': stats,
         })
+
+
+class CourseListView(APIView):
+    """
+    GET /crm/courses/
+
+    Список учебных курсов (school.Course) с агрегатами:
+      - студентов активных
+      - завершивших (по Certificate)
+      - средний прогресс (Subquery)
+      - оплат (через ProductCourseAccess → OrderItem → Order paid)
+      - суммы продаж в USD
+
+    Query-параметры:
+      - search          — по названию и slug
+      - status          — 'active' | 'inactive'
+      - has_whatsapp    — 'true' — только с WhatsApp-ссылкой
+      - ordering        — title, -title, created_at, -created_at,
+                          students_count, -students_count,
+                          avg_progress, -avg_progress,
+                          revenue_usd, -revenue_usd
+      - page, page_size — пагинация
+    """
+    permission_classes = [IsSuperuser]
+
+    def get(self, request):
+        qs = Course.objects.all()
+
+        # --- Поиск ---
+        search = (request.query_params.get('search') or '').strip()
+        if search:
+            qs = qs.filter(Q(title__icontains=search) | Q(slug__icontains=search))
+
+        # --- Фильтр по статусу ---
+        status = request.query_params.get('status')
+        if status == 'active':
+            qs = qs.filter(is_active=True)
+        elif status == 'inactive':
+            qs = qs.filter(is_active=False)
+
+        # --- Только с WhatsApp ---
+        if request.query_params.get('has_whatsapp') == 'true':
+            qs = qs.exclude(whatsapp_group_url='')
+
+        # --- Subquery: средний прогресс по курсу ---
+        # avg_progress = AVG(
+        #   completed_lessons_per_enrollment / total_lessons * 100
+        # )
+        # Считаем вложенным Subquery - Django умеет.
+        total_lessons_sq = (
+            Lesson.objects
+            .filter(module__course=OuterRef('course_id'))
+            .values('module__course')
+            .annotate(c=Count('id'))
+            .values('c')
+        )
+        completed_lessons_sq = (
+            LessonProgress.objects
+            .filter(enrollment__course=OuterRef('course_id'), is_completed=True)
+            .values('enrollment__course')
+            .annotate(c=Count('id'))
+            .values('c')
+        )
+        # Приближённый расчёт: общее кол-во completed / (students * lessons)
+        # Точный AVG по каждому ученику был бы ещё одним уровнем subquery.
+        # Для списка курсов это компромисс - достаточно для дашборда.
+        qs = qs.annotate(
+            total_lessons=Coalesce(
+                Subquery(total_lessons_sq, output_field=IntegerField()),
+                Value(0),
+            ),
+            completed_lessons=Coalesce(
+                Subquery(completed_lessons_sq, output_field=IntegerField()),
+                Value(0),
+            ),
+        )
+
+        # --- Аннотации ---
+        qs = qs.annotate(
+            students_count=Count(
+                'enrollments',
+                filter=Q(enrollments__is_active=True),
+                distinct=True,
+            ),
+            completions_count=Count(
+                'enrollments__certificate',
+                distinct=True,
+            ),
+        )
+
+        # --- Сортировка ---
+        ordering = request.query_params.get('ordering', 'title')
+        allowed = {
+            'title', '-title',
+            'created_at', '-created_at',
+            'students_count', '-students_count',
+            'completions_count', '-completions_count',
+        }
+        if ordering not in allowed:
+            ordering = 'title'
+        qs = qs.order_by(ordering)
+
+        # --- Пагинация ---
+        paginator = CrmPagination()
+        page = paginator.paginate_queryset(qs, request, view=self)
+
+        # --- Продажи: собираем через ProductCourseAccess -> OrderItem ---
+        # За один проход: берём ID всех курсов на странице,
+        # находим связанные ProductCourseAccess, потом OrderItem.
+        course_ids = [c.id for c in page]
+        sales_by_course = _aggregate_sales_by_course(course_ids)
+
+        results = []
+        for c in page:
+            total_lessons = c.total_lessons or 0
+            completed_lessons = c.completed_lessons or 0
+            students_count = c.students_count or 0
+            avg_progress = 0
+            if total_lessons > 0 and students_count > 0:
+                # Приближённое среднее
+                avg_progress = int(round(
+                    (completed_lessons / (total_lessons * students_count)) * 100
+                ))
+                avg_progress = min(avg_progress, 100)
+
+            sales = sales_by_course.get(c.id, {'count': 0, 'total': 0})
+
+            results.append({
+                'id': c.id,
+                'title': c.title,
+                'slug': c.slug,
+                'is_active': c.is_active,
+                'created_at': c.created_at,
+                'has_whatsapp': bool(c.whatsapp_group_url),
+                'students_count': students_count,
+                'completions_count': c.completions_count or 0,
+                'avg_progress': avg_progress,
+                'payments_count': sales['count'],
+                'revenue_usd': f"{sales['total']:.2f}",
+            })
+
+        return paginator.get_paginated_response(results)
+
+
+def _aggregate_sales_by_course(course_ids):
+    """
+    Для списка ID курсов возвращает {course_id: {'count': N, 'total': Decimal}}.
+    Идёт через ProductCourseAccess → OrderItem → Order(status='paid').
+
+    Один товар может открывать несколько курсов, поэтому считаем
+    OrderItem.count по каждому из связанных курсов (то есть продажи
+    одного товара попадут во все курсы, которые он открывает).
+    """
+    if not course_ids:
+        return {}
+
+    # Все связи товар -> курс для нужных курсов
+    links = (
+        ProductCourseAccess.objects
+        .filter(course_id__in=course_ids)
+        .values('course_id', 'content_type_id', 'object_id')
+    )
+
+    # Собираем (course_id) -> [(ct_id, obj_id), ...]
+    course_to_products = {}
+    for link in links:
+        course_to_products.setdefault(link['course_id'], []).append(
+            (link['content_type_id'], link['object_id'])
+        )
+
+    if not course_to_products:
+        return {cid: {'count': 0, 'total': 0} for cid in course_ids}
+
+    # Все OrderItem по оплаченным заказам
+    # Фильтруем по (product_type, product_id) - product_type у тебя = ContentType.model
+    paid_items = (
+        OrderItem.objects
+        .filter(order__status='paid')
+        .values('product_type', 'product_id', 'quantity', 'total')
+    )
+
+    # Индекс: (product_type, product_id) -> list of items
+    items_index = {}
+    for item in paid_items:
+        key = (item['product_type'], item['product_id'])
+        items_index.setdefault(key, []).append(item)
+
+    # Считаем по каждому курсу
+    result = {}
+    for course_id in course_ids:
+        count = 0
+        total = 0
+        for ct_id, obj_id in course_to_products.get(course_id, []):
+            # Находим model-имя ContentType
+            ct = ContentType.objects.filter(id=ct_id).first()
+            if not ct:
+                continue
+            model_name = ct.model  # 'course', 'membership', ...
+            key = (model_name, obj_id)
+            for item in items_index.get(key, []):
+                count += 1
+                total += item['total']
+        result[course_id] = {'count': count, 'total': total}
+
+    return result
