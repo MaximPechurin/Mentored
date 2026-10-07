@@ -25,7 +25,6 @@ import EscuelaForosPage from "../views/escuela/EscuelaForosPage.vue";
 import EscuelaProfesorCursoEditarPage from "../views/escuela/EscuelaProfesorCursoEditarPage.vue";
 import CompraRapidaPage from "../views/compra/CompraRapidaPage.vue";
 import CompraExitosaPage from "../views/compra/CompraExitosaPage.vue";
-import CrmPage from "../views/crm/CrmPage.vue";
 import CrmLayout from '../views/crm/CrmLayout.vue'
 import CrmDashboardPage from '../views/crm/CrmDashboardPage.vue'
 import CrmStudentsPage from '../views/crm/CrmStudentsPage.vue'
