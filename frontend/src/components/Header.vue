@@ -73,6 +73,14 @@
             <path d="m9.5 12 1.8 1.8L15 10"/>
           </svg>
         </a>
+        <router-link v-if="isSuperuser" to="/crm" class="icon-btn" aria-label="CRM">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <rect x="3" y="3" width="7" height="9" rx="1"/>
+            <rect x="14" y="3" width="7" height="5" rx="1"/>
+            <rect x="14" y="12" width="7" height="9" rx="1"/>
+            <rect x="3" y="16" width="7" height="5" rx="1"/>
+          </svg>
+        </router-link>
         <button class="burger" aria-label="Menú">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
             <line x1="3" y1="6" x2="21" y2="6"/>

@@ -28,6 +28,8 @@ INSTALLED_APPS = [
     'payments',
     'school',
     'notifications'
+    'notifications',
+    'crm'
 ]
 
 MIDDLEWARE = [

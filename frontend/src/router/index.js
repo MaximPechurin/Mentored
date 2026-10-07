@@ -25,6 +25,7 @@ import EscuelaForosPage from "../views/escuela/EscuelaForosPage.vue";
 import EscuelaProfesorCursoEditarPage from "../views/escuela/EscuelaProfesorCursoEditarPage.vue";
 import CompraRapidaPage from "../views/compra/CompraRapidaPage.vue";
 import CompraExitosaPage from "../views/compra/CompraExitosaPage.vue";
+import CrmPage from "../views/crm/CrmPage.vue";
 
 const routes = [
   {
@@ -170,6 +171,13 @@ const routes = [
     name: 'EscuelaForos',
     component: EscuelaForosPage,
   },
+  {
+    // ЦРМ система
+    path: '/crm',
+    name: 'CRM',
+    component: CrmPage,
+    meta: { requiresAuth: true, requiresStaff: true }
+  }
 ]
 
 const router = createRouter({
