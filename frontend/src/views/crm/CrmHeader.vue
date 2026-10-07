@@ -7,7 +7,6 @@
       </div>
       <div class="crm-header-right">
         <span class="crm-user">{{ userName }}</span>
-        <a href="/admin/" class="crm-admin-link">Admin Django →</a>
       </div>
     </div>
   </header>

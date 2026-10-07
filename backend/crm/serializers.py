@@ -60,3 +60,18 @@ class DashboardSerializer(serializers.Serializer):
     recent_payments = RecentPaymentSerializer(many=True)
     recent_registrations = RecentRegistrationSerializer(many=True)
     recent_contact_messages = RecentContactMessageSerializer(many=True)
+
+class StudentListSerializer(serializers.Serializer):
+    """
+    Строка списка учеников на /crm/students/.
+    Прогресс НЕ считаем здесь (тяжело) - только кол-во курсов и флаг доступа.
+    """
+    id = serializers.IntegerField()
+    email = serializers.EmailField()
+    username = serializers.CharField()
+    phone = serializers.CharField(allow_null=True)
+    created_at = serializers.DateTimeField()
+    courses_count = serializers.IntegerField()
+    has_access = serializers.BooleanField()
+    roles = serializers.ListField(child=serializers.CharField())
+

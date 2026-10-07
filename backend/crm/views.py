@@ -5,6 +5,7 @@ from django.db.models import Count, Q, Sum
 from django.utils import timezone
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.pagination import PageNumberPagination
 
 from mentored.models import ContactMessage, Order, Role
 from payments.models import Payment
@@ -130,3 +131,93 @@ class DashboardView(APIView):
             'recent_registrations': recent_registrations,
             'recent_contact_messages': recent_contact_messages,
         })
+
+class CrmPagination(PageNumberPagination):
+    """
+    Пагинация для всех списков CRM.
+    По умолчанию 20, но можно ?page_size=50 / ?page_size=100.
+    """
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 200
+
+class StudentListView(APIView):
+    """
+    GET /crm/students/
+
+    Список учеников с фильтрами и пагинацией.
+
+    Query-параметры:
+      - search           — поиск по email, username, phone
+      - access           — 'active' | 'none' (фильтр по наличию Enrollment)
+      - role             — 'student' | 'teacher' (по роли)
+      - ordering         — '-created_at', 'username', 'email'
+      - page             — номер страницы
+      - page_size        — размер страницы (20/50/100)
+
+    Ответ: {count, page, page_size, pages, results: [...]}
+    """
+    permission_classes = [IsSuperuser]
+
+    def get(self, request):
+        qs = User.objects.filter(is_active=True)
+
+        # --- Поиск ---
+        search = (request.query_params.get('search') or '').strip()
+        if search:
+            qs = qs.filter(
+                Q(email__icontains=search) |
+                Q(username__icontains=search) |
+                Q(phone__icontains=search)
+            )
+
+        # --- Фильтр по доступу ---
+        access = request.query_params.get('access')
+        if access == 'active':
+            qs = qs.filter(enrollments__is_active=True).distinct()
+        elif access == 'none':
+            qs = qs.exclude(enrollments__is_active=True).distinct()
+
+        # --- Фильтр по роли ---
+        role = request.query_params.get('role')
+        if role:
+            qs = qs.filter(roles__codename=role).distinct()
+
+        # --- Сортировка ---
+        ordering = request.query_params.get('ordering', '-created_at')
+        allowed_ordering = {
+            'created_at', '-created_at',
+            'username', '-username',
+            'email', '-email',
+        }
+        if ordering not in allowed_ordering:
+            ordering = '-created_at'
+
+        # --- Аннотации: кол-во активных курсов + флаг доступа ---
+        qs = qs.annotate(
+            courses_count=Count(
+                'enrollments',
+                filter=Q(enrollments__is_active=True),
+                distinct=True,
+            ),
+        ).prefetch_related('roles').order_by(ordering)
+
+        # --- Пагинация ---
+        paginator = CrmPagination()
+        page = paginator.paginate_queryset(qs, request, view=self)
+
+        results = [
+            {
+                'id': u.id,
+                'email': u.email,
+                'username': u.username,
+                'phone': u.phone,
+                'created_at': u.created_at,
+                'courses_count': u.courses_count,
+                'has_access': u.courses_count > 0,
+                'roles': [r.codename for r in u.roles.all()],
+            }
+            for u in page
+        ]
+
+        return paginator.get_paginated_response(results)
