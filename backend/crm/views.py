@@ -558,3 +558,287 @@ def _aggregate_sales_by_course(course_ids):
         result[course_id] = {'count': count, 'total': total}
 
     return result
+
+
+STATUS_ES_ORDER = {
+    'pending': 'Pendiente',
+    'paid': 'Aprobado',
+    'processing': 'En proceso',
+    'completed': 'Completado',
+    'cancelled': 'Cancelado',
+    'refunded': 'Reembolsado',
+}
+
+
+def _course_stats(course):
+    """
+    Считает агрегаты для одного курса: ученики, завершившие,
+    средний прогресс, оплаты, сумма продаж.
+    Возвращает dict.
+    """
+    students_count = Enrollment.objects.filter(course=course, is_active=True).count()
+    completions_count = Certificate.objects.filter(enrollment__course=course).count()
+
+    total_lessons = Lesson.objects.filter(module__course=course).count()
+    completed_lessons = LessonProgress.objects.filter(
+        enrollment__course=course, is_completed=True,
+    ).count()
+
+    avg_progress = 0
+    if total_lessons > 0 and students_count > 0:
+        avg_progress = int(round(
+            (completed_lessons / (total_lessons * students_count)) * 100
+        ))
+        avg_progress = min(avg_progress, 100)
+
+    sales = _aggregate_sales_by_course([course.id]).get(course.id, {'count': 0, 'total': 0})
+
+    return {
+        'students_count': students_count,
+        'completions_count': completions_count,
+        'avg_progress': avg_progress,
+        'payments_count': sales['count'],
+        'revenue_usd': f"{sales['total']:.2f}",
+    }
+
+
+class CourseDetailView(APIView):
+    """
+    GET /crm/courses/<id>/
+
+    Детальная карточка курса: хедер, статистика, модули+уроки,
+    первые 20 учеников, первые 20 заказов, связанные товары,
+    ссылка на форум и WhatsApp.
+    """
+    permission_classes = [IsSuperuser]
+
+    def get(self, request, pk):
+        course = Course.objects.filter(pk=pk).first()
+        if not course:
+            return Response({'detail': 'Curso no encontrado.'}, status=404)
+
+        # --- Модули и уроки ---
+        modules = (
+            Module.objects
+            .filter(course=course)
+            .prefetch_related('lessons')
+            .order_by('order', 'id')
+        )
+        modules_data = []
+        for m in modules:
+            lessons = m.lessons.all().order_by('order', 'id')
+            modules_data.append({
+                'id': m.id,
+                'title': m.title,
+                'order': m.order,
+                'lessons': [
+                    {
+                        'id': l.id,
+                        'title': l.title,
+                        'order': l.order,
+                        'duration_minutes': l.duration_minutes,
+                        'is_free_preview': l.is_free_preview,
+                        'has_video': bool(l.video_file or l.video_url),
+                    }
+                    for l in lessons
+                ],
+            })
+
+        # --- Ученики (первые 20) ---
+        students_qs = (
+            Enrollment.objects
+            .filter(course=course)
+            .select_related('user')
+            .order_by('-enrolled_at')
+        )
+        students_total = students_qs.count()
+        students_first_page = students_qs[:20]
+        students_data = _serialize_course_students(students_first_page, course)
+
+        # --- Заказы (первые 20) ---
+        orders_qs, orders_total = _get_course_orders(course)
+        orders_first_page = orders_qs[:20]
+        orders_data = _serialize_course_orders(orders_first_page)
+
+        # --- Связанные витринные товары ---
+        links = (
+            ProductCourseAccess.objects
+            .filter(course=course)
+            .select_related('content_type')
+        )
+        products_data = []
+        for link in links:
+            p = link.product  # через GenericForeignKey
+            if not p:
+                continue
+            products_data.append({
+                'type': link.content_type.model,   # 'course', 'membership', ...
+                'id': p.id,
+                'name': getattr(p, 'name', str(p)),
+                'price': f"{getattr(p, 'price', 0):.2f}",
+                'is_active': getattr(p, 'is_active', True),
+                'admin_url': f"/admin/{link.content_type.app_label}/{link.content_type.model}/{p.id}/change/",
+            })
+
+        return Response({
+            'id': course.id,
+            'title': course.title,
+            'slug': course.slug,
+            'description': course.description,
+            'is_active': course.is_active,
+            'created_at': course.created_at,
+            'updated_at': course.updated_at,
+            'whatsapp_group_url': course.whatsapp_group_url,
+            'creator': {
+                'id': course.creator.id,
+                'username': course.creator.username,
+                'email': course.creator.email,
+            } if course.creator else None,
+            'stats': _course_stats(course),
+            'modules': modules_data,
+            'students': {
+                'count': students_total,
+                'page_size': 20,
+                'results': students_data,
+            },
+            'orders': {
+                'count': orders_total,
+                'page_size': 20,
+                'results': orders_data,
+            },
+            'products': products_data,
+            'forum_url': f"/escuela/foro/{course.id}",
+        })
+
+
+class CourseStudentsView(APIView):
+    """
+    GET /crm/courses/<id>/students/?page=N&page_size=20
+    Пагинация учеников курса.
+    """
+    permission_classes = [IsSuperuser]
+
+    def get(self, request, pk):
+        course = Course.objects.filter(pk=pk).first()
+        if not course:
+            return Response({'detail': 'Curso no encontrado.'}, status=404)
+
+        qs = (
+            Enrollment.objects
+            .filter(course=course)
+            .select_related('user')
+            .order_by('-enrolled_at')
+        )
+
+        paginator = CrmPagination()
+        page = paginator.paginate_queryset(qs, request, view=self)
+        data = _serialize_course_students(page, course)
+        return paginator.get_paginated_response(data)
+
+
+class CourseOrdersView(APIView):
+    """
+    GET /crm/courses/<id>/orders/?page=N&page_size=20
+    Пагинация заказов, содержащих этот курс.
+    """
+    permission_classes = [IsSuperuser]
+
+    def get(self, request, pk):
+        course = Course.objects.filter(pk=pk).first()
+        if not course:
+            return Response({'detail': 'Curso no encontrado.'}, status=404)
+
+        qs, _ = _get_course_orders(course)
+
+        paginator = CrmPagination()
+        page = paginator.paginate_queryset(qs, request, view=self)
+        data = _serialize_course_orders(page)
+        return paginator.get_paginated_response(data)
+
+
+# ============================================================
+# Хелперы
+# ============================================================
+
+def _serialize_course_students(enrollments, course):
+    """
+    Для списка Enrollment возвращает компактные строки с прогрессом.
+    """
+    total_lessons = Lesson.objects.filter(module__course=course).count()
+
+    result = []
+    for enr in enrollments:
+        completed = LessonProgress.objects.filter(
+            enrollment=enr, is_completed=True,
+        ).count()
+        progress = int(round(completed / total_lessons * 100)) if total_lessons else 0
+        last_activity = (
+            LessonProgress.objects
+            .filter(enrollment=enr)
+            .aggregate(m=Max('updated_at'))['m']
+        )
+        has_certificate = Certificate.objects.filter(enrollment=enr).exists()
+
+        result.append({
+            'user_id': enr.user.id,
+            'username': enr.user.username or enr.user.email,
+            'email': enr.user.email,
+            'enrolled_at': enr.enrolled_at,
+            'is_active': enr.is_active,
+            'lessons_total': total_lessons,
+            'lessons_completed': completed,
+            'progress_percent': progress,
+            'completed': has_certificate,
+            'last_activity': last_activity,
+        })
+    return result
+
+
+def _get_course_orders(course):
+    """
+    Возвращает (queryset Order, total_count) для заказов, где
+    встречается хотя бы один товар, открывающий доступ к этому курсу.
+    """
+    # Все товары, открывающие доступ к курсу
+    links = ProductCourseAccess.objects.filter(course=course).select_related('content_type')
+    product_keys = [
+        (link.content_type.model, link.object_id)   # ('course', 5) или ('membership', 2)
+        for link in links
+    ]
+
+    if not product_keys:
+        return Order.objects.none(), 0
+
+    # Все OrderItem, у которых (product_type, product_id) из product_keys
+    q = Q()
+    for ptype, pid in product_keys:
+        q |= Q(product_type=ptype, product_id=pid)
+
+    items = OrderItem.objects.filter(q).values_list('order_id', flat=True)
+    orders_qs = (
+        Order.objects
+        .filter(id__in=items)
+        .select_related('user')
+        .prefetch_related('items')
+        .order_by('-created_at')
+    )
+    return orders_qs, orders_qs.count()
+
+
+def _serialize_course_orders(orders):
+    result = []
+    for o in orders:
+        result.append({
+            'id': o.id,
+            'order_number': o.order_number,
+            'user_name': o.user.username or o.user.email,
+            'user_email': o.user.email,
+            'status': o.status,
+            'status_display': STATUS_ES_ORDER.get(o.status, o.status),
+            'total': f"{o.total:.2f}",
+            'currency': 'USD',
+            'paid_at': o.paid_at,
+            'created_at': o.created_at,
+            'items': [i.product_name for i in o.items.all()],
+        })
+    return result
