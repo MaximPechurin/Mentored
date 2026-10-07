@@ -27,7 +27,6 @@ INSTALLED_APPS = [
     'mentored',
     'payments',
     'school',
-    'notifications'
     'notifications',
     'crm'
 ]
