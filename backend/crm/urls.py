@@ -1,7 +1,7 @@
 from django.urls import path
 
 from .views import DashboardView, StudentListView, StudentDetailView, CourseListView, CourseDetailView, CourseStudentsView, \
-    CourseOrdersView, TeacherListView, TeacherDetailView, OrderListView, OrderDetailView
+    CourseOrdersView, TeacherListView, TeacherDetailView, OrderListView, OrderDetailView, PaymentListView
 
 app_name = 'crm'
 
