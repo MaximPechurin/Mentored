@@ -567,6 +567,14 @@ STATUS_ES_ORDER = {
     'refunded': 'Reembolsado',
 }
 
+STATUS_ES_PAYMENT = {
+    'pending': 'Pendiente',
+    'approved': 'Aprobado',
+    'rejected': 'Rechazado',
+    'cancelled': 'Cancelado',
+    'refunded': 'Reembolsado',
+}
+
 
 def _course_stats(course):
     """
@@ -1042,3 +1050,198 @@ class TeacherDetailView(APIView):
             'stats': stats,
             'courses': courses_data,
         })
+
+
+# ============================================================
+# ORDERS (Pedidos)
+# ============================================================
+
+class OrderListView(APIView):
+    """
+    GET /crm/orders/
+
+    Список заказов с фильтрами и пагинацией.
+    Подтягивает Payment (OneToOne) для способа оплаты и статуса.
+
+    Query-параметры:
+      - search        — order_number, user.email, user.username
+      - status        — Order.status (pending/paid/cancelled/refunded/processing/completed)
+      - payment_status — Payment.status (approved/pending/rejected/cancelled/refunded)
+      - method        — Payment.payment_method (visa/master/...)
+      - date_from     — YYYY-MM-DD (по created_at)
+      - date_to       — YYYY-MM-DD
+      - amount_min    — минимальная сумма
+      - amount_max    — максимальная сумма
+      - ordering      — created_at, -created_at, paid_at, -paid_at, total, -total, order_number
+      - page, page_size
+    """
+    permission_classes = [IsSuperuser]
+
+    def get(self, request):
+        qs = (
+            Order.objects
+            .select_related('user', 'payment')
+            .prefetch_related('items')
+        )
+
+        # --- Поиск ---
+        search = (request.query_params.get('search') or '').strip()
+        if search:
+            qs = qs.filter(
+                Q(order_number__icontains=search) |
+                Q(user__email__icontains=search) |
+                Q(user__username__icontains=search)
+            )
+
+        # --- Статус заказа ---
+        status = request.query_params.get('status')
+        if status:
+            qs = qs.filter(status=status)
+
+        # --- Статус платежа ---
+        payment_status = request.query_params.get('payment_status')
+        if payment_status:
+            qs = qs.filter(payment__status=payment_status)
+
+        # --- Способ оплаты ---
+        method = request.query_params.get('method')
+        if method:
+            qs = qs.filter(payment__payment_method=method)
+
+        # --- Даты ---
+        date_from = request.query_params.get('date_from')
+        if date_from:
+            qs = qs.filter(created_at__date__gte=date_from)
+        date_to = request.query_params.get('date_to')
+        if date_to:
+            qs = qs.filter(created_at__date__lte=date_to)
+
+        # --- Сумма ---
+        amount_min = request.query_params.get('amount_min')
+        if amount_min:
+            qs = qs.filter(total__gte=amount_min)
+        amount_max = request.query_params.get('amount_max')
+        if amount_max:
+            qs = qs.filter(total__lte=amount_max)
+
+        # --- Сортировка ---
+        ordering = request.query_params.get('ordering', '-created_at')
+        allowed = {
+            'created_at', '-created_at',
+            'paid_at', '-paid_at',
+            'total', '-total',
+            'order_number', '-order_number',
+        }
+        if ordering not in allowed:
+            ordering = '-created_at'
+        qs = qs.order_by(ordering)
+
+        # --- Пагинация ---
+        paginator = CrmPagination()
+        page = paginator.paginate_queryset(qs, request, view=self)
+
+        results = [_serialize_order_row(o) for o in page]
+        return paginator.get_paginated_response(results)
+
+
+class OrderDetailView(APIView):
+    """
+    GET /crm/orders/<id>/
+
+    Детали заказа: клиент, позиции, суммы, платёж.
+    """
+    permission_classes = [IsSuperuser]
+
+    def get(self, request, pk):
+        order = (
+            Order.objects
+            .select_related('user', 'payment')
+            .prefetch_related('items')
+            .filter(pk=pk)
+            .first()
+        )
+        if not order:
+            return Response({'detail': 'Pedido no encontrado.'}, status=404)
+
+        payment = getattr(order, 'payment', None)
+
+        items = [
+            {
+                'id': item.id,
+                'product_name': item.product_name,
+                'product_type': item.product_type,
+                'product_id': item.product_id,
+                'quantity': item.quantity,
+                'price': f"{item.product_price:.2f}",
+                'total': f"{item.total:.2f}",
+            }
+            for item in order.items.all()
+        ]
+
+        return Response({
+            'id': order.id,
+            'order_number': order.order_number,
+            'status': order.status,
+            'status_display': STATUS_ES_ORDER.get(order.status, order.status),
+            'created_at': order.created_at,
+            'paid_at': order.paid_at,
+            'is_active': order.is_active,
+            'is_digital': order.is_digital,
+            'subtotal': f"{order.subtotal:.2f}" if order.subtotal else None,
+            'tax': f"{order.tax:.2f}" if order.tax else "0.00",
+            'shipping': f"{order.shipping:.2f}" if order.shipping else "0.00",
+            'total': f"{order.total:.2f}",
+            'currency': 'USD',
+
+            'client': {
+                'id': order.user.id,
+                'username': order.user.username or order.user.email,
+                'email': order.user.email,
+                'phone': order.user.phone,
+            },
+
+            'items': items,
+
+            'payment': {
+                'id': payment.id,
+                'status': payment.status,
+                'status_display': payment.get_status_display() if payment else None,
+                'method': payment.payment_method if payment else None,
+                'transaction_id': payment.transaction_id if payment else None,
+                'amount': f"{payment.amount:.2f}" if payment and payment.amount else None,
+                'paid_at': payment.paid_at if payment else None,
+                'created_at': payment.created_at if payment else None,
+            } if payment else None,
+        })
+
+
+# ============================================================
+# Хелперы для заказов
+# ============================================================
+
+def _serialize_order_row(order):
+    """Компактная строка заказа для списка."""
+    payment = getattr(order, 'payment', None)
+    items = order.items.all()
+    product_names = [i.product_name for i in items]
+    products_summary = ', '.join(product_names[:3])
+    if len(product_names) > 3:
+        products_summary += f' +{len(product_names) - 3}'
+
+    return {
+        'id': order.id,
+        'order_number': order.order_number,
+        'user_name': order.user.username or order.user.email,
+        'user_email': order.user.email,
+        'products_summary': products_summary,
+        'products_count': len(product_names),
+        'total': f"{order.total:.2f}",
+        'currency': 'USD',
+        'status': order.status,
+        'status_display': STATUS_ES_ORDER.get(order.status, order.status),
+        'payment_status': payment.status if payment else None,
+        'payment_status_display': STATUS_ES_PAYMENT.get(payment.status, payment.status) if payment else None,
+        'payment_method': payment.payment_method if payment else None,
+        'created_at': order.created_at,
+        'paid_at': order.paid_at,
+    }
