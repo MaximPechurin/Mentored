@@ -404,15 +404,15 @@ class CourseListView(APIView):
         # Считаем вложенным Subquery - Django умеет.
         total_lessons_sq = (
             Lesson.objects
-            .filter(module__course=OuterRef('course_id'))
-            .values('module__course')
+            .filter(module__course__id=OuterRef('id'))
+            .values('module__course__id')
             .annotate(c=Count('id'))
             .values('c')
         )
         completed_lessons_sq = (
             LessonProgress.objects
-            .filter(enrollment__course=OuterRef('course_id'), is_completed=True)
-            .values('enrollment__course')
+            .filter(enrollment__course__id=OuterRef('id'), is_completed=True)
+            .values('enrollment__course__id')
             .annotate(c=Count('id'))
             .values('c')
         )
