@@ -27,10 +27,10 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { crmApi } from '../../api/crm'
-import CrmCountersRow from './components/CrmCountersRow.vue'
-import CrmRecentPayments from './components/CrmRecentPayments.vue'
-import CrmRecentRegistrations from './components/CrmRecentRegistrations.vue'
-import CrmRecentMessages from './components/CrmRecentMessages.vue'
+import CrmCountersRow from "./CrmCountersRow.vue";
+import CrmRecentPayments from "./CrmRecentPayments.vue";
+import CrmRecentRegistrations from "./CrmRecentRegistrations.vue";
+import CrmRecentMessages from "./CrmRecentMessages.vue";
 
 const loading = ref(true)
 const error = ref(null)
