@@ -17,13 +17,15 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { crmApi } from '../../api/crm'
 
 const route = useRoute()
 
-// Иконки — простые SVG, 18×18, stroke currentColor
-const items = [
+const unreadCount = ref(0)
+
+const items = computed(() => [
   {
     name: 'CrmDashboard',
     label: 'Panel',
@@ -58,22 +60,30 @@ const items = [
     name: 'CrmContactMessages',
     label: 'Mensajes',
     icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
+    badge: unreadCount.value > 0 ? unreadCount.value : null,
   },
   {
     name: 'CrmSubmissions',
     label: 'Tareas',
     icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`,
   },
-]
+])
 
 const isActive = (item) => {
   const current = route.name
-  // Активный = сам пункт или его детальная страница
   if (current === item.name) return true
-  // CrmStudentDetail подсвечивает CrmStudents и т.д.
   if (current && current.startsWith(item.name)) return true
   return false
 }
+
+onMounted(async () => {
+  try {
+    const res = await crmApi.getContactMessagesUnreadCount()
+    unreadCount.value = res.data.unread || 0
+  } catch (e) {
+    console.error('Error loading unread count:', e)
+  }
+})
 </script>
 
 <style scoped>
@@ -135,12 +145,23 @@ const isActive = (item) => {
 }
 
 .crm-nav-badge {
-  font-size: 11px;
-  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 7px;
   background: #8e1519;
   color: #fff;
-  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 700;
   border-radius: 999px;
+  line-height: 1;
+}
+
+.crm-nav-link.active .crm-nav-badge {
+  background: #c49a3f;
+  color: #0e0c0c;
 }
 
 @media (max-width: 980px) {
