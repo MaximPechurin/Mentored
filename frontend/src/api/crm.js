@@ -37,4 +37,22 @@ export const crmApi = {
   getPayments(params = {}) {
     return api.get('/crm/payments/', { params })
   },
+  getContactMessages(params = {}) {
+    return api.get('/crm/contact-messages/', { params })
+  },
+  getContactMessage(id) {
+    return api.get(`/crm/contact-messages/${id}/`)
+  },
+  updateContactMessage(id, data) {
+    return api.patch(`/crm/contact-messages/${id}/`, data)
+  },
+  deleteContactMessage(id) {
+    return api.delete(`/crm/contact-messages/${id}/`)
+  },
+  bulkContactMessages(data) {
+    return api.post('/crm/contact-messages/bulk/', data)
+  },
+  getContactMessagesUnreadCount() {
+    return api.get('/crm/contact-messages/unread-count/')
+  },
 }

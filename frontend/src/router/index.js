@@ -38,6 +38,7 @@ import CrmOrderDetailPage from '../views/crm/CrmOrderDetailPage.vue'
 import CrmPaymentsPage from '../views/crm/CrmPaymentsPage.vue'
 import CrmContactMessagesPage from '../views/crm/CrmContactMessagesPage.vue'
 import CrmSubmissionsPage from '../views/crm/CrmSubmissionsPage.vue'
+import CrmContactMessageDetailPage from "../views/crm/CrmContactMessageDetailPage.vue";
 
 const routes = [
   {
@@ -252,6 +253,12 @@ const routes = [
         path: 'submissions',
         name: 'CrmSubmissions',
         component: CrmSubmissionsPage,
+      },
+      {
+        path: 'contact-messages/:id',
+        name: 'CrmContactMessageDetail',
+        component: CrmContactMessageDetailPage,
+        props: true,
       },
     ],
   }

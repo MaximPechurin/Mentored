@@ -1,7 +1,8 @@
 from django.urls import path
 
 from .views import DashboardView, StudentListView, StudentDetailView, CourseListView, CourseDetailView, CourseStudentsView, \
-    CourseOrdersView, TeacherListView, TeacherDetailView, OrderListView, OrderDetailView, PaymentListView
+    CourseOrdersView, TeacherListView, TeacherDetailView, OrderListView, OrderDetailView, PaymentListView, ContactMessageListView, \
+    ContactMessageBulkActionView, ContactMessageUnreadCountView, ContactMessageDetailView
 
 app_name = 'crm'
 
@@ -18,6 +19,9 @@ urlpatterns = [
     path('orders/', OrderListView.as_view(), name='orders'),
     path('orders/<int:pk>/', OrderDetailView.as_view(), name='order-detail'),
     path('payments/', PaymentListView.as_view(), name='payments'),
-    # path('contact-messages/', ContactMessageListView.as_view(), name='contact-messages'),
+    path('contact-messages/', ContactMessageListView.as_view(), name='contact-messages'),
+    path('contact-messages/bulk/', ContactMessageBulkActionView.as_view(), name='contact-messages-bulk'),
+    path('contact-messages/unread-count/', ContactMessageUnreadCountView.as_view(), name='contact-messages-unread-count'),
+    path('contact-messages/<int:pk>/', ContactMessageDetailView.as_view(), name='contact-message-detail'),
     # path('submissions/', SubmissionListView.as_view(), name='submissions'),
 ]

@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
 
-from mentored.models import ContactMessage, Order, Role, OrderItem, User
+from mentored.models import ContactMessage, Order, Role, OrderItem, User, ContactMessage
 from payments.models import Payment
 from school.models import Course, Enrollment, LessonProgress, Submission, Lesson, Certificate, ProductCourseAccess, \
     Module, CourseTeacher
@@ -1338,3 +1338,169 @@ class PaymentListView(APIView):
             })
 
         return paginator.get_paginated_response(results)
+
+
+# ============================================================
+# CONTACT MESSAGES (Mensajes)
+# ============================================================
+
+class ContactMessageListView(APIView):
+    """
+    GET /crm/contact-messages/
+    Список сообщений с формы контактов.
+
+    Query-параметры:
+      - search     — по name, email, message, motivo
+      - motivo     — конкретный motivo
+      - is_read    — 'true' | 'false'
+      - date_from  — YYYY-MM-DD
+      - date_to    — YYYY-MM-DD
+      - ordering   — created_at, -created_at, name, -name, is_read, -is_read
+      - page, page_size
+    """
+    permission_classes = [IsSuperuser]
+
+    def get(self, request):
+        qs = ContactMessage.objects.all()
+
+        # --- Поиск ---
+        search = (request.query_params.get('search') or '').strip()
+        if search:
+            qs = qs.filter(
+                Q(name__icontains=search) |
+                Q(email__icontains=search) |
+                Q(message__icontains=search) |
+                Q(motivo__icontains=search)
+            )
+
+        # --- Motivo ---
+        motivo = request.query_params.get('motivo')
+        if motivo:
+            qs = qs.filter(motivo=motivo)
+
+        # --- Estado ---
+        is_read = request.query_params.get('is_read')
+        if is_read == 'true':
+            qs = qs.filter(is_read=True)
+        elif is_read == 'false':
+            qs = qs.filter(is_read=False)
+
+        # --- Даты ---
+        date_from = request.query_params.get('date_from')
+        if date_from:
+            qs = qs.filter(created_at__date__gte=date_from)
+        date_to = request.query_params.get('date_to')
+        if date_to:
+            qs = qs.filter(created_at__date__lte=date_to)
+
+        # --- Сортировка ---
+        ordering = request.query_params.get('ordering', '-created_at')
+        allowed = {'created_at', '-created_at', 'name', '-name', 'is_read', '-is_read'}
+        if ordering not in allowed:
+            ordering = '-created_at'
+        qs = qs.order_by(ordering)
+
+        # --- Пагинация ---
+        paginator = CrmPagination()
+        page = paginator.paginate_queryset(qs, request, view=self)
+
+        results = [
+            {
+                'id': m.id,
+                'name': m.name,
+                'email': m.email,
+                'motivo': m.motivo,
+                'message_preview': (m.message[:100] + '…') if len(m.message) > 100 else m.message,
+                'is_read': m.is_read,
+                'created_at': m.created_at,
+            }
+            for m in page
+        ]
+
+        return paginator.get_paginated_response(results)
+
+
+class ContactMessageDetailView(APIView):
+    """
+    GET    /crm/contact-messages/<id>/  — детали
+    PATCH  /crm/contact-messages/<id>/  — обновить (is_read)
+    DELETE /crm/contact-messages/<id>/  — удалить
+    """
+    permission_classes = [IsSuperuser]
+
+    def get(self, request, pk):
+        m = ContactMessage.objects.filter(pk=pk).first()
+        if not m:
+            return Response({'detail': 'Mensaje no encontrado.'}, status=404)
+        return Response({
+            'id': m.id,
+            'name': m.name,
+            'email': m.email,
+            'motivo': m.motivo,
+            'message': m.message,
+            'is_read': m.is_read,
+            'created_at': m.created_at,
+        })
+
+    def patch(self, request, pk):
+        m = ContactMessage.objects.filter(pk=pk).first()
+        if not m:
+            return Response({'detail': 'Mensaje no encontrado.'}, status=404)
+        if 'is_read' in request.data:
+            m.is_read = bool(request.data['is_read'])
+            m.save(update_fields=['is_read'])
+        return Response({
+            'id': m.id,
+            'is_read': m.is_read,
+        })
+
+    def delete(self, request, pk):
+        m = ContactMessage.objects.filter(pk=pk).first()
+        if not m:
+            return Response({'detail': 'Mensaje no encontrado.'}, status=404)
+        m.delete()
+        return Response(status=204)
+
+
+class ContactMessageBulkActionView(APIView):
+    """
+    POST /crm/contact-messages/bulk/
+
+    Тело: {action: 'mark_read' | 'mark_unread' | 'delete', ids: [1,2,3]}
+
+    Массовые действия.
+    """
+    permission_classes = [IsSuperuser]
+
+    def post(self, request):
+        action = request.data.get('action')
+        ids = request.data.get('ids', [])
+        if not isinstance(ids, list) or not ids:
+            return Response({'error': 'ids required'}, status=400)
+
+        qs = ContactMessage.objects.filter(pk__in=ids)
+        count = qs.count()
+
+        if action == 'mark_read':
+            qs.update(is_read=True)
+        elif action == 'mark_unread':
+            qs.update(is_read=False)
+        elif action == 'delete':
+            qs.delete()
+        else:
+            return Response({'error': 'unknown action'}, status=400)
+
+        return Response({'ok': True, 'affected': count})
+
+
+class ContactMessageUnreadCountView(APIView):
+    """
+    GET /crm/contact-messages/unread-count/
+    Возвращает число непрочитанных сообщений (для бейджа в сайдбаре).
+    """
+    permission_classes = [IsSuperuser]
+
+    def get(self, request):
+        return Response({
+            'unread': ContactMessage.objects.filter(is_read=False).count(),
+        })
