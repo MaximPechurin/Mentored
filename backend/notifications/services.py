@@ -160,7 +160,7 @@ class EmailService:
         from django.contrib.auth import get_user_model
         User = get_user_model()
 
-        admins = User.objects.filter(is_staff=True, email__isnull=False).exclude(email='')
+        admins = User.objects.filter(is_staff=True, email__isnull=False, is_superuser=True).exclude(email='')
 
         for admin in admins:
             EmailService.send(

@@ -20,6 +20,8 @@ from mentored.services import (
     send_buyer_credentials, ProductNotFound,
 )
 from .models import Payment
+from notifications.services import EmailService
+from notifications.models import EmailLog
 
 logger = logging.getLogger(__name__)
 
@@ -289,6 +291,17 @@ def payment_webhook(request):
     order.save()
 
     logger.info("Webhook Mercado Pago: заказ %s -> %s (payment_id=%s)", order_number, order_status, data_id)
+
+    # ОТПРАВКА ПИСЕМ ПРИ УСПЕШНОЙ ОПЛАТЕ (без дублей)
+    if mp_status == 'approved':
+        already_sent = EmailLog.objects.filter(
+            related_order=order,
+            email_type='purchase',
+            status='sent',
+        ).exists()
+        if not already_sent:
+            _send_purchase_emails(order, payment_obj)
+
     return JsonResponse({"status": "ok"})
 
 
@@ -436,3 +449,86 @@ class QuickBuyOrderStatusView(APIView):
         if not order:
             return Response({'error': 'Pedido no encontrado'}, status=404)
         return Response({'status': order.status})
+
+def _send_purchase_emails(order, payment_obj):
+    """
+    Отправляет письма после успешной оплаты:
+      1. Клиенту — подтверждение покупки (purchase)
+      2. Админам — уведомление о новой покупке (admin_new_purchase)
+
+    Вызывается из payment_webhook. Ошибки писем НЕ должны ломать webhook —
+    иначе MP будет ретраить бесконечно, а заказ уже оплачен.
+    """
+
+    user = order.user
+    frontend_url = settings.SITE_URL
+    support_email = settings.DEFAULT_FROM_EMAIL
+
+    # Собираем список товаров: для письма берём первый как "главный",
+    # но в контексте можно показать все.
+    order_items = list(order.items.all())
+    if not order_items:
+        logger.warning(
+            "Заказ %s оплачен, но в нём нет OrderItem — письмо не отправляем",
+            order.order_number,
+        )
+        return
+
+    # Названия продуктов через запятую (или одно название, если товар один)
+    product_names = ", ".join(oi.product_name for oi in order_items)
+
+    # Способ оплаты: MP отдаёт payment_method_id (например 'visa', 'master')
+    payment_method = (
+        payment_obj.payment_method
+        if payment_obj and payment_obj.payment_method
+        else "Mercado Pago"
+    )
+
+    fecha_pago = order.paid_at.strftime('%d/%m/%Y %H:%M') if order.paid_at else '—'
+    link_cuenta = f"{frontend_url}/cuenta"
+
+    # ===== 1. ПИСЬМО КЛИЕНТУ =====
+    try:
+        EmailService.send(
+            email_type='purchase',
+            recipient=user,
+            context={
+                'nombre': user.username or user.email,
+                'nombre_producto': product_names,
+                'numero_pedido': order.order_number,
+                'monto': f"{order.total:.2f}",
+                'moneda': getattr(settings, 'MERCADOPAGO_CURRENCY', 'USD'),
+                'metodo_pago': payment_method,
+                'fecha_pago': fecha_pago,
+                'link_cuenta': link_cuenta,
+            },
+            related_order=order,
+        )
+    except Exception:
+        logger.exception(
+            "Не удалось отправить purchase-письмо для заказа %s", order.order_number
+        )
+
+    # ===== 2. ПИСЬМО АДМИНАМ =====
+    try:
+        EmailService.send_to_admins(
+            email_type='admin_new_purchase',
+            context={
+                'nombre_cliente': user.username or user.email,
+                'email_cliente': user.email,
+                'telefono_cliente': user.phone or '',
+                'nombre_producto': product_names,
+                'numero_pedido': order.order_number,
+                'monto': f"{order.total:.2f}",
+                'moneda': getattr(settings, 'MERCADOPAGO_CURRENCY', 'USD'),
+                'metodo_pago': payment_method,
+                'estado_pago': 'Pagado',
+                'fecha_pago': fecha_pago,
+                'link_admin_pedido': f"{getattr(settings, 'ADMIN_URL', '')}/mentored/order/{order.id}/change/",
+            },
+            related_order=order,
+        )
+    except Exception:
+        logger.exception(
+            "Не удалось отправить admin_new_purchase для заказа %s", order.order_number
+        )
