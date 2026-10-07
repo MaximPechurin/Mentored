@@ -2,6 +2,9 @@
   <div class="crm-card">
     <div class="crm-card-head">
       <h2>Últimos pagos</h2>
+      <router-link :to="{ name: 'CrmPayments' }" class="crm-card-more">
+        Ver todos →
+      </router-link>
     </div>
     <div v-if="payments.length === 0" class="crm-empty">
       Sin pagos recientes.
@@ -102,5 +105,26 @@ const formatDate = (iso) => {
   font-size: 15px;
   padding: 20px 0;
   text-align: center;
+}
+
+.crm-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.crm-card-more {
+  font-size: 13px;
+  font-weight: 600;
+  color: #8e1519;
+  text-decoration: none;
+  transition: color 0.2s;
+  white-space: nowrap;
+}
+
+.crm-card-more:hover {
+  color: #a01a1f;
 }
 </style>

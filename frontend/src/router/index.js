@@ -26,6 +26,19 @@ import EscuelaProfesorCursoEditarPage from "../views/escuela/EscuelaProfesorCurs
 import CompraRapidaPage from "../views/compra/CompraRapidaPage.vue";
 import CompraExitosaPage from "../views/compra/CompraExitosaPage.vue";
 import CrmPage from "../views/crm/CrmPage.vue";
+import CrmLayout from '../views/crm/CrmLayout.vue'
+import CrmDashboardPage from '../views/crm/CrmDashboardPage.vue'
+import CrmStudentsPage from '../views/crm/CrmStudentsPage.vue'
+import CrmStudentDetailPage from '../views/crm/CrmStudentDetailPage.vue'
+import CrmCoursesPage from '../views/crm/CrmCoursesPage.vue'
+import CrmCourseDetailPage from '../views/crm/CrmCourseDetailPage.vue'
+import CrmTeachersPage from '../views/crm/CrmTeachersPage.vue'
+import CrmTeacherDetailPage from '../views/crm/CrmTeacherDetailPage.vue'
+import CrmOrdersPage from '../views/crm/CrmOrdersPage.vue'
+import CrmOrderDetailPage from '../views/crm/CrmOrderDetailPage.vue'
+import CrmPaymentsPage from '../views/crm/CrmPaymentsPage.vue'
+import CrmContactMessagesPage from '../views/crm/CrmContactMessagesPage.vue'
+import CrmSubmissionsPage from '../views/crm/CrmSubmissionsPage.vue'
 
 const routes = [
   {
@@ -174,9 +187,74 @@ const routes = [
   {
     // ЦРМ система
     path: '/crm',
-    name: 'CRM',
-    component: CrmPage,
-    meta: { requiresAuth: true, requiresStaff: true }
+    component: CrmLayout,
+    meta: { requiresAuth: true, requiresSuperuser: true },
+    children: [
+      {
+        path: '',
+        name: 'CrmDashboard',
+        component: CrmDashboardPage,
+      },
+      {
+        path: 'students',
+        name: 'CrmStudents',
+        component: CrmStudentsPage,
+      },
+      {
+        path: 'students/:id',
+        name: 'CrmStudentDetail',
+        component: CrmStudentDetailPage,
+        props: true,
+      },
+      {
+        path: 'courses',
+        name: 'CrmCourses',
+        component: CrmCoursesPage,
+      },
+      {
+        path: 'courses/:id',
+        name: 'CrmCourseDetail',
+        component: CrmCourseDetailPage,
+        props: true,
+      },
+      {
+        path: 'teachers',
+        name: 'CrmTeachers',
+        component: CrmTeachersPage,
+      },
+      {
+        path: 'teachers/:id',
+        name: 'CrmTeacherDetail',
+        component: CrmTeacherDetailPage,
+        props: true,
+      },
+      {
+        path: 'orders',
+        name: 'CrmOrders',
+        component: CrmOrdersPage,
+      },
+      {
+        path: 'orders/:id',
+        name: 'CrmOrderDetail',
+        component: CrmOrderDetailPage,
+        props: true,
+      },
+      {
+        path: 'payments',
+        name: 'CrmPayments',
+        component: CrmPaymentsPage,
+      },
+      {
+        path: 'contact-messages',
+        name: 'CrmContactMessages',
+        component: CrmContactMessagesPage,
+      },
+      {
+        path: 'submissions',
+        name: 'CrmSubmissions',
+        component: CrmSubmissionsPage,
+      },
+    ],
   }
 ]
 

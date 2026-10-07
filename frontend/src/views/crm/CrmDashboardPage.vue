@@ -1,7 +1,5 @@
 <template>
-  <div class="crm-page">
-    <CrmHeader />
-
+  <div class="crm-dashboard">
     <div v-if="loading" class="crm-loading">
       <div class="crm-loading-spinner"></div>
       <p>Cargando panel...</p>
@@ -13,7 +11,7 @@
       <button @click="loadDashboard">Reintentar</button>
     </div>
 
-    <div v-else class="crm-content">
+    <div v-else>
       <CrmCountersRow :counters="data.counters" />
 
       <div class="crm-grid-2">
@@ -29,11 +27,10 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { crmApi } from '../../api/crm'
-import CrmHeader from "./CrmHeader.vue";
-import CrmCountersRow from './CrmCountersRow.vue'
-import CrmRecentPayments from './CrmRecentPayments.vue'
-import CrmRecentRegistrations from './CrmRecentRegistrations.vue'
-import CrmRecentMessages from './CrmRecentMessages.vue'
+import CrmCountersRow from './components/CrmCountersRow.vue'
+import CrmRecentPayments from './components/CrmRecentPayments.vue'
+import CrmRecentRegistrations from './components/CrmRecentRegistrations.vue'
+import CrmRecentMessages from './components/CrmRecentMessages.vue'
 
 const loading = ref(true)
 const error = ref(null)
@@ -57,19 +54,6 @@ onMounted(loadDashboard)
 </script>
 
 <style scoped>
-.crm-page {
-  font-family: 'Hanken Grotesk', -apple-system, Helvetica, Arial, sans-serif;
-  font-weight: 300;
-  background: #f5eee3;
-  min-height: 100vh;
-}
-
-.crm-content {
-  max-width: 1480px;
-  margin: 0 auto;
-  padding: 32px;
-}
-
 .crm-grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -83,7 +67,7 @@ onMounted(loadDashboard)
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 400px;
+  min-height: 300px;
   color: #8a8079;
   text-align: center;
 }
@@ -122,7 +106,6 @@ onMounted(loadDashboard)
 }
 
 @media (max-width: 900px) {
-  .crm-content { padding: 20px; }
   .crm-grid-2 { grid-template-columns: 1fr; }
 }
 </style>
