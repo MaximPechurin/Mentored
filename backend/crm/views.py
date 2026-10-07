@@ -11,7 +11,8 @@ from rest_framework.pagination import PageNumberPagination
 
 from mentored.models import ContactMessage, Order, Role
 from payments.models import Payment
-from school.models import Course, Enrollment, LessonProgress, Submission, Lesson, Certificate, ProductCourseAccess
+from school.models import Course, Enrollment, LessonProgress, Submission, Lesson, Certificate, ProductCourseAccess, \
+    Module
 from mentored.models import OrderItem, Order
 
 from .permissions import IsSuperuser
