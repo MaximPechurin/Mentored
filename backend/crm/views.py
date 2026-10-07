@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Q, Sum, Max
 from django.utils import timezone
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -9,7 +9,7 @@ from rest_framework.pagination import PageNumberPagination
 
 from mentored.models import ContactMessage, Order, Role
 from payments.models import Payment
-from school.models import Course, Enrollment, LessonProgress, Submission
+from school.models import Course, Enrollment, LessonProgress, Submission, Lesson
 
 from .permissions import IsSuperuser
 
@@ -221,3 +221,132 @@ class StudentListView(APIView):
         ]
 
         return paginator.get_paginated_response(results)
+
+
+class StudentDetailView(APIView):
+    """
+    GET /crm/students/<id>/
+
+    Детальная карточка ученика: основные данные, список курсов
+    (с прогрессом по каждому), список заказов, агрегированная статистика.
+    """
+    permission_classes = [IsSuperuser]
+
+    def get(self, request, pk):
+        user = (
+            User.objects
+            .prefetch_related('roles')
+            .filter(pk=pk)
+            .first()
+        )
+        if not user:
+            return Response({'detail': 'Alumno no encontrado.'}, status=404)
+
+        # ---------- Курсы ученика с прогрессом ----------
+        enrollments = (
+            Enrollment.objects
+            .filter(user=user)
+            .select_related('course')
+            .order_by('-enrolled_at')
+        )
+
+        courses = []
+        for enr in enrollments:
+            lessons_total = Lesson.objects.filter(module__course=enr.course).count()
+            lessons_completed = LessonProgress.objects.filter(
+                enrollment=enr,
+                is_completed=True,
+            ).count()
+            progress_percent = (
+                int(round(lessons_completed / lessons_total * 100))
+                if lessons_total else 0
+            )
+            last_activity = (
+                LessonProgress.objects
+                .filter(enrollment=enr)
+                .aggregate(m=Max('updated_at'))['m']
+            )
+
+            courses.append({
+                'course_id': enr.course.id,
+                'course_title': enr.course.title,
+                'course_slug': enr.course.slug,
+                'enrolled_at': enr.enrolled_at,
+                'is_active': enr.is_active,
+                'lessons_total': lessons_total,
+                'lessons_completed': lessons_completed,
+                'progress_percent': progress_percent,
+                'last_activity': last_activity,
+            })
+
+        # ---------- Заказы ученика ----------
+        orders_qs = (
+            Order.objects
+            .filter(user=user)
+            .prefetch_related('items')
+            .order_by('-created_at')[:20]
+        )
+
+        STATUS_ES = {
+            'pending': 'Pendiente',
+            'paid': 'Aprobado',
+            'processing': 'En proceso',
+            'completed': 'Completado',
+            'cancelled': 'Cancelado',
+            'refunded': 'Reembolsado',
+        }
+
+        orders = [
+            {
+                'id': o.id,
+                'order_number': o.order_number,
+                'created_at': o.created_at,
+                'paid_at': o.paid_at,
+                'status': o.status,
+                'status_display': STATUS_ES.get(o.status, o.status),
+                'total': f"{o.total:.2f}",
+                'currency': 'USD',
+                'items': [i.product_name for i in o.items.all()],
+            }
+            for o in orders_qs
+        ]
+
+        # ---------- Агрегированная статистика ----------
+        orders_paid_qs = Order.objects.filter(user=user, status='paid')
+        total_paid = orders_paid_qs.aggregate(s=Sum('total'))['s'] or 0
+
+        # Последняя активность: MAX из LessonProgress.updated_at + Submission.submitted_at
+        lp_last = LessonProgress.objects.filter(
+            enrollment__user=user,
+        ).aggregate(m=Max('updated_at'))['m']
+
+        sub_last = Submission.objects.filter(
+            enrollment__user=user,
+        ).aggregate(m=Max('submitted_at'))['m']
+
+        last_activity = max([d for d in (lp_last, sub_last) if d], default=None)
+
+        stats = {
+            'courses_count': len(courses),
+            'courses_active': sum(1 for c in courses if c['is_active']),
+            'orders_count': Order.objects.filter(user=user).count(),
+            'orders_paid': orders_paid_qs.count(),
+            'total_paid_usd': f"{total_paid:.2f}",
+            'last_activity': last_activity,
+        }
+
+        # ---------- Отдаём ----------
+        return Response({
+            'id': user.id,
+            'email': user.email,
+            'username': user.username,
+            'phone': user.phone,
+            'avatar': user.avatar.url if user.avatar else None,
+            'created_at': user.created_at,
+            'is_active': user.is_active,
+            'is_superuser': user.is_superuser,
+            'roles': [r.codename for r in user.roles.all()],
+            'courses': courses,
+            'orders': orders,
+            'stats': stats,
+        })

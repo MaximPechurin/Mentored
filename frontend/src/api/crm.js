@@ -7,4 +7,7 @@ export const crmApi = {
   getStudents(params = {}) {
     return api.get('/crm/students/', { params })
   },
+  getStudent(id) {
+    return api.get(`/crm/students/${id}/`)
+  },
 }

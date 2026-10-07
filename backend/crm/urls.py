@@ -1,13 +1,13 @@
 from django.urls import path
 
-from .views import DashboardView, StudentListView
+from .views import DashboardView, StudentListView, StudentDetailView
 
 app_name = 'crm'
 
 urlpatterns = [
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
     path('students/', StudentListView.as_view(), name='students'),
-    # path('students/<int:pk>/', StudentDetailView.as_view(), name='student-detail'),
+    path('students/<int:pk>/', StudentDetailView.as_view(), name='student-detail'),
     # path('courses/', CourseListView.as_view(), name='courses'),
     # path('courses/<int:pk>/', CourseDetailView.as_view(), name='course-detail'),
     # path('teachers/', TeacherListView.as_view(), name='teachers'),
