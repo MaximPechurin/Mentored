@@ -321,10 +321,16 @@ class ForumPostSerializer(serializers.ModelSerializer):
 class ForumThreadListSerializer(serializers.ModelSerializer):
     author = serializers.SerializerMethodField()
     posts_count = serializers.SerializerMethodField()
+    lesson_id = serializers.IntegerField(source='lesson.id', read_only=True, allow_null=True)
+    lesson_title = serializers.CharField(source='lesson.title', read_only=True, allow_null=True)
 
     class Meta:
         model = ForumThread
-        fields = ['id', 'title', 'author', 'is_pinned', 'is_locked', 'posts_count', 'created_at', 'updated_at']
+        fields = [
+            'id', 'title', 'author', 'is_pinned', 'is_locked',
+            'posts_count', 'created_at', 'updated_at',
+            'lesson_id', 'lesson_title',
+        ]
 
     def get_author(self, obj):
         return _display_name(obj.author)
@@ -336,12 +342,20 @@ class ForumThreadListSerializer(serializers.ModelSerializer):
 class ForumThreadDetailSerializer(serializers.ModelSerializer):
     author = serializers.SerializerMethodField()
     posts = ForumPostSerializer(many=True, read_only=True)
+    lesson_id = serializers.IntegerField(source='lesson.id', read_only=True, allow_null=True)
+    lesson_title = serializers.CharField(source='lesson.title', read_only=True, allow_null=True)
 
     class Meta:
         model = ForumThread
-        fields = ['id', 'title', 'author', 'is_pinned', 'is_locked', 'created_at', 'posts']
+        fields = [
+            'id', 'title', 'author', 'is_pinned', 'is_locked',
+            'created_at', 'posts', 'lesson_id', 'lesson_title',
+        ]
 
     def get_author(self, obj):
+        return _display_name(obj.author)
+
+    def get_posts(self, obj):
         qs = obj.posts.select_related('author', 'edited_by')
         if not self.context.get('viewer_is_superuser'):
             qs = qs.filter(is_hidden=False)

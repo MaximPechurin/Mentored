@@ -6,6 +6,7 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
+from rest_framework.pagination import PageNumberPagination
 
 from django.contrib.auth import get_user_model
 from django.db.models import Q, Prefetch
@@ -910,6 +911,17 @@ class TeacherHomeworkView(APIView):
 def _course_teacher_ids(course):
     return set(course.course_teachers.values_list('teacher_id', flat=True))
 
+def _can_view_lesson(user, lesson):
+    """
+    Может ли пользователь видеть урок и его обсуждение.
+    Доступ = активный Enrollment курса ИЛИ CourseTeacher курса.
+    """
+    course = lesson.module.course
+    if user.is_superuser:
+        return True
+    if Enrollment.objects.filter(user=user, course=course, is_active=True).exists():
+        return True
+    return CourseTeacher.objects.filter(course=course, teacher=user).exists()
 
 class ForumsListView(APIView):
     """
@@ -1327,3 +1339,71 @@ class PostDeleteView(APIView):
         post = get_object_or_404(ForumPost, id=post_id)
         post.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class LessonThreadsView(APIView):
+    """
+    GET  /school/lessons/<lesson_id>/threads/ - список тем обсуждения урока.
+         Пагинация 20, новые сверху.
+    POST /school/lessons/<lesson_id>/threads/ - создать тему {title, content}.
+         course подставляется автоматически из lesson.module.course.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, lesson_id):
+        lesson = get_object_or_404(
+            Lesson.objects.select_related('module__course'), id=lesson_id,
+        )
+        if not _can_view_lesson(request.user, lesson):
+            return Response({'error': 'Нет доступа к этому уроку'}, status=status.HTTP_403_FORBIDDEN)
+
+        threads = (
+            ForumThread.objects
+            .filter(lesson=lesson)
+            .select_related('author')
+            .order_by('-updated_at')
+        )
+
+        paginator = PageNumberPagination()
+        paginator.page_size = 20
+        page = paginator.paginate_queryset(threads, request, view=self)
+        serializer = ForumThreadListSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
+
+    def post(self, request, lesson_id):
+        lesson = get_object_or_404(
+            Lesson.objects.select_related('module__course'), id=lesson_id,
+        )
+        if not _can_view_lesson(request.user, lesson):
+            return Response({'error': 'Нет доступа к этому уроку'}, status=status.HTTP_403_FORBIDDEN)
+
+        title = (request.data.get('title') or '').strip()
+        content = (request.data.get('content') or '').strip()
+        if not title or not content:
+            return Response({'error': 'Нужны title и content'}, status=status.HTTP_400_BAD_REQUEST)
+
+        thread = ForumThread.objects.create(
+            course=lesson.module.course,
+            lesson=lesson,
+            author=request.user,
+            title=title,
+        )
+        ForumPost.objects.create(thread=thread, author=request.user, content=content)
+        return Response(ForumThreadListSerializer(thread).data, status=status.HTTP_201_CREATED)
+
+
+class LessonCommentsCountView(APIView):
+    """
+    GET /school/lessons/<lesson_id>/threads/count/
+    Просто количество тем обсуждения урока — для бейджа в шапке.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, lesson_id):
+        lesson = get_object_or_404(Lesson, id=lesson_id)
+        if not _can_view_lesson(request.user, lesson):
+            return Response({'error': 'Нет доступа'}, status=status.HTTP_403_FORBIDDEN)
+        return Response({
+            'count': ForumThread.objects.filter(lesson=lesson).count(),
+            'posts_count': ForumPost.objects.filter(thread__lesson=lesson, is_hidden=False).count(),
+        })

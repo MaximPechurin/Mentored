@@ -576,6 +576,14 @@ class ForumThread(models.Model):
         related_name='forum_threads',
         verbose_name='Курс',
     )
+    lesson = models.ForeignKey(
+        'Lesson',
+        on_delete=models.CASCADE,
+        null=True, blank=True,
+        related_name='forum_threads',
+        verbose_name='Урок',
+        help_text='Если заполнено — тема относится к обсуждению урока',
+    )
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

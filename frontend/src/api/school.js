@@ -181,4 +181,13 @@ export const schoolApi = {
   deletePost(postId) {
     return api.delete(`/school/posts/${postId}/delete/`)
   },
+  lessonThreads(lessonId, params = {}) {
+    return api.get(`/school/lessons/${lessonId}/threads/`, { params })
+  },
+  createLessonThread(lessonId, data) {
+    return api.post(`/school/lessons/${lessonId}/threads/`, data)
+  },
+  lessonThreadsCount(lessonId) {
+    return api.get(`/school/lessons/${lessonId}/threads/count/`)
+  },
 }

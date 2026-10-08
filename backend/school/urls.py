@@ -13,7 +13,7 @@ from .views import (
     ForumsListView,
     ConversationsView, ConversationView, ChatDirectoryView,
     TeacherCourseAnalyticsView, PlatformAnalyticsView, PostEditView, PostModerateView,
-    PostDeleteView
+    PostDeleteView, LessonThreadsView, LessonCommentsCountView
 )
 
 urlpatterns = [
@@ -68,4 +68,8 @@ urlpatterns = [
     path('posts/<int:post_id>/edit/', PostEditView.as_view(), name='school-post-edit'),
     path('posts/<int:post_id>/moderate/', PostModerateView.as_view(), name='school-post-moderate'),
     path('posts/<int:post_id>/delete/', PostDeleteView.as_view(), name='school-post-delete'),
+
+    # Обсуждения уроков
+    path('lessons/<int:lesson_id>/threads/', LessonThreadsView.as_view(), name='school-lesson-threads'),
+    path('lessons/<int:lesson_id>/threads/count/', LessonCommentsCountView.as_view(), name='school-lesson-threads-count'),
 ]

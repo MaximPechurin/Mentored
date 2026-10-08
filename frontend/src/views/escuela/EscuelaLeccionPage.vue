@@ -52,6 +52,9 @@
             <span class="esc-lesson-state" :class="{ done: lesson.is_completed }">
               {{ lesson.is_completed ? st('leccion.tareaHecha') : st('leccion.tareaPendiente') }}
             </span>
+            <span v-if="threadsCount > 0" class="esc-lesson-state esc-lesson-comments">
+        💬    {{ threadsCount }}
+            </span>
           </div>
 
           <button
@@ -275,6 +278,73 @@
           </div>
         </div>
       </section>
+
+      <!-- ============ ОБСУЖДЕНИЕ УРОКА ============ -->
+      <section class="lesson-discussion">
+        <header class="ld-head">
+          <h2 class="ld-title">💬 {{ st('lesson.discussion') }}</h2>
+          <span v-if="threadsCount > 0" class="ld-count">{{ threadsCount }}</span>
+        </header>
+
+        <!-- Новая тема -->
+        <div class="ld-new">
+          <input
+            v-model="newThread.title"
+            :placeholder="st('foro.threadTitle')"
+            class="ld-input"
+          >
+          <textarea
+            v-model="newThread.content"
+            rows="2"
+            :placeholder="st('foro.message')"
+            class="ld-textarea"
+          ></textarea>
+          <button
+            class="esc-complete-btn"
+            :disabled="creatingThread || !newThread.title.trim() || !newThread.content.trim()"
+            @click="createThread"
+          >
+            {{ st('foro.create') }}
+          </button>
+        </div>
+
+        <!-- Загрузка -->
+        <div v-if="threadsLoading" class="ld-empty">{{ st('common.cargando') }}</div>
+
+        <!-- Пусто -->
+        <div v-else-if="threads.length === 0" class="ld-empty">
+          {{ st('foro.empty') }}
+        </div>
+
+        <!-- Темы -->
+        <ul v-else class="ld-threads">
+          <li
+            v-for="t in threads"
+            :key="t.id"
+            class="ld-thread"
+            @click="openThread(t.id)"
+          >
+            <div class="ld-thread-main">
+              <span class="ld-thread-title">{{ t.title }}</span>
+              <span class="ld-thread-meta">
+                {{ t.author }} · {{ t.posts_count }} {{ st('foro.posts') }} ·
+                {{ formatDateTime(t.created_at) }}
+              </span>
+            </div>
+            <span v-if="t.is_locked" class="ld-lock">🔒</span>
+          </li>
+        </ul>
+
+        <button
+          v-if="threadsTotalPages > 1 && threadsPage < threadsTotalPages"
+          class="ld-load-more"
+          :disabled="threadsLoadingMore"
+          @click="loadMoreThreads"
+        >
+          {{ threadsLoadingMore ? st('common.cargando') : st('common.verMas') }}
+        </button>
+      </section>
+
       </template>
       </div>
     </div>
@@ -557,9 +627,86 @@ const loadLessonData = async () => {
 watch(() => route.params.lessonId, (_, oldId) => {
   if (oldId) saveVideoPositionForLessonId(Number(oldId))
   loadLessonData()
+  loadLessonThreads()
 })
 
 onBeforeUnmount(() => saveVideoPosition())
+
+// ============ ОБСУЖДЕНИЕ УРОКА ============
+const threads = ref([])
+const threadsCount = ref(0)
+const threadsLoading = ref(false)
+const threadsLoadingMore = ref(false)
+const threadsPage = ref(1)
+const threadsTotalPages = ref(1)
+const newThread = ref({ title: '', content: '' })
+const creatingThread = ref(false)
+
+const loadLessonThreads = async () => {
+  if (!lesson.value) return
+  threadsLoading.value = true
+  threadsPage.value = 1
+  try {
+    const { data } = await schoolApi.lessonThreads(lesson.value.id, { page: 1 })
+    threads.value = data.results || []
+    threadsCount.value = data.count || 0
+    threadsTotalPages.value = data.pages || 1
+  } catch (e) {
+    console.error('lesson threads', e)
+  } finally {
+    threadsLoading.value = false
+  }
+}
+
+const loadMoreThreads = async () => {
+  if (!lesson.value || threadsPage.value >= threadsTotalPages.value) return
+  threadsLoadingMore.value = true
+  try {
+    const nextPage = threadsPage.value + 1
+    const { data } = await schoolApi.lessonThreads(lesson.value.id, { page: nextPage })
+    threads.value.push(...(data.results || []))
+    threadsPage.value = nextPage
+  } catch (e) {
+    console.error('load more threads', e)
+  } finally {
+    threadsLoadingMore.value = false
+  }
+}
+
+const createThread = async () => {
+  if (!lesson.value) return
+  if (!newThread.value.title.trim() || !newThread.value.content.trim()) return
+  creatingThread.value = true
+  try {
+    const { data } = await schoolApi.createLessonThread(lesson.value.id, {
+      title: newThread.value.title.trim(),
+      content: newThread.value.content.trim(),
+    })
+    threads.value.unshift(data)
+    threadsCount.value += 1
+    newThread.value = { title: '', content: '' }
+  } catch (e) {
+    console.error('create thread', e)
+    alert('Error')
+  } finally {
+    creatingThread.value = false
+  }
+}
+
+const openThread = (threadId) => {
+  // Переходим на форум курса с открытием конкретной темы
+  router.push(`/escuela/foro/${course.value.id}?thread=${threadId}`)
+}
+
+const formatDateTime = (iso) => {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return d.toLocaleString('es-ES', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  })
+}
+
 
 onMounted(async () => {
   if (!isAuthenticated.value) {
@@ -581,6 +728,7 @@ onMounted(async () => {
     const { data } = await schoolApi.getCourse(route.params.slug)
     course.value = data
     await loadLessonData()
+    await loadLessonThreads()
   } catch (error) {
     if (error.response?.status === 403 || error.response?.status === 404) {
       forbidden.value = true
@@ -1185,5 +1333,159 @@ onMounted(async () => {
     position: static;
     max-height: 260px;
   }
+}
+
+/* ============ ОБСУЖДЕНИЕ УРОКА ============ */
+.lesson-discussion {
+  background: #ffffff;
+  border: 1px solid #ece7e1;
+  border-radius: 18px;
+  padding: 24px;
+  margin-top: 8px;
+}
+
+.ld-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.ld-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: #15110f;
+  margin: 0;
+}
+
+.ld-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: #8e1519;
+  background: #faf6f0;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.ld-new {
+  background: #fbf9f6;
+  border: 1px solid #ece7e1;
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 18px;
+}
+
+.ld-input,
+.ld-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #e4ddd2;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 14.5px;
+  color: #15110f;
+  background: #ffffff;
+  outline: none;
+  margin-bottom: 10px;
+  resize: vertical;
+}
+
+.ld-input:focus,
+.ld-textarea:focus {
+  border-color: #8e1519;
+}
+
+.ld-empty {
+  color: #8a8079;
+  text-align: center;
+  padding: 24px;
+  font-size: 14.5px;
+}
+
+.ld-threads {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ld-thread {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #ffffff;
+  border: 1px solid #ece7e1;
+  border-radius: 14px;
+  padding: 14px 18px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.ld-thread:hover {
+  border-color: #8e1519;
+  background: #faf8f5;
+}
+
+.ld-thread-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ld-thread-title {
+  font-weight: 600;
+  color: #15110f;
+  font-size: 15px;
+}
+
+.ld-thread-meta {
+  font-size: 12.5px;
+  color: #8a8079;
+  margin-top: 2px;
+}
+
+.ld-lock {
+  flex-shrink: 0;
+}
+
+.ld-load-more {
+  width: 100%;
+  margin-top: 12px;
+  background: #ffffff;
+  border: 1px solid #ece7e1;
+  border-radius: 12px;
+  padding: 12px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #8e1519;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.ld-load-more:hover {
+  border-color: #8e1519;
+}
+
+.ld-load-more:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 700px) {
+  .lesson-discussion {
+    padding: 18px;
+  }
+}
+
+.esc-lesson-comments {
+  background: #faf6f0;
+  color: #8e1519;
 }
 </style>
