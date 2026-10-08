@@ -132,8 +132,49 @@
 
       <!-- Ограничения по срокам -->
       <CrmDetailSection title="Duración del acceso">
-        <div class="crm-empty">
-          No configurado — la duración del acceso se implementará en la Fase 6.
+        <div class="access-info">
+          <div class="access-info-row">
+            <span class="access-info-label">Modo</span>
+            <span class="access-info-value">{{ accessModeLabel }}</span>
+          </div>
+
+          <template v-if="course.access_mode === 'duration'">
+            <div class="access-info-row">
+              <span class="access-info-label">Duración</span>
+              <span class="access-info-value">
+                {{ course.access_duration_days }} días desde la compra
+              </span>
+            </div>
+          </template>
+
+          <template v-if="course.access_mode === 'dates'">
+            <div class="access-info-row">
+              <span class="access-info-label">Inicio</span>
+              <span class="access-info-value">{{ formatDate(course.access_start) }}</span>
+            </div>
+            <div class="access-info-row">
+              <span class="access-info-label">Fin</span>
+              <span class="access-info-value">{{ formatDate(course.access_end) }}</span>
+            </div>
+          </template>
+
+          <div v-if="course.access_mode === 'unlimited'" class="access-info-hint">
+            Este curso no tiene restricción de tiempo.
+          </div>
+
+          <!-- Предупреждения -->
+          <div
+            v-if="course.stats.expiring_soon_count > 0"
+            class="access-warning access-warning--warn"
+          >
+            ⏳ {{ course.stats.expiring_soon_count }} alumno(s) pierden acceso en los próximos 7 días
+          </div>
+          <div
+            v-if="course.stats.expired_count > 0"
+            class="access-warning access-warning--danger"
+          >
+            🔒 {{ course.stats.expired_count }} alumno(s) ya no tienen acceso
+          </div>
         </div>
       </CrmDetailSection>
 
@@ -148,6 +189,7 @@
               <th>Alumno</th>
               <th>Email</th>
               <th class="align-center">Inscrito</th>
+              <th class="align-center">Vence</th>
               <th>Progreso</th>
               <th class="align-center">Completado</th>
               <th class="align-right">Última actividad</th>
@@ -168,6 +210,16 @@
               </td>
               <td class="muted">{{ s.email }}</td>
               <td class="align-center muted">{{ formatDate(s.enrolled_at) }}</td>
+              <td class="align-center">
+                <span
+                  v-if="s.access_expires_at"
+                  class="badge"
+                  :class="accessBadgeClass(s.access_status)"
+                >
+                  {{ formatDate(s.access_expires_at) }}
+                </span>
+                <span v-else class="muted">Sin límite</span>
+              </td>
               <td>
                 <CrmProgressBar :percent="s.progress_percent" style="min-width: 140px" />
               </td>
@@ -310,6 +362,25 @@ const totalLessons = computed(() => {
   return course.value.modules.reduce((sum, m) => sum + m.lessons.length, 0)
 })
 
+// === Тайминги доступа ===
+const accessModeLabel = computed(() => {
+  if (!course.value) return '—'
+  const mode = course.value.access_mode
+  if (mode === 'unlimited') return 'Sin límite'
+  if (mode === 'duration') return 'Duración desde la compra'
+  if (mode === 'dates') return 'Fechas fijas'
+  return '—'
+})
+
+// === Бейджи статуса доступа ===
+const accessBadgeClass = (status) => {
+  if (status === 'active') return 'badge-success'
+  if (status === 'expired') return 'badge-danger'
+  if (status === 'not_started') return 'badge-muted'
+  if (status === 'blocked') return 'badge-muted'
+  return 'badge-muted'
+}
+
 const loadCourse = async () => {
   loading.value = true
   error.value = null
@@ -379,6 +450,15 @@ const formatDate = (iso) => {
     day: '2-digit', month: '2-digit', year: 'numeric',
   })
 }
+
+const accessModeLabel = computed(() => {
+  if (!course.value) return '—'
+  const mode = course.value.access_mode
+  if (mode === 'unlimited') return 'Sin límite'
+  if (mode === 'duration') return 'Duración desde la compra'
+  if (mode === 'dates') return 'Fechas fijas'
+  return '—'
+})
 
 onMounted(loadCourse)
 
@@ -573,4 +653,61 @@ const downloadCourseReport = async () => {
   color: #a59c93; font-size: 15px;
   padding: 32px 24px; text-align: center;
 }
+
+/* --- Блок "Duración del acceso" --- */
+.access-info {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.access-info-row {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  font-size: 14.5px;
+}
+
+.access-info-label {
+  min-width: 100px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #8a8079;
+}
+
+.access-info-value {
+  color: #15110f;
+  font-weight: 500;
+}
+
+.access-info-hint {
+  font-size: 13.5px;
+  color: #8a8079;
+  font-style: italic;
+}
+
+.access-warning {
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.access-warning--warn {
+  background: #fff5e0;
+  color: #8c6a10;
+}
+
+.access-warning--danger {
+  background: #fbeaea;
+  color: #8e1519;
+}
+
+/* --- Бейджи --- */
+.badge-success { background: #eaf5ed; color: #1f7a3d; }
+.badge-danger { background: #fbeaea; color: #8e1519; }
+.badge-muted { background: #f0ede8; color: #8a8079; }
 </style>

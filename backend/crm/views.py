@@ -418,6 +418,7 @@ class CourseListView(APIView):
       - средний прогресс (Subquery)
       - оплат (через ProductCourseAccess → OrderItem → Order paid)
       - суммы продаж в USD
+      - доступ (режим + счётчики истекающих/истёкших)
 
     Query-параметры:
       - search          — по названию и slug
@@ -451,10 +452,6 @@ class CourseListView(APIView):
             qs = qs.exclude(whatsapp_group_url='')
 
         # --- Subquery: средний прогресс по курсу ---
-        # avg_progress = AVG(
-        #   completed_lessons_per_enrollment / total_lessons * 100
-        # )
-        # Считаем вложенным Subquery - Django умеет.
         total_lessons_sq = (
             Lesson.objects
             .filter(module__course__id=OuterRef('id'))
@@ -469,9 +466,6 @@ class CourseListView(APIView):
             .annotate(c=Count('id'))
             .values('c')
         )
-        # Приближённый расчёт: общее кол-во completed / (students * lessons)
-        # Точный AVG по каждому ученику был бы ещё одним уровнем subquery.
-        # Для списка курсов это компромисс - достаточно для дашборда.
         qs = qs.annotate(
             total_lessons=Coalesce(
                 Subquery(total_lessons_sq, output_field=IntegerField()),
@@ -484,6 +478,9 @@ class CourseListView(APIView):
         )
 
         # --- Аннотации ---
+        now = timezone.now()
+        threshold = now + timedelta(days=7)
+
         qs = qs.annotate(
             students_count=Count(
                 'enrollments',
@@ -492,6 +489,23 @@ class CourseListView(APIView):
             ),
             completions_count=Count(
                 'enrollments__certificate',
+                distinct=True,
+            ),
+            expiring_soon_count=Count(
+                'enrollments',
+                filter=Q(
+                    enrollments__is_active=True,
+                    enrollments__access_expires_at__gt=now,
+                    enrollments__access_expires_at__lte=threshold,
+                ),
+                distinct=True,
+            ),
+            expired_count=Count(
+                'enrollments',
+                filter=Q(
+                    enrollments__is_active=True,
+                    enrollments__access_expires_at__lte=now,
+                ),
                 distinct=True,
             ),
         )
@@ -512,9 +526,6 @@ class CourseListView(APIView):
         paginator = CrmPagination()
         page = paginator.paginate_queryset(qs, request, view=self)
 
-        # --- Продажи: собираем через ProductCourseAccess -> OrderItem ---
-        # За один проход: берём ID всех курсов на странице,
-        # находим связанные ProductCourseAccess, потом OrderItem.
         course_ids = [c.id for c in page]
         sales_by_course = _aggregate_sales_by_course(course_ids)
 
@@ -525,7 +536,6 @@ class CourseListView(APIView):
             students_count = c.students_count or 0
             avg_progress = 0
             if total_lessons > 0 and students_count > 0:
-                # Приближённое среднее
                 avg_progress = int(round(
                     (completed_lessons / (total_lessons * students_count)) * 100
                 ))
@@ -545,6 +555,13 @@ class CourseListView(APIView):
                 'avg_progress': avg_progress,
                 'payments_count': sales['count'],
                 'revenue_usd': f"{sales['total']:.2f}",
+                # новые поля
+                'access_mode': c.access_mode,
+                'access_duration_days': c.access_duration_days,
+                'access_start': c.access_start,
+                'access_end': c.access_end,
+                'expiring_soon_count': c.expiring_soon_count or 0,
+                'expired_count': c.expired_count or 0,
             })
 
         return paginator.get_paginated_response(results)
@@ -654,12 +671,30 @@ def _course_stats(course):
 
     sales = _aggregate_sales_by_course([course.id]).get(course.id, {'count': 0, 'total': 0})
 
+    # === НОВОЕ: счётчики по срокам ===
+    now = timezone.now()
+    expiring_soon = Enrollment.objects.filter(
+        course=course,
+        is_active=True,
+        access_expires_at__gt=now,
+        access_expires_at__lte=now + timedelta(days=7),
+    ).count()
+
+    expired = Enrollment.objects.filter(
+        course=course,
+        is_active=True,
+        access_expires_at__lte=now,
+    ).count()
+
     return {
         'students_count': students_count,
         'completions_count': completions_count,
         'avg_progress': avg_progress,
         'payments_count': sales['count'],
         'revenue_usd': f"{sales['total']:.2f}",
+        # новые поля
+        'expiring_soon_count': expiring_soon,
+        'expired_count': expired,
     }
 
 
@@ -668,8 +703,8 @@ class CourseDetailView(APIView):
     GET /crm/courses/<id>/
 
     Детальная карточка курса: хедер, статистика, модули+уроки,
-    первые 20 учеников, первые 20 заказов, связанные товары,
-    ссылка на форум и WhatsApp.
+    первые 20 учеников (с данными о сроке доступа), первые 20 заказов,
+    связанные товары, ссылка на форум и WhatsApp, режим доступа.
     """
     permission_classes = [IsSuperuser]
 
@@ -729,11 +764,11 @@ class CourseDetailView(APIView):
         )
         products_data = []
         for link in links:
-            p = link.product  # через GenericForeignKey
+            p = link.product
             if not p:
                 continue
             products_data.append({
-                'type': link.content_type.model,   # 'course', 'membership', ...
+                'type': link.content_type.model,
                 'id': p.id,
                 'name': getattr(p, 'name', str(p)),
                 'price': f"{getattr(p, 'price', 0):.2f}",
@@ -750,6 +785,11 @@ class CourseDetailView(APIView):
             'created_at': course.created_at,
             'updated_at': course.updated_at,
             'whatsapp_group_url': course.whatsapp_group_url,
+            # новые поля таймингов
+            'access_mode': course.access_mode,
+            'access_duration_days': course.access_duration_days,
+            'access_start': course.access_start,
+            'access_end': course.access_end,
             'creator': {
                 'id': course.creator.id,
                 'username': course.creator.username,
@@ -823,9 +863,11 @@ class CourseOrdersView(APIView):
 
 def _serialize_course_students(enrollments, course):
     """
-    Для списка Enrollment возвращает компактные строки с прогрессом.
+    Для списка Enrollment возвращает компактные строки с прогрессом
+    и данными о сроке доступа (access_expires_at / access_status / days_left).
     """
     total_lessons = Lesson.objects.filter(module__course=course).count()
+    now = timezone.now()
 
     result = []
     for enr in enrollments:
@@ -840,6 +882,11 @@ def _serialize_course_students(enrollments, course):
         )
         has_certificate = Certificate.objects.filter(enrollment=enr).exists()
 
+        # срок доступа
+        days_left = None
+        if enr.access_expires_at:
+            days_left = max(0, (enr.access_expires_at - now).days)
+
         result.append({
             'user_id': enr.user.id,
             'username': enr.user.username or enr.user.email,
@@ -851,6 +898,10 @@ def _serialize_course_students(enrollments, course):
             'progress_percent': progress,
             'completed': has_certificate,
             'last_activity': last_activity,
+            # новые поля
+            'access_expires_at': enr.access_expires_at,
+            'access_status': enr.access_status,
+            'days_left': days_left,
         })
     return result
 
