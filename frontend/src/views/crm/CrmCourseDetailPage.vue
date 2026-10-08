@@ -451,15 +451,6 @@ const formatDate = (iso) => {
   })
 }
 
-const accessModeLabel = computed(() => {
-  if (!course.value) return '—'
-  const mode = course.value.access_mode
-  if (mode === 'unlimited') return 'Sin límite'
-  if (mode === 'duration') return 'Duración desde la compra'
-  if (mode === 'dates') return 'Fechas fijas'
-  return '—'
-})
-
 onMounted(loadCourse)
 
 const downloadCourseReport = async () => {
