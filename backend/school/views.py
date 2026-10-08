@@ -933,11 +933,14 @@ class ForumsListView(APIView):
 
     def get(self, request):
         me = request.user
-        student_courses = Course.objects.filter(
-            enrollments__user=me, enrollments__is_active=True, is_active=True,
-        )
-        teacher_courses = Course.objects.filter(course_teachers__teacher=me)
-        courses = (student_courses | teacher_courses).distinct().order_by('title')
+        if me.is_superuser:
+            courses = Course.objects.all().order_by('title')
+        else:
+            student_courses = Course.objects.filter(
+                enrollments__user=me, enrollments__is_active=True, is_active=True,
+            )
+            teacher_courses = Course.objects.filter(course_teachers__teacher=me)
+            courses = (student_courses | teacher_courses).distinct().order_by('title')
 
         return Response([
             {
