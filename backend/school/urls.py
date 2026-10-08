@@ -12,7 +12,8 @@ from .views import (
     CourseThreadsView, ThreadDetailView, ThreadPostsView, ThreadModerateView,
     ForumsListView,
     ConversationsView, ConversationView, ChatDirectoryView,
-    TeacherCourseAnalyticsView, PlatformAnalyticsView,
+    TeacherCourseAnalyticsView, PlatformAnalyticsView, PostEditView, PostModerateView,
+    PostDeleteView
 )
 
 urlpatterns = [
@@ -62,4 +63,9 @@ urlpatterns = [
 
     # Аналитика
     path('analytics/overview/', PlatformAnalyticsView.as_view(), name='school-analytics-overview'),
+
+    # Действия с постами
+    path('posts/<int:post_id>/edit/', PostEditView.as_view(), name='school-post-edit'),
+    path('posts/<int:post_id>/moderate/', PostModerateView.as_view(), name='school-post-moderate'),
+    path('posts/<int:post_id>/delete/', PostDeleteView.as_view(), name='school-post-delete'),
 ]

@@ -974,7 +974,10 @@ class ThreadDetailView(APIView):
         thread = get_object_or_404(ForumThread.objects.select_related('course'), id=thread_id)
         if not is_course_participant(request.user, thread.course):
             return Response({'error': 'Нет доступа'}, status=status.HTTP_403_FORBIDDEN)
-        ctx = {'teacher_ids': _course_teacher_ids(thread.course)}
+        ctx = {
+            'teacher_ids': _course_teacher_ids(thread.course),
+            'viewer_is_superuser': request.user.is_superuser,
+        }
         return Response(ForumThreadDetailSerializer(thread, context=ctx).data)
 
 
@@ -1223,3 +1226,72 @@ class ChatDirectoryView(APIView):
                 courses.append({'id': course.id, 'title': course.title, 'unread': c_unread, 'people': people})
 
         return Response({'role': role, 'total_unread': total_unread, 'courses': courses})
+
+
+class PostModerateView(APIView):
+    """
+    PATCH /school/posts/<id>/moderate/ - модерация поста.
+    Тело: {"is_hidden": bool}. Только суперюзер.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, post_id):
+        if not request.user.is_superuser:
+            return Response(
+                {'error': 'Solo el administrador puede moderar'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        post = get_object_or_404(
+            ForumPost.objects.select_related('thread__course'),
+            id=post_id,
+        )
+        if 'is_hidden' in request.data:
+            post.is_hidden = bool(request.data.get('is_hidden'))
+            post.save(update_fields=['is_hidden'])
+        return Response({'id': post.id, 'is_hidden': post.is_hidden})
+
+
+class PostEditView(APIView):
+    """
+    PATCH /school/posts/<id>/ - редактировать пост.
+    Тело: {"content": str}. Только суперюзер.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, post_id):
+        if not request.user.is_superuser:
+            return Response(
+                {'error': 'Solo el administrador puede editar'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        post = get_object_or_404(
+            ForumPost.objects.select_related('thread__course'),
+            id=post_id,
+        )
+        content = (request.data.get('content') or '').strip()
+        if not content:
+            return Response({'error': 'Нужен content'}, status=status.HTTP_400_BAD_REQUEST)
+        post.content = content
+        post.edited_at = timezone.now()
+        post.edited_by = request.user
+        post.save(update_fields=['content', 'edited_at', 'edited_by'])
+        ctx = {'teacher_ids': _course_teacher_ids(post.thread.course)}
+        return Response(ForumPostSerializer(post, context=ctx).data)
+
+
+class PostDeleteView(APIView):
+    """
+    DELETE /school/posts/<id>/ - удалить пост (hard delete).
+    Только суперюзер.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, post_id):
+        if not request.user.is_superuser:
+            return Response(
+                {'error': 'Solo el administrador puede eliminar'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        post = get_object_or_404(ForumPost, id=post_id)
+        post.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

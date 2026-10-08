@@ -170,4 +170,15 @@ export const schoolApi = {
   platformAnalytics() {
     return api.get('/school/analytics/overview/')
   },
+
+  // Действия с постами
+  editPost(postId, data) {
+    return api.patch(`/school/posts/${postId}/edit/`, data)
+  },
+  moderatePost(postId, data) {
+    return api.patch(`/school/posts/${postId}/moderate/`, data)
+  },
+  deletePost(postId) {
+    return api.delete(`/school/posts/${postId}/delete/`)
+  },
 }

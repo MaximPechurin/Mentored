@@ -294,10 +294,17 @@ class TeacherStudentProgressSerializer(serializers.ModelSerializer):
 class ForumPostSerializer(serializers.ModelSerializer):
     author = serializers.SerializerMethodField()
     is_teacher = serializers.SerializerMethodField()
+    is_hidden = serializers.BooleanField(read_only=True)
+    edited_at = serializers.DateTimeField(read_only=True)
+    edited_by_name = serializers.SerializerMethodField()
 
     class Meta:
         model = ForumPost
-        fields = ['id', 'author', 'author_id', 'is_teacher', 'content', 'created_at']
+        fields = [
+            'id', 'author', 'author_id', 'is_teacher',
+            'content', 'is_hidden', 'created_at', 'updated_at',
+            'edited_at', 'edited_by_name',
+        ]
 
     def get_author(self, obj):
         return _display_name(obj.author)
@@ -306,6 +313,9 @@ class ForumPostSerializer(serializers.ModelSerializer):
         # автор - препод этого курса? (для метки "преподаватель" в UI)
         teacher_ids = self.context.get('teacher_ids', set())
         return obj.author_id in teacher_ids
+
+    def get_edited_by_name(self, obj):
+        return _display_name(obj.edited_by) if obj.edited_by else None
 
 
 class ForumThreadListSerializer(serializers.ModelSerializer):
@@ -332,7 +342,10 @@ class ForumThreadDetailSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'author', 'is_pinned', 'is_locked', 'created_at', 'posts']
 
     def get_author(self, obj):
-        return _display_name(obj.author)
+        qs = obj.posts.select_related('author', 'edited_by')
+        if not self.context.get('viewer_is_superuser'):
+            qs = qs.filter(is_hidden=False)
+        return ForumPostSerializer(qs, many=True, context=self.context).data
 
 
 class DirectMessageSerializer(serializers.ModelSerializer):

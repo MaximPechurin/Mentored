@@ -57,14 +57,42 @@
           </div>
         </div>
 
-        <div class="foro-posts">
-          <p v-if="activeThread.posts.length === 0" class="foro-empty">{{ st('foro.noPosts') }}</p>
-          <div v-for="p in activeThread.posts" :key="p.id" class="foro-post">
-            <div class="foro-post-head">
-              <span class="foro-post-author">{{ p.author }}</span>
-              <span v-if="p.is_teacher" class="foro-teacher-badge">{{ st('foro.teacher') }}</span>
+        <div
+          v-for="p in activeThread.posts"
+          :key="p.id"
+          class="foro-post"
+          :class="{ 'foro-post--hidden': p.is_hidden }"
+        >
+          <div class="foro-post-head">
+            <span class="foro-post-author" :class="{ 'foro-post-author--teacher': p.is_teacher }">
+              {{ p.author }}
+            </span>
+            <span v-if="p.is_teacher" class="foro-teacher-badge">{{ st('foro.teacher') }}</span>
+            <span class="foro-post-date">{{ formatForumDate(p.created_at) }}</span>
+            <span v-if="p.is_hidden" class="foro-hidden-badge">Oculto</span>
+
+            <!-- Кнопки модерации (только админ) -->
+            <div v-if="isSuperuser" class="foro-post-actions">
+              <button @click="startEdit(p)" title="Editar">✏️</button>
+              <button @click="toggleHide(p)" :title="p.is_hidden ? 'Mostrar' : 'Ocultar'">
+                {{ p.is_hidden ? '👁' : '🙈' }}
+              </button>
+              <button @click="deletePost(p)" title="Eliminar">🗑</button>
             </div>
-            <div class="foro-post-text">{{ p.content }}</div>
+          </div>
+
+          <!-- Форма редактирования -->
+          <div v-if="editingPostId === p.id" class="foro-post-edit">
+            <textarea v-model="editText" rows="3" class="esc-textarea"></textarea>
+            <div class="foro-post-edit-actions">
+              <button class="esc-complete-btn" @click="saveEdit(p)">Guardar</button>
+              <button class="foro-cancel-btn" @click="cancelEdit">Cancelar</button>
+            </div>
+          </div>
+
+          <div v-else class="foro-post-text">{{ p.content }}</div>
+          <div v-if="p.edited_at" class="foro-post-edited">
+            Editado por {{ p.edited_by_name }} · {{ formatForumDate(p.edited_at) }}
           </div>
         </div>
 
@@ -104,6 +132,7 @@ const replyText = ref('')
 const replying = ref(false)
 
 const isTeacher = computed(() => !!user.value?.roles?.includes('teacher'))
+const isSuperuser = computed(() => !!user.value?.is_superuser)
 
 const goBack = () => router.back()
 
@@ -146,6 +175,63 @@ const moderate = async (field, value) => {
     activeThread.value.is_pinned = data.is_pinned
     activeThread.value.is_locked = data.is_locked
   } catch (e) { console.error('foro moderate', e); alert('Solo el profesor del curso') }
+}
+
+const editingPostId = ref(null)
+const editText = ref('')
+
+const startEdit = (post) => {
+  editingPostId.value = post.id
+  editText.value = post.content
+}
+
+const cancelEdit = () => {
+  editingPostId.value = null
+  editText.value = ''
+}
+
+const saveEdit = async (post) => {
+  if (!editText.value.trim()) return
+  try {
+    const { data } = await schoolApi.editPost(post.id, { content: editText.value.trim() })
+    // обновляем пост в массиве
+    const idx = activeThread.value.posts.findIndex(x => x.id === post.id)
+    if (idx !== -1) activeThread.value.posts[idx] = data
+    cancelEdit()
+  } catch (e) {
+    console.error('edit post', e)
+    alert('Error al editar')
+  }
+}
+
+const toggleHide = async (post) => {
+  try {
+    const { data } = await schoolApi.moderatePost(post.id, { is_hidden: !post.is_hidden })
+    post.is_hidden = data.is_hidden
+  } catch (e) {
+    console.error('moderate post', e)
+    alert('Error al moderar')
+  }
+}
+
+const deletePost = async (post) => {
+  if (!confirm('¿Eliminar este mensaje?')) return
+  try {
+    await schoolApi.deletePost(post.id)
+    activeThread.value.posts = activeThread.value.posts.filter(x => x.id !== post.id)
+  } catch (e) {
+    console.error('delete post', e)
+    alert('Error al eliminar')
+  }
+}
+
+const formatForumDate = (iso) => {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return d.toLocaleString('es-ES', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  })
 }
 
 onMounted(async () => {
@@ -195,10 +281,94 @@ onMounted(async () => {
 
 .foro-posts { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
 .foro-post { background: #fff; border: 1px solid #ece7e1; border-radius: 14px; padding: 14px 16px; }
-.foro-post-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .foro-post-author { font-weight: 600; color: #15110f; font-size: 14.5px; }
 .foro-teacher-badge { background: #fff4e0; color: #9a6a00; font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
 .foro-post-text { font-size: 14.5px; line-height: 1.6; color: #3f3a35; white-space: pre-wrap; word-break: break-word; }
 
 .foro-reply { background: #fff; border: 1px solid #ece7e1; border-radius: 16px; padding: 16px; }
+
+.foro-post-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.foro-post-author--teacher {
+  color: #8e1519;
+}
+
+.foro-post-date {
+  font-size: 12.5px;
+  color: #a59c93;
+}
+
+.foro-hidden-badge {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fbeaea;
+  color: #8e1519;
+}
+
+.foro-post-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+
+.foro-post-actions button {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 15px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.foro-post-actions button:hover {
+  background: #faf6f0;
+}
+
+.foro-post--hidden {
+  opacity: 0.55;
+  background: #fff9f9;
+}
+
+.foro-post-edit {
+  margin-top: 8px;
+}
+
+.foro-post-edit-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.foro-cancel-btn {
+  background: transparent;
+  border: 1px solid #e4ddd2;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+  color: #5d544c;
+}
+
+.foro-cancel-btn:hover {
+  border-color: #8e1519;
+  color: #8e1519;
+}
+
+.foro-post-edited {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #a59c93;
+  font-style: italic;
+}
 </style>
