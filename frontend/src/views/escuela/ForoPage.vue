@@ -73,11 +73,40 @@
 
             <!-- Кнопки модерации (только админ) -->
             <div v-if="isSuperuser" class="foro-post-actions">
-              <button @click="startEdit(p)" title="Editar">✏️</button>
-              <button @click="toggleHide(p)" :title="p.is_hidden ? 'Mostrar' : 'Ocultar'">
-                {{ p.is_hidden ? '👁' : '🙈' }}
+              <button @click="startEdit(p)" title="Editar" aria-label="Editar">
+                <!-- карандаш контурный -->
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 20h9"/>
+                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
+                </svg>
               </button>
-              <button @click="deletePost(p)" title="Eliminar">🗑</button>
+              <button
+                @click="toggleHide(p)"
+                :title="p.is_hidden ? 'Mostrar' : 'Ocultar'"
+                :aria-label="p.is_hidden ? 'Mostrar' : 'Ocultar'"
+                :class="{ 'active': p.is_hidden }"
+              >
+                <!-- eye -->
+                <svg v-if="!p.is_hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <!-- eye-off -->
+                <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                  <line x1="1" y1="1" x2="23" y2="23"/>
+                </svg>
+              </button>
+
+              <button @click="deletePost(p)" title="Eliminar" aria-label="Eliminar">
+                <!-- trash -->
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                  <path d="M10 11v6M14 11v6"/>
+                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                </svg>
+              </button>
             </div>
           </div>
 
@@ -321,17 +350,31 @@ onMounted(async () => {
 }
 
 .foro-post-actions button {
-  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
   background: transparent;
   cursor: pointer;
-  font-size: 15px;
-  padding: 2px 6px;
-  border-radius: 6px;
-  transition: background 0.15s;
+  color: #8a8079;
+  padding: 5px 7px;
+  border-radius: 8px;
+  transition: all 0.15s;
 }
 
 .foro-post-actions button:hover {
   background: #faf6f0;
+  color: #8e1519;
+  border-color: #ece7e1;
+}
+
+.foro-post-actions button.active {
+  color: #8e1519;
+  background: #fbeaea;
+}
+
+.foro-post-actions button svg {
+  display: block;
 }
 
 .foro-post--hidden {

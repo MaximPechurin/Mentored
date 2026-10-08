@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from rest_framework import status
 
 from django.contrib.auth import get_user_model
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 
 from .models import (
     Course, Module, Enrollment, Lesson, LessonMaterial, LessonProgress, Assignment, Submission,
@@ -1205,9 +1205,26 @@ class ChatDirectoryView(APIView):
 
         if teaches:
             role = 'teacher'
-            for course in Course.objects.filter(course_teachers__teacher=me).distinct().order_by('title'):
-                people, c_unread = [], 0
-                for enr in course.enrollments.filter(is_active=True).select_related('user'):
+            courses_qs = (
+                Course.objects
+                .filter(course_teachers__teacher=me)
+                .distinct()
+                .order_by('title')
+                .prefetch_related(
+                    Prefetch(
+                        'enrollments',
+                        queryset=Enrollment.objects
+                        .filter(is_active=True)
+                        .select_related('user'),
+                        to_attr='active_enrollments',
+                    )
+                )
+            )
+            courses = []
+            for course in courses_qs:
+                people = []
+                c_unread = 0
+                for enr in course.active_enrollments:
                     u = enr.user
                     cnt = unread.get(u.id, 0)
                     c_unread += cnt
@@ -1215,10 +1232,25 @@ class ChatDirectoryView(APIView):
                 courses.append({'id': course.id, 'title': course.title, 'unread': c_unread, 'people': people})
         else:
             role = 'student'
-            for enr in Enrollment.objects.filter(user=me, is_active=True).select_related('course').order_by('-enrolled_at'):
+            enrollments_qs = (
+                Enrollment.objects
+                .filter(user=me, is_active=True)
+                .select_related('course')
+                .order_by('-enrolled_at')
+                .prefetch_related(
+                    Prefetch(
+                        'course__course_teachers',
+                        queryset=CourseTeacher.objects.select_related('teacher'),
+                        to_attr='prefetched_teachers',
+                    )
+                )
+            )
+            courses = []
+            for enr in enrollments_qs:
                 course = enr.course
-                people, c_unread = [], 0
-                for ct in course.course_teachers.select_related('teacher'):
+                people = []
+                c_unread = 0
+                for ct in course.prefetched_teachers:
                     t = ct.teacher
                     cnt = unread.get(t.id, 0)
                     c_unread += cnt
