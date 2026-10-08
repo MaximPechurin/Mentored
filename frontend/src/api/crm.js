@@ -55,4 +55,10 @@ export const crmApi = {
   getContactMessagesUnreadCount() {
     return api.get('/crm/contact-messages/unread-count/')
   },
+  getSubmissions(params = {}) {
+    return api.get('/crm/submissions/', { params })
+  },
+  getSubmission(id) {
+    return api.get(`/crm/submissions/${id}/`)
+  },
 }

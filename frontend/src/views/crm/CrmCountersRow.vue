@@ -46,14 +46,14 @@ const items = computed(() => [
     key: 'orders_paid_30d',
     label: 'Pagos (30 días)',
     value: props.counters.orders_paid_30d,
-    to: { name: 'CrmPayments', query: { period: '30d' } },
+    to: { name: 'CrmOrders', query: { status: 'paid' } },
   },
   {
     key: 'revenue_usd_30d',
     label: 'Ventas (30 días)',
     value: `$${props.counters.revenue_usd_30d}`,
     accent: true,
-    to: { name: 'CrmPayments', query: { period: '30d' } },
+    to: { name: 'CrmOrders', query: { status: 'paid' } },
   },
   {
     key: 'submissions_pending',

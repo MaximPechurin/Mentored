@@ -2,7 +2,7 @@
   <div class="crm-card">
     <div class="crm-card-head">
       <h2>Últimos pagos</h2>
-      <router-link :to="{ name: 'CrmPayments' }" class="crm-card-more">
+      <router-link :to="{ name: 'CrmOrders', query: { status: 'paid' } }" class="crm-card-more">
         Ver todos →
       </router-link>
     </div>

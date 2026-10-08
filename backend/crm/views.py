@@ -1504,3 +1504,200 @@ class ContactMessageUnreadCountView(APIView):
         return Response({
             'unread': ContactMessage.objects.filter(is_read=False).count(),
         })
+
+
+# ============================================================
+# SUBMISSIONS (Tareas)
+# ============================================================
+
+STATUS_ES_SUBMISSION = {
+    'submitted': 'Pendiente',
+    'reviewed': 'Revisado',
+    'needs_revision': 'Revisión',
+}
+
+
+class SubmissionListView(APIView):
+    """
+    GET /crm/submissions/
+
+    Список ответов студентов на ДЗ.
+
+    Query-параметры:
+      - search       — по студенту (email/имя), заданию, курсу
+      - status       — submitted / reviewed / needs_revision
+      - course       — id курса
+      - teacher      — id преподавателя (по CourseTeacher)
+      - date_from    — YYYY-MM-DD (submitted_at)
+      - date_to      — YYYY-MM-DD
+      - ordering     — submitted_at, -submitted_at, reviewed_at, -reviewed_at,
+                       score, -score
+      - page, page_size
+    """
+    permission_classes = [IsSuperuser]
+
+    def get(self, request):
+        qs = (
+            Submission.objects
+            .select_related(
+                'assignment__lesson__module__course',
+                'enrollment__user',
+                'reviewed_by',
+            )
+        )
+
+        # --- Поиск ---
+        search = (request.query_params.get('search') or '').strip()
+        if search:
+            qs = qs.filter(
+                Q(enrollment__user__email__icontains=search) |
+                Q(enrollment__user__username__icontains=search) |
+                Q(assignment__title__icontains=search) |
+                Q(assignment__lesson__title__icontains=search) |
+                Q(assignment__lesson__module__course__title__icontains=search)
+            )
+
+        # --- Статус ---
+        status = request.query_params.get('status')
+        if status:
+            qs = qs.filter(status=status)
+
+        # --- Курс ---
+        course_id = request.query_params.get('course')
+        if course_id:
+            qs = qs.filter(assignment__lesson__module__course_id=course_id)
+
+        # --- Преподаватель ---
+        teacher_id = request.query_params.get('teacher')
+        if teacher_id:
+            qs = qs.filter(
+                assignment__lesson__module__course__course_teachers__teacher_id=teacher_id
+            ).distinct()
+
+        # --- Даты ---
+        date_from = request.query_params.get('date_from')
+        if date_from:
+            qs = qs.filter(submitted_at__date__gte=date_from)
+        date_to = request.query_params.get('date_to')
+        if date_to:
+            qs = qs.filter(submitted_at__date__lte=date_to)
+
+        # --- Сортировка ---
+        ordering = request.query_params.get('ordering', '-submitted_at')
+        allowed = {
+            'submitted_at', '-submitted_at',
+            'reviewed_at', '-reviewed_at',
+            'score', '-score',
+        }
+        if ordering not in allowed:
+            ordering = '-submitted_at'
+        qs = qs.order_by(ordering)
+
+        # --- Пагинация ---
+        paginator = CrmPagination()
+        page = paginator.paginate_queryset(qs, request, view=self)
+
+        results = []
+        for s in page:
+            course = s.assignment.lesson.module.course
+            results.append({
+                'id': s.id,
+                'submitted_at': s.submitted_at,
+                'reviewed_at': s.reviewed_at,
+                'user_id': s.enrollment.user.id,
+                'user_name': s.enrollment.user.username or s.enrollment.user.email,
+                'user_email': s.enrollment.user.email,
+                'course_id': course.id,
+                'course_title': course.title,
+                'lesson_title': s.assignment.lesson.title,
+                'assignment_title': s.assignment.title,
+                'status': s.status,
+                'status_display': STATUS_ES_SUBMISSION.get(s.status, s.status),
+                'score': s.score,
+                'reviewed_by': (
+                    (s.reviewed_by.username or s.reviewed_by.email)
+                    if s.reviewed_by else None
+                ),
+            })
+
+        return paginator.get_paginated_response(results)
+
+
+class SubmissionDetailView(APIView):
+    """
+    GET /crm/submissions/<id>/
+
+    Детали одного ответа: студент, задание, текст ответа, файл,
+    проверка, комментарии.
+    """
+    permission_classes = [IsSuperuser]
+
+    def get(self, request, pk):
+        s = (
+            Submission.objects
+            .select_related(
+                'assignment__lesson__module__course',
+                'enrollment__user',
+                'reviewed_by',
+            )
+            .prefetch_related('comments__author')
+            .filter(pk=pk)
+            .first()
+        )
+        if not s:
+            return Response({'detail': 'Tarea no encontrada.'}, status=404)
+
+        course = s.assignment.lesson.module.course
+
+        comments = [
+            {
+                'id': c.id,
+                'author_id': c.author.id,
+                'author_name': c.author.username or c.author.email,
+                'text': c.text,
+                'created_at': c.created_at,
+            }
+            for c in s.comments.all()
+        ]
+
+        return Response({
+            'id': s.id,
+            'submitted_at': s.submitted_at,
+            'status': s.status,
+            'status_display': STATUS_ES_SUBMISSION.get(s.status, s.status),
+            'text': s.text,
+            'file_url': s.file.url if s.file else None,
+            'is_public': s.is_public,
+
+            'user': {
+                'id': s.enrollment.user.id,
+                'username': s.enrollment.user.username or s.enrollment.user.email,
+                'email': s.enrollment.user.email,
+            },
+            'course': {
+                'id': course.id,
+                'title': course.title,
+            },
+            'lesson': {
+                'id': s.assignment.lesson.id,
+                'title': s.assignment.lesson.title,
+            },
+            'assignment': {
+                'id': s.assignment.id,
+                'title': s.assignment.title,
+                'description': s.assignment.description,
+                'max_score': s.assignment.max_score,
+            },
+
+            'score': s.score,
+            'mentor_comment': s.mentor_comment,
+            'reviewed_by': (
+                {
+                    'id': s.reviewed_by.id,
+                    'name': s.reviewed_by.username or s.reviewed_by.email,
+                } if s.reviewed_by else None
+            ),
+            'reviewed_at': s.reviewed_at,
+
+            'comments': comments,
+        })

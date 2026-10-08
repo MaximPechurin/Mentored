@@ -35,10 +35,10 @@ import CrmTeachersPage from '../views/crm/CrmTeachersPage.vue'
 import CrmTeacherDetailPage from '../views/crm/CrmTeacherDetailPage.vue'
 import CrmOrdersPage from '../views/crm/CrmOrdersPage.vue'
 import CrmOrderDetailPage from '../views/crm/CrmOrderDetailPage.vue'
-import CrmPaymentsPage from '../views/crm/CrmPaymentsPage.vue'
 import CrmContactMessagesPage from '../views/crm/CrmContactMessagesPage.vue'
 import CrmSubmissionsPage from '../views/crm/CrmSubmissionsPage.vue'
 import CrmContactMessageDetailPage from "../views/crm/CrmContactMessageDetailPage.vue";
+import CrmSubmissionDetailPage from "../views/crm/CrmSubmissionDetailPage.vue";
 
 const routes = [
   {
@@ -240,11 +240,6 @@ const routes = [
         props: true,
       },
       {
-        path: 'payments',
-        name: 'CrmPayments',
-        component: CrmPaymentsPage,
-      },
-      {
         path: 'contact-messages',
         name: 'CrmContactMessages',
         component: CrmContactMessagesPage,
@@ -258,6 +253,12 @@ const routes = [
         path: 'contact-messages/:id',
         name: 'CrmContactMessageDetail',
         component: CrmContactMessageDetailPage,
+        props: true,
+      },
+      {
+        path: 'submissions/:id',
+        name: 'CrmSubmissionDetail',
+        component: CrmSubmissionDetailPage,
         props: true,
       },
     ],
