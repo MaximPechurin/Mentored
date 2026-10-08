@@ -3,7 +3,8 @@ from django.urls import path
 from .views import DashboardView, StudentListView, StudentDetailView, CourseListView, CourseDetailView, CourseStudentsView, \
     CourseOrdersView, TeacherListView, TeacherDetailView, OrderListView, OrderDetailView, PaymentListView, ContactMessageListView, \
     ContactMessageBulkActionView, ContactMessageUnreadCountView, ContactMessageDetailView, SubmissionListView, \
-    SubmissionDetailView, SalesReportExportView
+    SubmissionDetailView, SalesReportExportView, StudentExportView, CourseExportView, CourseReportExportView, \
+    TeacherExportView, OrderExportView, SubmissionExportView, ContactMessageExportView
 
 app_name = 'crm'
 
@@ -27,4 +28,11 @@ urlpatterns = [
     path('submissions/', SubmissionListView.as_view(), name='submissions'),
     path('submissions/<int:pk>/', SubmissionDetailView.as_view(), name='submission-detail'),
     path('reports/sales/', SalesReportExportView.as_view(), name='sales-report-export'),
+    path('students/export/', StudentExportView.as_view(), name='students-export'),
+    path('courses/export/', CourseExportView.as_view(), name='courses-export'),
+    path('courses/<int:pk>/report/', CourseReportExportView.as_view(), name='course-report-export'),
+    path('teachers/export/', TeacherExportView.as_view(), name='teachers-export'),
+    path('orders/export/', OrderExportView.as_view(), name='orders-export'),
+    path('submissions/export/', SubmissionExportView.as_view(), name='submissions-export'),
+    path('contact-messages/export/', ContactMessageExportView.as_view(), name='contact-messages-export'),
 ]
