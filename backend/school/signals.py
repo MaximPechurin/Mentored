@@ -1,6 +1,7 @@
 import logging
 
 from django.contrib.contenttypes.models import ContentType
+from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -98,3 +99,58 @@ def on_enrollment_saved(sender, instance, **kwargs):
             "School: ошибка назначения роли student для user=%s (enrollment=%s)",
             instance.user_id, instance.pk,
         )
+
+def compute_access_expires_at(enrollment):
+    """
+    Считает access_expires_at по настройкам курса. Возвращает
+    datetime | None. Не сохраняет — только вычисляет.
+    """
+    from django.utils import timezone
+
+    course = enrollment.course
+    mode = getattr(course, 'access_mode', 'unlimited')
+
+    if mode == 'unlimited':
+        return None
+
+    if mode == 'duration':
+        days = course.access_duration_days
+        if not days:
+            return None
+        return timezone.now() + timedelta(days=days)
+
+    if mode == 'dates':
+        # для фазовых курсов: срок = access_end
+        return course.access_end
+
+    return None
+
+
+def on_enrollment_saved(sender, instance, **kwargs):
+    """
+    ... (существующая логика про роль student) ...
+    + автоподстановка access_expires_at, если он ещё не задан
+    """
+    from django.utils import timezone
+    from mentored.models import Role
+
+    # === Существующая логика с ролью ===
+    if instance.is_active:
+        try:
+            student_role, _ = Role.objects.get_or_create(
+                codename=Role.STUDENT, defaults={'name': 'Студент'},
+            )
+            instance.user.roles.add(student_role)
+        except Exception:
+            logger.exception(...)
+
+    # === НОВОЕ: автоподстановка access_expires_at ===
+    # Только при СОЗДАНИИ (или если поле пустое) — не перетираем ручные правки.
+    if kwargs.get('created') and instance.access_expires_at is None:
+        expires = compute_access_expires_at(instance)
+        if expires is not None:
+            # update через queryset, чтобы не рекурсить сигнал
+            type(instance).objects.filter(pk=instance.pk).update(
+                access_expires_at=expires,
+            )
+            instance.access_expires_at = expires

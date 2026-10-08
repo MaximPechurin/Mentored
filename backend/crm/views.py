@@ -152,6 +152,10 @@ class StudentListView(APIView):
       - search           — поиск по email, username, phone
       - access           — 'active' | 'none' (фильтр по наличию Enrollment)
       - role             — 'student' | 'teacher' (по роли)
+      - access_expiring  — N дней: показать только тех, у кого доступ
+                           истекает в течение N дней (1..365)
+      - access_expired   — 'true': показать только тех, у кого есть
+                           истёкшие Enrollment
       - ordering         — '-created_at', 'username', 'email'
       - page             — номер страницы
       - page_size        — размер страницы (20/50/100)
@@ -161,6 +165,9 @@ class StudentListView(APIView):
     permission_classes = [IsSuperuser]
 
     def get(self, request):
+        from datetime import timedelta
+        from django.utils import timezone
+
         qs = User.objects.filter(is_active=True)
 
         # --- Поиск ---
@@ -183,6 +190,31 @@ class StudentListView(APIView):
         role = request.query_params.get('role')
         if role:
             qs = qs.filter(roles__codename=role).distinct()
+
+        # --- Фильтр "доступ истекает в течение N дней" ---
+        access_expiring = request.query_params.get('access_expiring')
+        if access_expiring:
+            try:
+                days = int(access_expiring)
+                if 1 <= days <= 365:
+                    now = timezone.now()
+                    threshold = now + timedelta(days=days)
+                    qs = qs.filter(
+                        enrollments__is_active=True,
+                        enrollments__access_expires_at__gt=now,
+                        enrollments__access_expires_at__lte=threshold,
+                    ).distinct()
+            except (TypeError, ValueError):
+                pass
+
+        # --- Фильтр "есть истёкшие доступы" ---
+        access_expired = request.query_params.get('access_expired')
+        if access_expired == 'true':
+            now = timezone.now()
+            qs = qs.filter(
+                enrollments__is_active=True,
+                enrollments__access_expires_at__lte=now,
+            ).distinct()
 
         # --- Сортировка ---
         ordering = request.query_params.get('ordering', '-created_at')
@@ -229,11 +261,14 @@ class StudentDetailView(APIView):
     GET /crm/students/<id>/
 
     Детальная карточка ученика: основные данные, список курсов
-    (с прогрессом по каждому), список заказов, агрегированная статистика.
+    (с прогрессом и данными о сроке доступа по каждому Enrollment),
+    список заказов, агрегированная статистика.
     """
     permission_classes = [IsSuperuser]
 
     def get(self, request, pk):
+        from django.utils import timezone
+
         user = (
             User.objects
             .prefetch_related('roles')
@@ -243,7 +278,7 @@ class StudentDetailView(APIView):
         if not user:
             return Response({'detail': 'Alumno no encontrado.'}, status=404)
 
-        # ---------- Курсы ученика с прогрессом ----------
+        # ---------- Курсы ученика с прогрессом + данными доступа ----------
         enrollments = (
             Enrollment.objects
             .filter(user=user)
@@ -251,6 +286,7 @@ class StudentDetailView(APIView):
             .order_by('-enrolled_at')
         )
 
+        now = timezone.now()
         courses = []
         for enr in enrollments:
             lessons_total = Lesson.objects.filter(module__course=enr.course).count()
@@ -268,7 +304,13 @@ class StudentDetailView(APIView):
                 .aggregate(m=Max('updated_at'))['m']
             )
 
+            # дни до окончания (None, если без срока)
+            days_left = None
+            if enr.access_expires_at:
+                days_left = max(0, (enr.access_expires_at - now).days)
+
             courses.append({
+                'enrollment_id': enr.id,
                 'course_id': enr.course.id,
                 'course_title': enr.course.title,
                 'course_slug': enr.course.slug,
@@ -278,6 +320,10 @@ class StudentDetailView(APIView):
                 'lessons_completed': lessons_completed,
                 'progress_percent': progress_percent,
                 'last_activity': last_activity,
+                # новые поля доступа:
+                'access_expires_at': enr.access_expires_at,
+                'access_status': enr.access_status,
+                'days_left': days_left,
             })
 
         # ---------- Заказы ученика ----------
@@ -316,7 +362,7 @@ class StudentDetailView(APIView):
         orders_paid_qs = Order.objects.filter(user=user, status='paid')
         total_paid = orders_paid_qs.aggregate(s=Sum('total'))['s'] or 0
 
-        # Последняя активность: MAX из LessonProgress.updated_at + Submission.submitted_at
+        # Последняя активность
         lp_last = LessonProgress.objects.filter(
             enrollment__user=user,
         ).aggregate(m=Max('updated_at'))['m']
@@ -327,6 +373,13 @@ class StudentDetailView(APIView):
 
         last_activity = max([d for d in (lp_last, sub_last) if d], default=None)
 
+        # счётчики по доступам
+        expiring_count = sum(
+            1 for c in courses
+            if c['access_status'] == 'active' and c['days_left'] is not None and c['days_left'] <= 7
+        )
+        expired_count = sum(1 for c in courses if c['access_status'] == 'expired')
+
         stats = {
             'courses_count': len(courses),
             'courses_active': sum(1 for c in courses if c['is_active']),
@@ -334,6 +387,8 @@ class StudentDetailView(APIView):
             'orders_paid': orders_paid_qs.count(),
             'total_paid_usd': f"{total_paid:.2f}",
             'last_activity': last_activity,
+            'expiring_count': expiring_count,
+            'expired_count': expired_count,
         }
 
         # ---------- Отдаём ----------
@@ -1925,3 +1980,50 @@ class SalesReportExportView(APIView):
         date_to = request.query_params.get('date_to')
         filename, content = exports.export_sales_report(date_from, date_to)
         return _xlsx_response(filename, content)
+
+
+class ExpiringEnrollmentsView(APIView):
+    """
+    GET /crm/enrollments/expiring/
+    Список активных Enrollment с истекающим (в течение N дней) или
+    уже истёкшим доступом. Для админского контроля.
+    Query: ?days=7 (по умолчанию 7), ?status=expiring|expired|all
+    """
+    permission_classes = [IsSuperuser]
+
+    def get(self, request):
+        days = int(request.query_params.get('days', 7))
+        status_filter = request.query_params.get('status', 'all')
+
+        now = timezone.now()
+        threshold = now + timedelta(days=days)
+
+        qs = Enrollment.objects.filter(
+            is_active=True,
+            access_expires_at__isnull=False,
+        ).select_related('user', 'course')
+
+        if status_filter == 'expiring':
+            qs = qs.filter(access_expires_at__gt=now, access_expires_at__lte=threshold)
+        elif status_filter == 'expired':
+            qs = qs.filter(access_expires_at__lte=now)
+        else:
+            qs = qs.filter(access_expires_at__lte=threshold)
+
+        qs = qs.order_by('access_expires_at')
+
+        results = [
+            {
+                'enrollment_id': e.id,
+                'user_id': e.user.id,
+                'user_name': e.user.username or e.user.email,
+                'user_email': e.user.email,
+                'course_id': e.course.id,
+                'course_title': e.course.title,
+                'access_expires_at': e.access_expires_at,
+                'access_status': e.access_status,
+                'days_left': max(0, (e.access_expires_at - now).days),
+            }
+            for e in qs[:200]
+        ]
+        return Response(results)

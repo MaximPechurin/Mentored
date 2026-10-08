@@ -62,8 +62,8 @@ class CourseDetailView(APIView):
         enrollment = Enrollment.objects.filter(
             user=request.user, course=course, is_active=True,
         ).first()
-        if not enrollment:
-            return Response({'error': 'Нет доступа к этому курсу'}, status=status.HTTP_403_FORBIDDEN)
+        if not _enrollment_has_access(enrollment):
+            return Response({'error': 'Acceso expirado'}, status=status.HTTP_403_FORBIDDEN)
 
         modules = course.modules.prefetch_related(
             'lessons__materials', 'lessons__assignments',
@@ -83,6 +83,8 @@ class CourseDetailView(APIView):
             'whatsapp_group_url': course.whatsapp_group_url,
             'modules': modules_data,
             'has_certificate': Certificate.objects.filter(enrollment=enrollment).exists(),
+            'access_expires_at': enrollment.access_expires_at,
+            'access_status': enrollment.access_status,
         })
 
 
@@ -100,7 +102,7 @@ class CertificateDownloadView(APIView):
         enrollment = Enrollment.objects.filter(
             user=request.user, course=course, is_active=True,
         ).first()
-        if not enrollment:
+        if not _enrollment_has_access(enrollment):
             return Response({'error': 'Нет доступа к этому курсу'}, status=status.HTTP_403_FORBIDDEN)
 
         certificate = Certificate.objects.filter(enrollment=enrollment).first()
@@ -134,7 +136,7 @@ class LessonProgressView(APIView):
         enrollment = Enrollment.objects.filter(
             user=request.user, course=course, is_active=True,
         ).first()
-        if not enrollment:
+        if not _enrollment_has_access(enrollment):
             return Response({'error': 'Нет доступа к этому курсу'}, status=status.HTTP_403_FORBIDDEN)
 
         progress, _ = LessonProgress.objects.get_or_create(enrollment=enrollment, lesson=lesson)
@@ -196,7 +198,10 @@ def _maybe_issue_certificate(enrollment, course):
 def _student_enrollment_for_assignment(user, assignment):
     """ Активный Enrollment студента на курс, к которому относится задание, либо None. """
     course = assignment.lesson.module.course
-    return Enrollment.objects.filter(user=user, course=course, is_active=True).first()
+    enrollment = Enrollment.objects.filter(user=user, course=course, is_active=True).first()
+    if not _enrollment_has_access(enrollment):
+        return None
+    return enrollment
 
 
 class AssignmentDetailView(APIView):
@@ -206,7 +211,7 @@ class AssignmentDetailView(APIView):
     def get(self, request, assignment_id):
         assignment = get_object_or_404(Assignment, id=assignment_id)
         enrollment = _student_enrollment_for_assignment(request.user, assignment)
-        if not enrollment:
+        if not _enrollment_has_access(enrollment):
             return Response({'error': 'Нет доступа к этому курсу'}, status=status.HTTP_403_FORBIDDEN)
         my_sub = Submission.objects.prefetch_related('comments__author').filter(
             assignment=assignment, enrollment=enrollment,
@@ -240,7 +245,7 @@ class AssignmentSubmitView(APIView):
     def post(self, request, assignment_id):
         assignment = get_object_or_404(Assignment, id=assignment_id)
         enrollment = _student_enrollment_for_assignment(request.user, assignment)
-        if not enrollment:
+        if not _enrollment_has_access(enrollment):
             return Response({'error': 'Нет доступа к этому курсу'}, status=status.HTTP_403_FORBIDDEN)
 
         text = request.data.get('text', '')
@@ -719,7 +724,7 @@ class TeacherStudentCourseDetailView(APIView):
         enrollment = Enrollment.objects.filter(
             user=student, course=course, is_active=True,
         ).first()
-        if not enrollment:
+        if not _enrollment_has_access(enrollment):
             return Response({'error': 'У этого студента нет доступа к курсу'}, status=status.HTTP_404_NOT_FOUND)
 
         modules = course.modules.prefetch_related(
@@ -907,6 +912,30 @@ class TeacherHomeworkView(APIView):
 # ============================================================
 # Форум курса
 # ============================================================
+
+def _enrollment_has_access(enrollment):
+    """
+    Есть ли у Enrollment активный доступ (учитывая тайминги).
+    - is_active=False → нет
+    - access_start в будущем → нет
+    - access_expires_at в прошлом → нет
+    - иначе → да
+    """
+    from django.utils import timezone
+
+    if not enrollment or not enrollment.is_active:
+        return False
+
+    now = timezone.now()
+
+    access_start = getattr(enrollment.course, 'access_start', None)
+    if access_start and access_start > now:
+        return False
+
+    if enrollment.access_expires_at and enrollment.access_expires_at <= now:
+        return False
+
+    return True
 
 def _course_teacher_ids(course):
     return set(course.course_teachers.values_list('teacher_id', flat=True))

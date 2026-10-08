@@ -61,6 +61,9 @@ export const crmApi = {
   getSubmission(id) {
     return api.get(`/crm/submissions/${id}/`)
   },
+  extendEnrollmentAccess(enrollmentId, data) {
+    return api.post(`/crm/enrollments/${enrollmentId}/extend/`, data)
+  },
   async downloadExport(url, params = {}) {
     const response = await api.get(url, {
       params,

@@ -30,7 +30,19 @@
           :to="`/escuela/curso/${course.slug}`"
           class="esc-course"
         >
-          <h3 class="esc-course-title">{{ course.title }}</h3>
+          <h3 class="esc-course-title">
+            {{ course.title }}
+            <span
+              v-if="course.access_limited"
+              class="mycourse-access-badge"
+              :class="accessBadgeClass(course.access_status)"
+            >
+              <template v-if="course.access_status === 'active'">⏳ {{ course.days_left }}d</template>
+              <template v-else-if="course.access_status === 'expired'">🔒 Expirado</template>
+              <template v-else-if="course.access_status === 'not_started'">🕐 Próximo</template>
+              <template v-else>⚫ Bloqueado</template>
+            </span>
+          </h3>
           <p v-if="course.teachers.length" class="esc-course-teacher">{{ course.teachers.join(', ') }}</p>
           <div class="esc-progress">
             <span>{{ st('common.progreso') }}</span>
@@ -75,6 +87,13 @@ const userDisplayName = computed(() => {
 const userInitials = computed(() => {
   const name = userDisplayName.value
   return name ? name.charAt(0).toUpperCase() : '?'
+})
+
+const accessBadgeClass = (status) => ({
+  'badge-active': status === 'active',
+  'badge-expired': status === 'expired',
+  'badge-pending': status === 'not_started',
+  'badge-blocked': status === 'blocked',
 })
 
 const downloadCertificate = async (course) => {
@@ -318,5 +337,40 @@ onMounted(async () => {
 @media (max-width: 920px) {
   .esc-hero { padding: 40px 20px !important; }
   .esc-shell { padding: 32px 20px 72px !important; }
+}
+
+.mycourse-access-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  margin-left: 8px;
+  vertical-align: middle;
+  font-family: 'Hanken Grotesk', sans-serif;
+  letter-spacing: 0.3px;
+  text-transform: none;
+}
+
+.mycourse-access-badge.badge-active {
+  background: #eaf5ed;
+  color: #2f7a3a;
+}
+
+.mycourse-access-badge.badge-expired {
+  background: #fbeaea;
+  color: #8e1519;
+}
+
+.mycourse-access-badge.badge-pending {
+  background: #f0ede8;
+  color: #6f655c;
+}
+
+.mycourse-access-badge.badge-blocked {
+  background: #f0ede8;
+  color: #6f655c;
 }
 </style>

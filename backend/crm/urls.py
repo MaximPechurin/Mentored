@@ -4,7 +4,7 @@ from .views import DashboardView, StudentListView, StudentDetailView, CourseList
     CourseOrdersView, TeacherListView, TeacherDetailView, OrderListView, OrderDetailView, PaymentListView, ContactMessageListView, \
     ContactMessageBulkActionView, ContactMessageUnreadCountView, ContactMessageDetailView, SubmissionListView, \
     SubmissionDetailView, SalesReportExportView, StudentExportView, CourseExportView, CourseReportExportView, \
-    TeacherExportView, OrderExportView, SubmissionExportView, ContactMessageExportView
+    TeacherExportView, OrderExportView, SubmissionExportView, ContactMessageExportView, ExpiringEnrollmentsView
 
 app_name = 'crm'
 
@@ -52,4 +52,6 @@ urlpatterns = [
 
     # --- Отчёты ---
     path('reports/sales/', SalesReportExportView.as_view(), name='sales-report-export'),
+
+    path('enrollments/expiring/', ExpiringEnrollmentsView.as_view(), name='enrollments-expiring'),
 ]

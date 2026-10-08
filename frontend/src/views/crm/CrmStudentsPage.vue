@@ -40,6 +40,14 @@
         <option value="student">Estudiantes</option>
         <option value="teacher">Profesores</option>
       </select>
+
+      <select v-model="accessExpiringFilter" @change="reload(1)">
+        <option value="">Todos los accesos</option>
+        <option value="7">Vencen en 7 días</option>
+        <option value="14">Vencen en 14 días</option>
+        <option value="30">Vencen en 30 días</option>
+        <option value="expired">Ya vencidos</option>
+      </select>
     </div>
 
     <!-- Таблица -->
@@ -136,6 +144,7 @@ const search = ref('')
 const accessFilter = ref('')
 const roleFilter = ref('')
 const ordering = ref('-created_at')
+const accessExpiringFilter = ref('')
 
 let searchTimeout = null
 
@@ -150,6 +159,12 @@ const loadStudents = async () => {
     if (accessFilter.value) params.access = accessFilter.value
     if (roleFilter.value) params.role = roleFilter.value
     if (ordering.value) params.ordering = ordering.value
+    // Новое: фильтр по сроку доступа
+    if (accessExpiringFilter.value === 'expired') {
+      params.access_expired = 'true'
+    } else if (accessExpiringFilter.value) {
+      params.access_expiring = accessExpiringFilter.value
+    }
 
     const res = await crmApi.getStudents(params)
     students.value = res.data.results

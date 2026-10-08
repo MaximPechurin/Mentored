@@ -13,6 +13,29 @@
       </div>
     </section>
 
+    <div v-if="course.access_expires_at" class="esc-access-banner" :class="bannerClass">
+      <template v-if="course.access_status === 'active'">
+        <span class="esc-access-icon">⏳</span>
+        <span>
+          {{ st('course.accessHasta') || 'Tu acceso está disponible hasta' }}
+          <strong>{{ fmtDate(course.access_expires_at) }}</strong>
+          ({{ daysLeftLabel }})
+        </span>
+      </template>
+      <template v-else-if="course.access_status === 'expired'">
+        <span class="esc-access-icon">🔒</span>
+        <span>
+          {{ st('course.accessExpirado') || 'Tu acceso ha expirado. Contáctanos para renovarlo.' }}
+        </span>
+      </template>
+      <template v-else-if="course.access_status === 'not_started'">
+        <span class="esc-access-icon">🕐</span>
+        <span>
+          {{ st('course.accessProximo') || 'El acceso se abrirá próximamente.' }}
+        </span>
+      </template>
+    </div>
+
     <div class="esc-shell">
       <p v-if="course.description" class="esc-course-description">{{ course.description }}</p>
 
@@ -119,6 +142,21 @@ const isLessonLocked = (lessonId) => lockedLessonIds.value.has(lessonId)
 const onLessonClick = (event, lesson) => {
   if (isLessonLocked(lesson.id)) event.preventDefault()
 }
+
+const daysLeftLabel = computed(() => {
+  const days = course.value?.days_left
+  if (days === null || days === undefined) return ''
+  if (days === 0) return 'vence hoy'
+  if (days === 1) return 'queda 1 día'
+  return `quedan ${days} días`
+})
+
+const bannerClass = computed(() => ({
+  'esc-access-banner--active': course.value?.access_status === 'active',
+  'esc-access-banner--warn': course.value?.access_status === 'active' && course.value?.days_left <= 7,
+  'esc-access-banner--expired': course.value?.access_status === 'expired',
+  'esc-access-banner--pending': course.value?.access_status === 'not_started',
+}))
 
 onMounted(async () => {
   if (!isAuthenticated.value) {
@@ -354,4 +392,41 @@ onMounted(async () => {
   .esc-hero { padding: 40px 20px !important; }
   .esc-shell { padding: 32px 20px 72px !important; }
 }
+
+.esc-access-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-radius: 14px;
+  font-size: 14.5px;
+  margin-bottom: 20px;
+  border: 1px solid transparent;
+}
+
+.esc-access-banner--active {
+  background: #eaf5ed;
+  border-color: #cbe5d2;
+  color: #2f7a3a;
+}
+
+.esc-access-banner--warn {
+  background: #fff5e0;
+  border-color: #f3ddb3;
+  color: #8c6a10;
+}
+
+.esc-access-banner--expired {
+  background: #fbeaea;
+  border-color: #f0cccc;
+  color: #8e1519;
+}
+
+.esc-access-banner--pending {
+  background: #f0ede8;
+  border-color: #d8d1c8;
+  color: #6f655c;
+}
+
+.esc-access-icon { font-size: 18px; }
 </style>

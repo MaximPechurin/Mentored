@@ -111,6 +111,10 @@ class MyCourseSerializer(serializers.ModelSerializer):
     lessons_completed = serializers.SerializerMethodField()
     progress_percent = serializers.SerializerMethodField()
     has_certificate = serializers.SerializerMethodField()
+    access_expires_at = serializers.DateTimeField(read_only=True)
+    days_left = serializers.SerializerMethodField()
+    access_status = serializers.SerializerMethodField()
+    access_limited = serializers.SerializerMethodField()
 
     class Meta:
         model = Enrollment
@@ -118,6 +122,7 @@ class MyCourseSerializer(serializers.ModelSerializer):
             'id', 'slug', 'title', 'description', 'teachers',
             'lessons_total', 'lessons_completed', 'progress_percent',
             'has_certificate', 'enrolled_at',
+            'access_expires_at', 'days_left', 'access_status', 'access_limited',
         ]
 
     def get_teachers(self, obj):
@@ -140,6 +145,19 @@ class MyCourseSerializer(serializers.ModelSerializer):
 
     def get_has_certificate(self, obj):
         return Certificate.objects.filter(enrollment=obj).exists()
+
+    def get_days_left(self, obj):
+        if not obj.access_expires_at:
+            return None
+        from django.utils import timezone
+        delta = obj.access_expires_at - timezone.now()
+        return max(0, delta.days)
+
+    def get_access_status(self, obj):
+        return obj.access_status
+
+    def get_access_limited(self, obj):
+        return obj.access_expires_at is not None
 
 
 class SubmissionCommentSerializer(serializers.ModelSerializer):
@@ -261,12 +279,15 @@ class TeacherStudentProgressSerializer(serializers.ModelSerializer):
     lessons_total = serializers.SerializerMethodField()
     lessons_completed = serializers.SerializerMethodField()
     progress_percent = serializers.SerializerMethodField()
+    access_expires_at = serializers.DateTimeField(read_only=True)
+    access_status = serializers.SerializerMethodField()
 
     class Meta:
         model = Enrollment
         fields = [
             'id', 'user_id', 'student', 'email', 'is_active', 'enrolled_at',
             'lessons_total', 'lessons_completed', 'progress_percent',
+            'access_expires_at', 'access_status',
         ]
 
     def get_student(self, obj):
@@ -285,6 +306,9 @@ class TeacherStudentProgressSerializer(serializers.ModelSerializer):
         if not total:
             return 0
         return round(self.get_lessons_completed(obj) / total * 100)
+
+    def get_access_status(self, obj):
+        return obj.access_status
 
 
 # ============================================================

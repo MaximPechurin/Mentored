@@ -138,6 +138,58 @@
         </table>
       </CrmDetailSection>
 
+      <!-- Accesos a cursos (con extensión de plazo) -->
+      <CrmDetailSection title="Accesos a cursos" :count="student.courses.length">
+        <div v-if="student.courses.length === 0" class="crm-empty">
+          Este alumno no está inscrito en ningún curso.
+        </div>
+        <table v-else class="crm-table-inner">
+          <thead>
+            <tr>
+              <th>Curso</th>
+              <th class="align-center">Estado</th>
+              <th class="align-center">Vence</th>
+              <th class="align-center">Días</th>
+              <th class="align-right"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="c in student.courses" :key="c.enrollment_id">
+              <td>
+                <router-link
+                  :to="{ name: 'CrmCourseDetail', params: { id: c.course_id } }"
+                  class="crm-link"
+                >
+                  {{ c.course_title }}
+                </router-link>
+              </td>
+              <td class="align-center">
+                <span class="badge" :class="accessBadgeClass(c.access_status)">
+                  {{ statusLabel(c.access_status) }}
+                </span>
+              </td>
+              <td class="align-center muted">
+                {{ c.access_expires_at ? formatDate(c.access_expires_at) : 'Sin límite' }}
+              </td>
+              <td class="align-center">
+                <span
+                  v-if="c.days_left !== null && c.days_left !== undefined"
+                  :class="{ 'text-danger': c.days_left <= 3 && c.access_status === 'active' }"
+                >
+                  {{ c.days_left }}d
+                </span>
+                <span v-else class="muted">—</span>
+              </td>
+              <td class="align-right">
+                <button class="crm-btn-sm" @click="openExtendModal(c)">
+                  Extender
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </CrmDetailSection>
+
       <!-- Pedidos -->
       <CrmDetailSection title="Pedidos" :count="student.orders.length">
         <div v-if="student.orders.length === 0" class="crm-empty">
@@ -181,6 +233,59 @@
         </table>
       </CrmDetailSection>
     </template>
+    <!-- Модалка продления доступа -->
+    <div v-if="extendRow" class="crm-modal-overlay" @click.self="closeExtendModal">
+      <div class="crm-modal">
+        <h2 class="crm-modal-title">Extender acceso</h2>
+
+        <div class="crm-modal-info">
+          <div><strong>Alumno:</strong> {{ student.username || student.email }}</div>
+          <div><strong>Curso:</strong> {{ extendRow.course_title }}</div>
+          <div>
+            <strong>Vence actualmente:</strong>
+            {{ extendRow.access_expires_at ? formatDate(extendRow.access_expires_at) : 'Sin límite' }}
+          </div>
+        </div>
+
+        <div class="crm-modal-field">
+          <label>Extender por:</label>
+          <div class="crm-extend-options">
+            <button
+              v-for="d in [7, 14, 30, 60, 90]"
+              :key="d"
+              class="crm-extend-btn"
+              :class="{ active: extendDays === d }"
+              @click="selectExtendDays(d)"
+            >
+              +{{ d }}d
+            </button>
+          </div>
+        </div>
+
+        <div class="crm-modal-field">
+          <label>O fecha exacta:</label>
+          <input
+            v-model="extendDate"
+            type="date"
+            class="crm-modal-date"
+            @input="extendDays = null"
+          >
+        </div>
+
+        <div class="crm-modal-actions">
+          <button class="crm-btn crm-btn-outline" @click="closeExtendModal">
+            Cancelar
+          </button>
+          <button
+            class="crm-btn crm-btn-primary"
+            :disabled="extending || (!extendDays && !extendDate)"
+            @click="confirmExtend"
+          >
+            {{ extending ? 'Extendiendo…' : 'Extender' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -244,6 +349,66 @@ const formatDateTime = (iso) => {
 }
 
 onMounted(loadStudent)
+// ============ ПРОДЛЕНИЕ ДОСТУПА ============
+const extendRow = ref(null)
+const extendDays = ref(30)
+const extendDate = ref('')
+const extending = ref(false)
+
+const openExtendModal = (courseRow) => {
+  extendRow.value = courseRow
+  extendDays.value = 30
+  extendDate.value = ''
+}
+
+const closeExtendModal = () => {
+  extendRow.value = null
+  extendDays.value = 30
+  extendDate.value = ''
+}
+
+const selectExtendDays = (d) => {
+  extendDays.value = d
+  extendDate.value = ''
+}
+
+const confirmExtend = async () => {
+  if (!extendRow.value) return
+  extending.value = true
+  try {
+    const payload = extendDate.value
+      ? { new_expires_at: `${extendDate.value}T23:59:59Z` }
+      : { days: extendDays.value }
+
+    await crmApi.extendEnrollmentAccess(extendRow.value.enrollment_id, payload)
+    closeExtendModal()
+    await loadStudent()
+  } catch (e) {
+    console.error('extend error', e)
+    alert('No se pudo extender el acceso.')
+  } finally {
+    extending.value = false
+  }
+}
+
+// ============ СТАТУСЫ ДОСТУПА ============
+const accessBadgeClass = (status) => {
+  if (status === 'active') return 'badge-success'
+  if (status === 'expired') return 'badge-danger'
+  if (status === 'not_started') return 'badge-muted'
+  if (status === 'blocked') return 'badge-muted'
+  return 'badge-muted'
+}
+
+const statusLabel = (status) => {
+  const map = {
+    'active': 'Activo',
+    'expired': 'Vencido',
+    'not_started': 'Próximo',
+    'blocked': 'Bloqueado',
+  }
+  return map[status] || status
+}
 </script>
 
 <style scoped>
@@ -557,5 +722,186 @@ a.crm-meta-item:hover {
   font-size: 15px;
   padding: 32px 24px;
   text-align: center;
+}
+
+/* --- Ссылки --- */
+.crm-link {
+  color: #8e1519;
+  text-decoration: none;
+  font-weight: 500;
+}
+.crm-link:hover { text-decoration: underline; }
+
+/* --- Кнопка Extender --- */
+.crm-btn-sm {
+  background: #0e0c0c;
+  color: #fff;
+  border: none;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.crm-btn-sm:hover { background: #2a1a1a; }
+
+/* --- Text danger --- */
+.text-danger { color: #8e1519; font-weight: 600; }
+
+/* --- Бейджи --- */
+.badge-success { background: #eaf5ed; color: #1f7a3d; }
+.badge-danger { background: #fbeaea; color: #8e1519; }
+.badge-muted { background: #f0ede8; color: #8a8079; }
+
+/* --- Модалка продления --- */
+.crm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(14, 12, 12, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.crm-modal {
+  background: #fff;
+  border-radius: 18px;
+  padding: 28px;
+  max-width: 460px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+.crm-modal-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: #15110f;
+  margin: 0 0 18px;
+}
+
+.crm-modal-info {
+  background: #faf6f0;
+  border-radius: 12px;
+  padding: 14px 18px;
+  font-size: 14px;
+  color: #3a342e;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.crm-modal-field {
+  margin-bottom: 18px;
+}
+
+.crm-modal-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #8a8079;
+  margin-bottom: 8px;
+}
+
+.crm-extend-options {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.crm-extend-btn {
+  border: 1.5px solid #ece7e1;
+  background: #fff;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #5d544c;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.crm-extend-btn:hover {
+  border-color: #8e1519;
+  color: #8e1519;
+}
+
+.crm-extend-btn.active {
+  background: #0e0c0c;
+  color: #fff;
+  border-color: #0e0c0c;
+}
+
+.crm-modal-date {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #ece7e1;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-family: inherit;
+  font-size: 14.5px;
+  color: #15110f;
+  background: #faf6f0;
+  outline: none;
+}
+
+.crm-modal-date:focus {
+  border-color: #8e1519;
+}
+
+.crm-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.crm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1.5px solid transparent;
+}
+
+.crm-btn-outline {
+  background: #fff;
+  border-color: #ece7e1;
+  color: #5d544c;
+}
+
+.crm-btn-outline:hover {
+  border-color: #8e1519;
+  color: #8e1519;
+}
+
+.crm-btn-primary {
+  background: #0e0c0c;
+  border-color: #0e0c0c;
+  color: #fff;
+}
+
+.crm-btn-primary:hover:not(:disabled) {
+  background: #2a1a1a;
+}
+
+.crm-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>

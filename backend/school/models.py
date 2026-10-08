@@ -131,6 +131,41 @@ class Course(models.Model):
                   'студента/название курса/дата накладываются на фиксированные '
                   'координаты, другой макет "поедет".',
     )
+
+    # ============================================================
+    # ТАЙМИНГИ ДОСТУПА (п.6 ТЗ)
+    # ============================================================
+    ACCESS_MODE_CHOICES = [
+        ('unlimited', 'Sin límite'),
+        ('duration', 'Duración desde la compra (días)'),
+        ('dates', 'Fechas fijas'),
+    ]
+
+    access_mode = models.CharField(
+        max_length=20,
+        choices=ACCESS_MODE_CHOICES,
+        default='unlimited',
+        verbose_name='Modo de acceso',
+        help_text='Sin límite — курс доступен бессрочно. '
+                  'Duración — доступ открывается на N дней после покупки. '
+                  'Fechas fijas — доступ только в указанном окне дат.',
+    )
+    access_duration_days = models.PositiveIntegerField(
+        null=True, blank=True,
+        verbose_name='Duración de acceso (días)',
+        help_text='Для режима "Duración". Например, 30 — доступ на 30 дней после покупки.',
+    )
+    access_start = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name='Inicio de acceso',
+        help_text='Для режима "Fechas fijas". До этой даты курс недоступен.',
+    )
+    access_end = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name='Fin de acceso',
+        help_text='Для режима "Fechas fijas". После этой даты доступ пропадает.',
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -359,6 +394,12 @@ class Enrollment(models.Model):
         help_text='Можно снять галочку, чтобы временно/навсегда отозвать доступ, не удаляя историю прогресса',
     )
     enrolled_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата открытия доступа')
+    access_expires_at = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name='Acceso vence en',
+        help_text='Считается автоматически при создании доступа, исходя из '
+                  'настроек курса. Может быть изменено вручную (продление).',
+    )
 
     class Meta:
         verbose_name = 'Доступ к курсу'
@@ -370,6 +411,32 @@ class Enrollment(models.Model):
 
     def __str__(self):
         return f"{self.user.email} -> {self.course.title}"
+
+    @property
+    def access_status(self):
+        """
+        Возвращает статус доступа: 'active' | 'expired' | 'not_started' | 'blocked'.
+        - blocked: is_active=False (ручное отключение админом)
+        - not_started: access_start в будущем (только для mode='dates')
+        - expired: access_expires_at в прошлом
+        - active: всё ок
+        """
+        from django.utils import timezone
+
+        if not self.is_active:
+            return 'blocked'
+
+        now = timezone.now()
+
+        # not_started — только для фазовых курсов с access_start
+        access_start = getattr(self.course, 'access_start', None)
+        if access_start and access_start > now:
+            return 'not_started'
+
+        if self.access_expires_at and self.access_expires_at <= now:
+            return 'expired'
+
+        return 'active'
 
 
 class Certificate(models.Model):

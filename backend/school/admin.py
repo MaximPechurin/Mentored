@@ -114,12 +114,37 @@ class ProductCourseAccessInline(admin.TabularInline):
 @admin.register(Course)
 class CourseAdmin(TeacherScopedAdminMixin, admin.ModelAdmin):
     course_lookup = ''
-    list_display = ('title', 'creator', 'is_active', 'created_at')
-    list_filter = ('is_active',)
+    list_display = ('title', 'creator', 'is_active', 'access_mode', 'created_at')
+    list_filter = ('is_active', 'access_mode')
     search_fields = ('title', 'description')
     prepopulated_fields = {'slug': ('title',)}
     readonly_fields = ('created_at', 'updated_at')
     inlines = [ModuleInline, CourseTeacherInline, ProductCourseAccessInline]
+    fieldsets = (
+        (None, {
+            'fields': ('title', 'slug', 'description', 'whatsapp_group_url')
+        }),
+        ('Доступ', {
+            'fields': ('is_active', 'creator')
+        }),
+        ('Тайминги доступа', {
+            'fields': (
+                'access_mode',
+                'access_duration_days',
+                'access_start',
+                'access_end',
+            ),
+            'description': (
+                'Sin límite — курс доступен бессрочно. '
+                'Duración — доступ на N дней после покупки. '
+                'Fechas fijas — доступ только в указанном окне.'
+            ),
+        }),
+        ('Служебное', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',),
+        }),
+    )
 
 
 @admin.register(ProductCourseAccess)
@@ -195,10 +220,31 @@ class LessonAdmin(TeacherScopedAdminMixin, admin.ModelAdmin):
 @admin.register(Enrollment)
 class EnrollmentAdmin(TeacherScopedAdminMixin, admin.ModelAdmin):
     course_lookup = 'course'
-    list_display = ('user', 'course', 'is_active', 'enrolled_at')
-    list_filter = ('is_active', 'course', 'enrolled_at')
+    list_display = (
+        'user', 'course', 'is_active',
+        'enrolled_at', 'access_expires_at', 'access_status_display',
+    )
+    list_filter = ('is_active', 'course', 'enrolled_at', 'access_expires_at')
     search_fields = ('user__email', 'course__title')
     date_hierarchy = 'enrolled_at'
+    readonly_fields = ('enrolled_at',)
+    fields = (
+        'user', 'course', 'order_item',
+        'is_active',
+        'enrolled_at', 'access_expires_at',
+    )
+
+    def access_status_display(self, obj):
+        status = obj.access_status
+        colors = {
+            'active': '🟢',
+            'expired': '🔴',
+            'not_started': '⚪',
+            'blocked': '⚫',
+        }
+        return f"{colors.get(status, '')} {status}"
+
+    access_status_display.short_description = 'Статус'
 
 
 @admin.register(LessonProgress)
