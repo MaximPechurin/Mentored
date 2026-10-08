@@ -8,6 +8,10 @@
       <div class="crm-page-count">
         <strong>{{ count }}</strong> mensajes
       </div>
+      <CrmExportButton
+        url="/crm/contact-messages/export/"
+        :params="exportParams"
+      />
     </header>
 
     <!-- Фильтры -->
@@ -130,6 +134,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { crmApi } from '../../api/crm'
 import CrmPagination from './CrmPagination.vue'
+import CrmExportButton from './CrmExportButton.vue'
 
 const router = useRouter()
 
@@ -231,6 +236,12 @@ const formatDate = (iso) => {
     day: '2-digit', month: '2-digit', year: 'numeric',
   })
 }
+
+const exportParams = computed(() => ({
+  search: search.value || undefined,
+  motivo: motivoFilter.value || undefined,
+  is_read: readFilter.value || undefined,
+}))
 
 onMounted(loadMessages)
 </script>
@@ -372,4 +383,11 @@ onMounted(loadMessages)
   margin: 0 auto;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+.crm-page-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
 </style>

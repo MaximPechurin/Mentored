@@ -3,7 +3,7 @@ from django.urls import path
 from .views import DashboardView, StudentListView, StudentDetailView, CourseListView, CourseDetailView, CourseStudentsView, \
     CourseOrdersView, TeacherListView, TeacherDetailView, OrderListView, OrderDetailView, PaymentListView, ContactMessageListView, \
     ContactMessageBulkActionView, ContactMessageUnreadCountView, ContactMessageDetailView, SubmissionListView, \
-    SubmissionDetailView
+    SubmissionDetailView, SalesReportExportView
 
 app_name = 'crm'
 
@@ -26,4 +26,5 @@ urlpatterns = [
     path('contact-messages/<int:pk>/', ContactMessageDetailView.as_view(), name='contact-message-detail'),
     path('submissions/', SubmissionListView.as_view(), name='submissions'),
     path('submissions/<int:pk>/', SubmissionDetailView.as_view(), name='submission-detail'),
+    path('reports/sales/', SalesReportExportView.as_view(), name='sales-report-export'),
 ]

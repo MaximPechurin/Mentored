@@ -8,6 +8,10 @@
       <div class="crm-page-count">
         <strong>{{ count }}</strong> cursos
       </div>
+      <CrmExportButton
+        url="/crm/courses/export/"
+        :params="exportParams"
+      />
     </header>
 
     <!-- Фильтры -->
@@ -109,6 +113,7 @@ import { crmApi } from '../../api/crm'
 import CrmDataTable from './CrmDataTable.vue'
 import CrmPagination from './CrmPagination.vue'
 import CrmProgressBar from './CrmProgressBar.vue'
+import CrmExportButton from "./CrmExportButton.vue";
 
 const router = useRouter()
 
@@ -182,6 +187,12 @@ const onPageSizeChange = (value) => {
 const goToCourse = (row) => {
   router.push({ name: 'CrmCourseDetail', params: { id: row.id } })
 }
+
+const exportParams = computed(() => ({
+  search: search.value || undefined,
+  status: statusFilter.value || undefined,
+  has_whatsapp: hasWhatsapp.value ? 'true' : undefined,
+}))
 
 onMounted(loadCourses)
 </script>
@@ -331,4 +342,11 @@ onMounted(loadCourses)
 .badge-muted { background: #f0ede8; color: #8a8079; }
 
 .muted { color: #a59c93; font-size: 13.5px; }
+
+.crm-page-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
 </style>

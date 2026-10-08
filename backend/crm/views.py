@@ -1701,3 +1701,227 @@ class SubmissionDetailView(APIView):
 
             'comments': comments,
         })
+
+
+# ============================================================
+# ЭКСПОРТ (XLSX)
+# ============================================================
+
+from django.http import HttpResponse
+from . import exports
+
+
+XLSX_CONTENT_TYPE = (
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+)
+
+
+def _xlsx_response(filename, content):
+    response = HttpResponse(content, content_type=XLSX_CONTENT_TYPE)
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+
+class StudentExportView(APIView):
+    """GET /crm/students/export/ — XLSX с текущим фильтром."""
+    permission_classes = [IsSuperuser]
+
+    def get(self, request):
+        qs = User.objects.filter(is_active=True)
+
+        search = (request.query_params.get('search') or '').strip()
+        if search:
+            qs = qs.filter(
+                Q(email__icontains=search) |
+                Q(username__icontains=search) |
+                Q(phone__icontains=search)
+            )
+
+        access = request.query_params.get('access')
+        if access == 'active':
+            qs = qs.filter(enrollments__is_active=True).distinct()
+        elif access == 'none':
+            qs = qs.exclude(enrollments__is_active=True).distinct()
+
+        role = request.query_params.get('role')
+        if role:
+            qs = qs.filter(roles__codename=role).distinct()
+
+        qs = qs.prefetch_related('roles', 'enrollments')
+        filename, content = exports.export_students(qs)
+        return _xlsx_response(filename, content)
+
+
+class CourseExportView(APIView):
+    """GET /crm/courses/export/ — XLSX с текущим фильтром."""
+    permission_classes = [IsSuperuser]
+
+    def get(self, request):
+        qs = Course.objects.all()
+
+        search = (request.query_params.get('search') or '').strip()
+        if search:
+            qs = qs.filter(Q(title__icontains=search) | Q(slug__icontains=search))
+
+        status = request.query_params.get('status')
+        if status == 'active':
+            qs = qs.filter(is_active=True)
+        elif status == 'inactive':
+            qs = qs.filter(is_active=False)
+
+        if request.query_params.get('has_whatsapp') == 'true':
+            qs = qs.exclude(whatsapp_group_url='')
+
+        filename, content = exports.export_courses(qs)
+        return _xlsx_response(filename, content)
+
+
+class TeacherExportView(APIView):
+    """GET /crm/teachers/export/ — XLSX с текущим фильтром."""
+    permission_classes = [IsSuperuser]
+
+    def get(self, request):
+        qs = User.objects.filter(is_active=True, roles__codename=Role.TEACHER).distinct()
+
+        search = (request.query_params.get('search') or '').strip()
+        if search:
+            qs = qs.filter(
+                Q(username__icontains=search) |
+                Q(email__icontains=search) |
+                Q(phone__icontains=search)
+            )
+
+        status = request.query_params.get('status')
+        if status == 'active':
+            qs = qs.filter(is_active=True)
+        elif status == 'inactive':
+            qs = qs.filter(is_active=False)
+
+        qs = qs.prefetch_related('taught_courses__course__enrollments')
+        filename, content = exports.export_teachers(qs)
+        return _xlsx_response(filename, content)
+
+
+class OrderExportView(APIView):
+    """GET /crm/orders/export/ — XLSX с текущим фильтром."""
+    permission_classes = [IsSuperuser]
+
+    def get(self, request):
+        qs = Order.objects.select_related('user', 'payment').prefetch_related('items')
+
+        search = (request.query_params.get('search') or '').strip()
+        if search:
+            qs = qs.filter(
+                Q(order_number__icontains=search) |
+                Q(user__email__icontains=search) |
+                Q(user__username__icontains=search)
+            )
+
+        status = request.query_params.get('status')
+        if status:
+            qs = qs.filter(status=status)
+
+        payment_status = request.query_params.get('payment_status')
+        if payment_status:
+            qs = qs.filter(payment__status=payment_status)
+
+        method = request.query_params.get('method')
+        if method:
+            qs = qs.filter(payment__payment_method=method)
+
+        date_from = request.query_params.get('date_from')
+        if date_from:
+            qs = qs.filter(created_at__date__gte=date_from)
+        date_to = request.query_params.get('date_to')
+        if date_to:
+            qs = qs.filter(created_at__date__lte=date_to)
+
+        filename, content = exports.export_orders(qs)
+        return _xlsx_response(filename, content)
+
+
+class SubmissionExportView(APIView):
+    """GET /crm/submissions/export/ — XLSX с текущим фильтром."""
+    permission_classes = [IsSuperuser]
+
+    def get(self, request):
+        qs = Submission.objects.select_related(
+            'assignment__lesson__module__course',
+            'enrollment__user',
+            'reviewed_by',
+        )
+
+        search = (request.query_params.get('search') or '').strip()
+        if search:
+            qs = qs.filter(
+                Q(enrollment__user__email__icontains=search) |
+                Q(enrollment__user__username__icontains=search) |
+                Q(assignment__title__icontains=search)
+            )
+
+        status = request.query_params.get('status')
+        if status:
+            qs = qs.filter(status=status)
+
+        date_from = request.query_params.get('date_from')
+        if date_from:
+            qs = qs.filter(submitted_at__date__gte=date_from)
+        date_to = request.query_params.get('date_to')
+        if date_to:
+            qs = qs.filter(submitted_at__date__lte=date_to)
+
+        filename, content = exports.export_submissions(qs)
+        return _xlsx_response(filename, content)
+
+
+class ContactMessageExportView(APIView):
+    """GET /crm/contact-messages/export/ — XLSX с текущим фильтром."""
+    permission_classes = [IsSuperuser]
+
+    def get(self, request):
+        qs = ContactMessage.objects.all()
+
+        search = (request.query_params.get('search') or '').strip()
+        if search:
+            qs = qs.filter(
+                Q(name__icontains=search) |
+                Q(email__icontains=search) |
+                Q(message__icontains=search)
+            )
+
+        motivo = request.query_params.get('motivo')
+        if motivo:
+            qs = qs.filter(motivo=motivo)
+
+        is_read = request.query_params.get('is_read')
+        if is_read == 'true':
+            qs = qs.filter(is_read=True)
+        elif is_read == 'false':
+            qs = qs.filter(is_read=False)
+
+        filename, content = exports.export_contact_messages(qs)
+        return _xlsx_response(filename, content)
+
+
+class CourseReportExportView(APIView):
+    """GET /crm/courses/<id>/report/ — XLSX с деталями по курсу."""
+    permission_classes = [IsSuperuser]
+
+    def get(self, request, pk):
+        course = Course.objects.filter(pk=pk).first()
+        if not course:
+            return Response({'detail': 'Curso no encontrado.'}, status=404)
+
+        filename, content = exports.export_course_report(course)
+        return _xlsx_response(filename, content)
+
+
+class SalesReportExportView(APIView):
+    """GET /crm/reports/sales/ — XLSX со сводкой продаж за период."""
+    permission_classes = [IsSuperuser]
+
+    def get(self, request):
+        date_from = request.query_params.get('date_from')
+        date_to = request.query_params.get('date_to')
+        filename, content = exports.export_sales_report(date_from, date_to)
+        return _xlsx_response(filename, content)

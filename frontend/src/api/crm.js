@@ -61,4 +61,27 @@ export const crmApi = {
   getSubmission(id) {
     return api.get(`/crm/submissions/${id}/`)
   },
+  async downloadExport(url, params = {}) {
+    const response = await api.get(url, {
+      params,
+      responseType: 'blob',
+    })
+    // Достаём имя файла из Content-Disposition
+    let filename = 'export.xlsx'
+    const disposition = response.headers['content-disposition']
+    if (disposition) {
+      const match = disposition.match(/filename="?([^";]+)"?/)
+      if (match) filename = match[1]
+    }
+    const blob = new Blob([response.data], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(link.href)
+  },
 }

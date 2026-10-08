@@ -8,6 +8,10 @@
       <div class="crm-page-count">
         <strong>{{ count }}</strong> tareas
       </div>
+      <CrmExportButton
+        url="/crm/submissions/export/"
+        :params="exportParams"
+      />
     </header>
 
     <div class="crm-filters">
@@ -122,6 +126,7 @@ import { useRouter } from 'vue-router'
 import { crmApi } from '../../api/crm'
 import CrmDataTable from './CrmDataTable.vue'
 import CrmPagination from './CrmPagination.vue'
+import CrmExportButton from './CrmExportButton.vue'
 
 const router = useRouter()
 
@@ -212,6 +217,13 @@ const statusBadgeClass = (status) => {
   return 'badge-warn'
 }
 
+const exportParams = computed(() => ({
+  search: search.value || undefined,
+  status: statusFilter.value || undefined,
+  date_from: dateFrom.value || undefined,
+  date_to: dateTo.value || undefined,
+}))
+
 onMounted(loadSubmissions)
 </script>
 
@@ -287,4 +299,11 @@ onMounted(loadSubmissions)
 .badge-warn { background: #fff5e0; color: #8c6a10; }
 
 .muted { color: #a59c93; font-size: 13.5px; }
+
+.crm-page-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
 </style>

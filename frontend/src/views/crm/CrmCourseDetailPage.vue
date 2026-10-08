@@ -67,6 +67,12 @@
           >
             Django admin →
           </a>
+          <button
+            class="crm-btn crm-btn-outline"
+            @click="downloadCourseReport"
+          >
+            📊 Descargar reporte
+          </button>
         </div>
       </header>
 
@@ -375,6 +381,15 @@ const formatDate = (iso) => {
 }
 
 onMounted(loadCourse)
+
+const downloadCourseReport = async () => {
+  try {
+    await crmApi.downloadExport(`/crm/courses/${course.value.id}/report/`)
+  } catch (e) {
+    console.error('Report error:', e)
+    alert('No se pudo generar el reporte.')
+  }
+}
 </script>
 
 <style scoped>

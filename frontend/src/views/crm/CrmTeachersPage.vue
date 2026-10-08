@@ -8,6 +8,10 @@
       <div class="crm-page-count">
         <strong>{{ count }}</strong> profesores
       </div>
+      <CrmExportButton
+        url="/crm/teachers/export/"
+        :params="exportParams"
+      />
     </header>
 
     <div class="crm-filters">
@@ -99,6 +103,7 @@ import { useRouter } from 'vue-router'
 import { crmApi } from '../../api/crm'
 import CrmDataTable from './CrmDataTable.vue'
 import CrmPagination from './CrmPagination.vue'
+import CrmExportButton from './CrmExportButton.vue'
 
 const router = useRouter()
 
@@ -178,6 +183,11 @@ const formatDate = (iso) => {
   })
 }
 
+const exportParams = computed(() => ({
+  search: search.value || undefined,
+  status: statusFilter.value || undefined,
+}))
+
 onMounted(loadTeachers)
 </script>
 
@@ -245,4 +255,11 @@ onMounted(loadTeachers)
 .badge-muted { background: #f0ede8; color: #8a8079; }
 
 .muted { color: #a59c93; font-size: 13.5px; }
+
+.crm-page-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
 </style>

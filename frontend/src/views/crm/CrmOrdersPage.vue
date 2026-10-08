@@ -8,6 +8,10 @@
       <div class="crm-page-count">
         <strong>{{ count }}</strong> pedidos
       </div>
+      <CrmExportButton
+        url="/crm/orders/export/"
+        :params="exportParams"
+      />
     </header>
 
     <!-- Фильтры -->
@@ -132,6 +136,7 @@ import { useRouter } from 'vue-router'
 import { crmApi } from '../../api/crm'
 import CrmDataTable from './CrmDataTable.vue'
 import CrmPagination from './CrmPagination.vue'
+import CrmExportButton from './CrmExportButton.vue'
 
 const router = useRouter()
 
@@ -230,6 +235,14 @@ const paymentBadgeClass = (status) => {
   return 'badge-warn'
 }
 
+const exportParams = computed(() => ({
+  search: search.value || undefined,
+  status: statusFilter.value || undefined,
+  payment_status: paymentStatusFilter.value || undefined,
+  date_from: dateFrom.value || undefined,
+  date_to: dateTo.value || undefined,
+}))
+
 onMounted(loadOrders)
 </script>
 
@@ -304,4 +317,11 @@ onMounted(loadOrders)
 .badge-warn { background: #fff5e0; color: #8c6a10; }
 
 .muted { color: #a59c93; font-size: 13.5px; }
+
+.crm-page-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
 </style>

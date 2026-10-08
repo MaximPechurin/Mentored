@@ -8,6 +8,10 @@
       <div class="crm-page-count">
         <strong>{{ count }}</strong> registros
       </div>
+      <CrmExportButton
+        url="/crm/students/export/"
+        :params="{ search, access: accessFilter, role: roleFilter }"
+      />
     </header>
 
     <!-- Фильтры -->
@@ -109,6 +113,7 @@ import { useRouter } from 'vue-router'
 import { crmApi } from '../../api/crm'
 import CrmDataTable from './CrmDataTable.vue'
 import CrmPagination from './CrmPagination.vue'
+import CrmExportButton from './CrmExportButton.vue'
 
 const router = useRouter()
 
@@ -361,4 +366,11 @@ onMounted(loadStudents)
 .role-teacher { background: #fff5e0; color: #8c6a10; }
 
 .muted { color: #a59c93; font-size: 13.5px; }
+
+.crm-page-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
 </style>
