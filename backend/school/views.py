@@ -75,12 +75,28 @@ class CourseDetailView(APIView):
             modules, many=True, context={'progress_by_lesson': progress_by_lesson},
         ).data
 
+        # ===== WhatsApp: отдаём с учётом видимости =====
+        whatsapp_data = None
+        if course.whatsapp_group_url:
+            can_see = (
+                    course.whatsapp_group_is_visible
+                    or request.user.is_superuser
+                    or is_course_teacher(request.user, course)
+            )
+            if can_see:
+                whatsapp_data = {
+                    'url': course.whatsapp_group_url,
+                    'name': course.whatsapp_group_name or '',
+                    'description': course.whatsapp_group_description or '',
+                    'is_visible': course.whatsapp_group_is_visible,
+                }
+
         return Response({
             'id': course.id,
             'slug': course.slug,
             'title': course.title,
             'description': course.description,
-            'whatsapp_group_url': course.whatsapp_group_url,
+            'whatsapp_group': whatsapp_data,
             'modules': modules_data,
             'has_certificate': Certificate.objects.filter(enrollment=enrollment).exists(),
             'access_expires_at': enrollment.access_expires_at,

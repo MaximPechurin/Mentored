@@ -124,6 +124,14 @@ class CourseAdmin(TeacherScopedAdminMixin, admin.ModelAdmin):
         (None, {
             'fields': ('title', 'slug', 'description', 'whatsapp_group_url')
         }),
+        ('Группа WhatsApp', {
+            'fields': (
+                'whatsapp_group_name',
+                'whatsapp_group_description',
+                'whatsapp_group_is_visible',
+            ),
+            'description': 'Оставьте URL пустым, чтобы полностью отключить блок WhatsApp у учеников.',
+        }),
         ('Доступ', {
             'fields': ('is_active', 'creator')
         }),

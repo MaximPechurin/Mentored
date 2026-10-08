@@ -13,6 +13,40 @@
       </div>
     </section>
 
+    <!-- WhatsApp group -->
+    <section v-if="course.whatsapp_group" class="esc-whatsapp">
+      <div class="esc-whatsapp-inner">
+        <div class="esc-whatsapp-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+          </svg>
+        </div>
+        <div class="esc-whatsapp-body">
+          <h3 class="esc-whatsapp-title">
+            {{ course.whatsapp_group.name || st('course.whatsappGroupDefault') || 'Grupo de WhatsApp' }}
+          </h3>
+          <p v-if="course.whatsapp_group.description" class="esc-whatsapp-desc">
+            {{ course.whatsapp_group.description }}
+          </p>
+          <p v-else class="esc-whatsapp-desc">
+            {{ st('course.whatsappGroupHint') || 'Únete al grupo del curso para resolver dudas y compartir con otros alumnos.' }}
+          </p>
+        </div>
+        <a
+          :href="course.whatsapp_group.url"
+          target="_blank"
+          rel="noopener"
+          class="esc-whatsapp-btn"
+        >
+          {{ st('course.joinWhatsapp') || 'Unirme al grupo' }}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"/>
+            <polyline points="12 5 19 12 12 19"/>
+          </svg>
+        </a>
+      </div>
+    </section>
+
     <div v-if="course.access_expires_at" class="esc-access-banner" :class="bannerClass">
       <template v-if="course.access_status === 'active'">
         <span class="esc-access-icon">⏳</span>
@@ -42,16 +76,6 @@
       <button v-if="course.has_certificate" class="esc-certificate-btn" @click="downloadCertificate">
         🎓 {{ st('student.descargarCertificado') }}
       </button>
-
-      <a
-        v-if="course.whatsapp_group_url"
-        :href="course.whatsapp_group_url"
-        target="_blank"
-        rel="noopener"
-        class="esc-whatsapp-btn"
-      >
-        💬 {{ st('course.grupoWhatsapp') }}
-      </a>
 
       <div v-for="module in course.modules" :key="module.id" class="esc-module">
         <h2 class="esc-module-title">{{ module.title }}</h2>
@@ -429,4 +453,90 @@ onMounted(async () => {
 }
 
 .esc-access-icon { font-size: 18px; }
+
+/* ===== WhatsApp group ===== */
+.esc-whatsapp {
+  max-width: 1180px;
+  margin: 20px auto 0;
+  padding: 0 32px;
+}
+
+.esc-whatsapp-inner {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: #ffffff;
+  border: 1px solid #ece7e1;
+  border-left: 4px solid #25d366; /* WhatsApp green */
+  border-radius: 16px;
+  padding: 20px 24px;
+  flex-wrap: wrap;
+}
+
+.esc-whatsapp-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #e7f9ee;
+  color: #1ea952;
+  flex-shrink: 0;
+}
+
+.esc-whatsapp-body {
+  flex: 1;
+  min-width: 200px;
+}
+
+.esc-whatsapp-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: #15110f;
+  margin: 0 0 4px;
+}
+
+.esc-whatsapp-desc {
+  font-size: 14px;
+  color: #6b6259;
+  margin: 0;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+.esc-whatsapp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #25d366;
+  color: #ffffff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14.5px;
+  padding: 12px 22px;
+  border-radius: 999px;
+  transition: background 0.2s, transform 0.15s;
+  white-space: nowrap;
+}
+
+.esc-whatsapp-btn:hover {
+  background: #1ea952;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 700px) {
+  .esc-whatsapp {
+    padding: 0 20px;
+  }
+  .esc-whatsapp-inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .esc-whatsapp-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
 </style>

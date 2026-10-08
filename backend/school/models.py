@@ -109,6 +109,23 @@ class Course(models.Model):
         help_text='Если заполнено - студент увидит на странице курса блок '
                   '«Группа WhatsApp», клик по которому открывает эту ссылку.',
     )
+    whatsapp_group_name = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name='Nombre del grupo',
+        help_text='Например: MENTORED · Курс личностного роста',
+    )
+    whatsapp_group_description = models.TextField(
+        blank=True,
+        verbose_name='Descripción / reglas de entrada',
+        help_text='Краткое описание группы или правила входа',
+    )
+    whatsapp_group_is_visible = models.BooleanField(
+        default=True,
+        verbose_name='Mostrar a los alumnos',
+        help_text='Если выключено — ученики не видят ссылку. '
+                  'Админ и преподаватель курса всегда видят её.',
+    )
     creator = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -193,6 +210,29 @@ class Course(models.Model):
                 n += 1
             self.slug = slug
         super().save(*args, **kwargs)
+
+    def clean(self):
+        """
+        Валидация WhatsApp-ссылки. Разрешаем три формата:
+        - https://chat.whatsapp.com/...
+        - https://wa.me/...
+        - https://api.whatsapp.com/...
+        """
+        super().clean()
+
+        if not self.whatsapp_group_url:
+            return
+
+        import re
+        pattern = r'^https?://(chat\.whatsapp\.com|wa\.me|api\.whatsapp\.com)/.+$'
+        if not re.match(pattern, self.whatsapp_group_url.strip()):
+            from django.core.exceptions import ValidationError
+            raise ValidationError({
+                'whatsapp_group_url': (
+                    'URL inválida. Debe ser del tipo '
+                    'https://chat.whatsapp.com/... o https://wa.me/...'
+                ),
+            })
 
 
 class ProductCourseAccess(models.Model):

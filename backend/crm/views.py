@@ -550,6 +550,7 @@ class CourseListView(APIView):
                 'is_active': c.is_active,
                 'created_at': c.created_at,
                 'has_whatsapp': bool(c.whatsapp_group_url),
+                'whatsapp_is_visible': c.whatsapp_group_is_visible,
                 'students_count': students_count,
                 'completions_count': c.completions_count or 0,
                 'avg_progress': avg_progress,
@@ -784,7 +785,12 @@ class CourseDetailView(APIView):
             'is_active': course.is_active,
             'created_at': course.created_at,
             'updated_at': course.updated_at,
-            'whatsapp_group_url': course.whatsapp_group_url,
+            'whatsapp_group': {
+                'url': course.whatsapp_group_url,
+                'name': course.whatsapp_group_name,
+                'description': course.whatsapp_group_description,
+                'is_visible': course.whatsapp_group_is_visible,
+            } if course.whatsapp_group_url else None,
             # новые поля таймингов
             'access_mode': course.access_mode,
             'access_duration_days': course.access_duration_days,

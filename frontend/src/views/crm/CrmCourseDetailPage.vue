@@ -42,8 +42,8 @@
         </div>
         <div class="crm-header-actions">
           <a
-            v-if="course.whatsapp_group_url"
-            :href="course.whatsapp_group_url"
+            v-if="course.whatsapp_group && course.whatsapp_group.url"
+            :href="course.whatsapp_group.url"
             target="_blank"
             rel="noopener"
             class="crm-btn crm-btn-outline"
@@ -100,6 +100,37 @@
           <span class="crm-stat-sub">USD</span>
         </div>
       </div>
+
+      <CrmDetailSection title="Grupo de WhatsApp">
+        <div v-if="!course.whatsapp_group || !course.whatsapp_group.url" class="crm-empty">
+          Este curso no tiene grupo de WhatsApp vinculado.
+        </div>
+        <div v-else class="wa-block">
+          <div class="wa-block-row">
+            <span class="wa-block-label">Estado</span>
+            <span
+              class="badge"
+              :class="course.whatsapp_group.is_visible ? 'badge-success' : 'badge-warn'"
+            >
+              {{ course.whatsapp_group.is_visible ? 'Visible a alumnos' : 'Oculto' }}
+            </span>
+          </div>
+          <div v-if="course.whatsapp_group.name" class="wa-block-row">
+            <span class="wa-block-label">Nombre</span>
+            <span>{{ course.whatsapp_group.name }}</span>
+          </div>
+          <div v-if="course.whatsapp_group.description" class="wa-block-row">
+            <span class="wa-block-label">Descripción</span>
+            <span class="wa-block-desc">{{ course.whatsapp_group.description }}</span>
+          </div>
+          <div class="wa-block-row">
+            <span class="wa-block-label">Enlace</span>
+            <a :href="course.whatsapp_group.url" target="_blank" rel="noopener" class="crm-link">
+              {{ course.whatsapp_group.url }}
+            </a>
+          </div>
+        </div>
+      </CrmDetailSection>
 
       <!-- Módulos y lecciones -->
       <CrmDetailSection title="Módulos y lecciones" :count="totalLessons">
@@ -701,4 +732,42 @@ const downloadCourseReport = async () => {
 .badge-success { background: #eaf5ed; color: #1f7a3d; }
 .badge-danger { background: #fbeaea; color: #8e1519; }
 .badge-muted { background: #f0ede8; color: #8a8079; }
+
+.wa-block {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wa-block-row {
+  display: flex;
+  gap: 16px;
+  align-items: baseline;
+  font-size: 14.5px;
+}
+
+.wa-block-label {
+  min-width: 100px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #8a8079;
+}
+
+.wa-block-desc {
+  color: #3a342e;
+  white-space: pre-line;
+}
+
+.crm-link {
+  color: #8e1519;
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.crm-link:hover {
+  text-decoration: underline;
+}
 </style>
