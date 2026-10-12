@@ -238,6 +238,4 @@ CELERY_RESULT_EXTENDED = True
 # Планировщик периодических задач — в БД (через django-celery-beat)
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
-# Результаты храним в БД (django-celery-results)
-CELERY_RESULT_BACKEND = 'django-db'
 CELERY_CACHE_BACKEND = 'django-cache'
