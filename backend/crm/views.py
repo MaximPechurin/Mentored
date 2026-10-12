@@ -14,7 +14,7 @@ from payments.models import Payment
 from school.models import Course, Enrollment, LessonProgress, Submission, Lesson, Certificate, ProductCourseAccess, \
     Module, CourseTeacher
 
-from .permissions import IsSuperuser
+from .permissions import IsCrmUser
 
 
 class DashboardView(APIView):
@@ -26,7 +26,7 @@ class DashboardView(APIView):
 
     Только is_superuser (по ТЗ 'руководитель проекта').
     """
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsCrmUser]
 
     def get(self, request):
         now = timezone.now()
@@ -162,7 +162,7 @@ class StudentListView(APIView):
 
     Ответ: {count, page, page_size, pages, results: [...]}
     """
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsCrmUser]
 
     def get(self, request):
         from datetime import timedelta
@@ -264,7 +264,7 @@ class StudentDetailView(APIView):
     (с прогрессом и данными о сроке доступа по каждому Enrollment),
     список заказов, агрегированная статистика.
     """
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsCrmUser]
 
     def get(self, request, pk):
         from django.utils import timezone
@@ -430,7 +430,7 @@ class CourseListView(APIView):
                           revenue_usd, -revenue_usd
       - page, page_size — пагинация
     """
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsCrmUser]
 
     def get(self, request):
         qs = Course.objects.all()
@@ -707,7 +707,7 @@ class CourseDetailView(APIView):
     первые 20 учеников (с данными о сроке доступа), первые 20 заказов,
     связанные товары, ссылка на форум и WhatsApp, режим доступа.
     """
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsCrmUser]
 
     def get(self, request, pk):
         course = Course.objects.filter(pk=pk).first()
@@ -823,7 +823,7 @@ class CourseStudentsView(APIView):
     GET /crm/courses/<id>/students/?page=N&page_size=20
     Пагинация учеников курса.
     """
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsCrmUser]
 
     def get(self, request, pk):
         course = Course.objects.filter(pk=pk).first()
@@ -848,7 +848,7 @@ class CourseOrdersView(APIView):
     GET /crm/courses/<id>/orders/?page=N&page_size=20
     Пагинация заказов, содержащих этот курс.
     """
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsCrmUser]
 
     def get(self, request, pk):
         course = Course.objects.filter(pk=pk).first()
@@ -982,7 +982,7 @@ class TeacherListView(APIView):
                        created_at, -created_at
       - page, page_size
     """
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsCrmUser]
 
     def get(self, request):
         # Все юзеры с ролью teacher
@@ -1075,7 +1075,7 @@ class TeacherDetailView(APIView):
       - статистика (курсы, ученики, группы)
       - список назначенных курсов с прогрессом и кол-вом учеников
     """
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsCrmUser]
 
     def get(self, request, pk):
         teacher = (
@@ -1187,7 +1187,7 @@ class OrderListView(APIView):
       - ordering      — created_at, -created_at, paid_at, -paid_at, total, -total, order_number
       - page, page_size
     """
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsCrmUser]
 
     def get(self, request):
         qs = (
@@ -1262,7 +1262,7 @@ class OrderDetailView(APIView):
 
     Детали заказа: клиент, позиции, суммы, платёж.
     """
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsCrmUser]
 
     def get(self, request, pk):
         order = (
@@ -1380,7 +1380,7 @@ class PaymentListView(APIView):
       - ordering      — created_at, -created_at, paid_at, -paid_at, amount, -amount
       - page, page_size
     """
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsCrmUser]
 
     def get(self, request):
         qs = (
@@ -1470,7 +1470,7 @@ class ContactMessageListView(APIView):
       - ordering   — created_at, -created_at, name, -name, is_read, -is_read
       - page, page_size
     """
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsCrmUser]
 
     def get(self, request):
         qs = ContactMessage.objects.all()
@@ -1538,7 +1538,7 @@ class ContactMessageDetailView(APIView):
     PATCH  /crm/contact-messages/<id>/  — обновить (is_read)
     DELETE /crm/contact-messages/<id>/  — удалить
     """
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsCrmUser]
 
     def get(self, request, pk):
         m = ContactMessage.objects.filter(pk=pk).first()
@@ -1582,7 +1582,7 @@ class ContactMessageBulkActionView(APIView):
 
     Массовые действия.
     """
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsCrmUser]
 
     def post(self, request):
         action = request.data.get('action')
@@ -1610,7 +1610,7 @@ class ContactMessageUnreadCountView(APIView):
     GET /crm/contact-messages/unread-count/
     Возвращает число непрочитанных сообщений (для бейджа в сайдбаре).
     """
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsCrmUser]
 
     def get(self, request):
         return Response({
@@ -1646,7 +1646,7 @@ class SubmissionListView(APIView):
                        score, -score
       - page, page_size
     """
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsCrmUser]
 
     def get(self, request):
         qs = (
@@ -1742,7 +1742,7 @@ class SubmissionDetailView(APIView):
     Детали одного ответа: студент, задание, текст ответа, файл,
     проверка, комментарии.
     """
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsCrmUser]
 
     def get(self, request, pk):
         s = (
@@ -1836,7 +1836,7 @@ def _xlsx_response(filename, content):
 
 class StudentExportView(APIView):
     """GET /crm/students/export/ — XLSX с текущим фильтром."""
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsCrmUser]
 
     def get(self, request):
         qs = User.objects.filter(is_active=True)
@@ -1866,7 +1866,7 @@ class StudentExportView(APIView):
 
 class CourseExportView(APIView):
     """GET /crm/courses/export/ — XLSX с текущим фильтром."""
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsCrmUser]
 
     def get(self, request):
         qs = Course.objects.all()
@@ -1890,7 +1890,7 @@ class CourseExportView(APIView):
 
 class TeacherExportView(APIView):
     """GET /crm/teachers/export/ — XLSX с текущим фильтром."""
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsCrmUser]
 
     def get(self, request):
         qs = User.objects.filter(is_active=True, roles__codename=Role.TEACHER).distinct()
@@ -1916,7 +1916,7 @@ class TeacherExportView(APIView):
 
 class OrderExportView(APIView):
     """GET /crm/orders/export/ — XLSX с текущим фильтром."""
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsCrmUser]
 
     def get(self, request):
         qs = Order.objects.select_related('user', 'payment').prefetch_related('items')
@@ -1954,7 +1954,7 @@ class OrderExportView(APIView):
 
 class SubmissionExportView(APIView):
     """GET /crm/submissions/export/ — XLSX с текущим фильтром."""
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsCrmUser]
 
     def get(self, request):
         qs = Submission.objects.select_related(
@@ -1988,7 +1988,7 @@ class SubmissionExportView(APIView):
 
 class ContactMessageExportView(APIView):
     """GET /crm/contact-messages/export/ — XLSX с текущим фильтром."""
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsCrmUser]
 
     def get(self, request):
         qs = ContactMessage.objects.all()
@@ -2017,7 +2017,7 @@ class ContactMessageExportView(APIView):
 
 class CourseReportExportView(APIView):
     """GET /crm/courses/<id>/report/ — XLSX с деталями по курсу."""
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsCrmUser]
 
     def get(self, request, pk):
         course = Course.objects.filter(pk=pk).first()
@@ -2030,7 +2030,7 @@ class CourseReportExportView(APIView):
 
 class SalesReportExportView(APIView):
     """GET /crm/reports/sales/ — XLSX со сводкой продаж за период."""
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsCrmUser]
 
     def get(self, request):
         date_from = request.query_params.get('date_from')
@@ -2046,7 +2046,7 @@ class ExpiringEnrollmentsView(APIView):
     уже истёкшим доступом. Для админского контроля.
     Query: ?days=7 (по умолчанию 7), ?status=expiring|expired|all
     """
-    permission_classes = [IsSuperuser]
+    permission_classes = [IsCrmUser]
 
     def get(self, request):
         days = int(request.query_params.get('days', 7))

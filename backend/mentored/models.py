@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils.text import slugify
+from django.utils import timezone
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 
@@ -119,6 +120,18 @@ class User(AbstractUser):
         related_name='users',
         verbose_name='Роли',
         help_text='Студент, преподаватель и т.д. Можно совмещать несколько ролей.',
+    )
+    country = models.CharField(
+        max_length=100,
+        blank=True,
+        default='',
+        verbose_name='Страна',
+    )
+    crm_access = models.BooleanField(
+        default=False,
+        verbose_name='Доступ к CRM',
+        help_text='Даёт доступ к панели /crm без прав суперюзера. '
+                  'Суперюзеры имеют доступ автоматически.',
     )
 
     class Meta:
@@ -535,12 +548,6 @@ class Consultation(Product):
         null=True,
         verbose_name='Длительность (минуты)'
     )
-    expert = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
-        verbose_name='Эксперт'
-    )
     platform = models.CharField(
         max_length=100,
         blank=True,
@@ -565,6 +572,26 @@ class Consultation(Product):
         null=True,
         verbose_name='Повестка дня'
     )
+    # ===== НОВЫЕ ПОЛЯ =====
+    mentor = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='consultations_as_mentor',
+        limit_choices_to={'roles__codename': 'teacher'},
+        verbose_name='Ментор',
+        help_text='Пользователь с ролью teacher, который проводит консультацию',
+    )
+    instruction = models.TextField(
+        blank=True,
+        verbose_name='Инструкция клиенту',
+        help_text='Показывается клиенту после покупки / на странице консультации',
+    )
+    is_featured = models.BooleanField(
+        default=False,
+        verbose_name='Рекомендуемая',
+        help_text='Показывать на странице Consultas в топе',
+    )
 
     class Meta:
         verbose_name = 'Консультация'
@@ -572,6 +599,181 @@ class Consultation(Product):
 
     def __str__(self):
         return f"Консультация: {self.name}"
+
+
+class ConsultationSlot(models.Model):
+    """
+    Слот времени для консультации. Создаётся менеджером/ментором вручную
+    через админку. Общий для ментора:
+    если у ментора занят слот на 18:00 — он занят для ВСЕХ его консультаций.
+    """
+    mentor = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='consultation_slots',
+        limit_choices_to={'roles__codename': 'teacher'},
+        verbose_name='Ментор',
+    )
+    starts_at = models.DateTimeField(verbose_name='Начало')
+    duration_minutes = models.PositiveIntegerField(
+        default=60,
+        verbose_name='Длительность (мин)',
+        help_text='Скопировано с консультации на момент создания слота. '
+                  'Используется только для проверки пересечений.',
+    )
+    is_booked = models.BooleanField(default=False, verbose_name='Занят')
+    reserved_until = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name='Зарезервировано до',
+        help_text='При бронировании ставится now()+15 мин. Если оплата не '
+                  'пришла — слот автоматически освобождается.',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Слот консультации'
+        verbose_name_plural = 'Слоты консультаций'
+        ordering = ['starts_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['mentor', 'starts_at'],
+                name='unique_slot_per_mentor',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['mentor', 'is_booked', 'starts_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.mentor.username or self.mentor.email} @ {self.starts_at:%d.%m.%Y %H:%M}"
+
+    @property
+    def ends_at(self):
+        from datetime import timedelta
+        return self.starts_at + timedelta(minutes=self.duration_minutes)
+
+    def is_available(self):
+        """Слот свободен ИЛИ резерв истёк."""
+        if not self.is_booked:
+            return True
+        # если зарезервирован, но время резерва прошло — считаем свободным
+        if self.reserved_until and self.reserved_until <= timezone.now():
+            return True
+        return False
+
+
+class ConsultationBooking(models.Model):
+    """
+    Бронь консультации. Создаётся при выборе слота клиентом (до оплаты),
+    оплачивается через обычный Order. При оплате статус меняется на 'paid'.
+    """
+    STATUS_CHOICES = [
+        ('pending', 'Ожидает оплаты'),
+        ('paid', 'Оплачено — ожидает записи'),
+        ('scheduled', 'Запланировано'),
+        ('completed', 'Проведено'),
+        ('cancelled', 'Отменено'),
+        ('rescheduled', 'Перенесено'),
+        ('no_show', 'Не явился'),
+        ('refunded', 'Возврат'),
+    ]
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='consultation_bookings',
+        verbose_name='Клиент',
+    )
+    consultation = models.ForeignKey(
+        Consultation,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='bookings',
+        verbose_name='Консультация (товар)',
+    )
+    mentor = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='consultation_bookings_as_mentor',
+        verbose_name='Ментор',
+    )
+    slot = models.OneToOneField(
+        ConsultationSlot,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='booking',
+        verbose_name='Слот',
+    )
+    # --- Данные брони ---
+    scheduled_at = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name='Назначено на',
+    )
+    timezone = models.CharField(
+        max_length=64, blank=True, default='',
+        verbose_name='Часовой пояс клиента',
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        verbose_name='Статус',
+    )
+    amount_usd = models.DecimalField(
+        max_digits=10, decimal_places=2,
+        null=True, blank=True,
+        verbose_name='Сумма (USD)',
+    )
+    payment_system = models.CharField(
+        max_length=50, blank=True, default='',
+        verbose_name='Платёжная система',
+    )
+    meeting_url = models.URLField(
+        blank=True, default='',
+        verbose_name='Ссылка на встречу (Zoom/Meet)',
+    )
+
+    # --- Данные клиента ---
+    client_name = models.CharField(max_length=200, blank=True, default='', verbose_name='Имя клиента')
+    client_email = models.EmailField(blank=True, default='', verbose_name='Email клиента')
+    client_whatsapp = models.CharField(max_length=30, blank=True, default='', verbose_name='WhatsApp')
+    client_country = models.CharField(max_length=100, blank=True, default='', verbose_name='Страна')
+    topic = models.TextField(blank=True, default='', verbose_name='Тема запроса')
+
+    # --- Служебное ---
+    admin_notes = models.TextField(blank=True, default='', verbose_name='Комментарий администратора')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    paid_at = models.DateTimeField(null=True, blank=True, verbose_name='Оплачено')
+    confirmed_at = models.DateTimeField(null=True, blank=True, verbose_name='Подтверждено')
+    completed_at = models.DateTimeField(null=True, blank=True, verbose_name='Проведено')
+    reminder_sent_at = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name='Напоминание отправлено',
+    )
+
+    class Meta:
+        verbose_name = 'Бронь консультации'
+        verbose_name_plural = 'Брони консультаций'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', '-created_at']),
+            models.Index(fields=['user', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f"Booking #{self.pk} — {self.client_email or self.user.email} ({self.get_status_display()})"
+
+    @property
+    def mentor_name(self):
+        if self.mentor:
+            return self.mentor.username or self.mentor.email
+        return self.consultation.expert if self.consultation else ''
+
+    @property
+    def consultation_name(self):
+        return self.consultation.name if self.consultation else ''
 
 
 # ============================================================
@@ -685,6 +887,14 @@ class CartItem(models.Model):
     quantity = models.PositiveIntegerField(
         default=1,
         verbose_name='Количество'
+    )
+    consultation_booking = models.OneToOneField(
+        'mentored.ConsultationBooking',
+        on_delete=models.CASCADE,
+        null=True, blank=True,
+        related_name='cart_item',
+        verbose_name='Бронь консультации',
+        help_text='Если товар — консультация, ссылка на её бронь.',
     )
 
     created_at = models.DateTimeField(
@@ -811,7 +1021,6 @@ class Order(models.Model):
     def generate_order_number(self):
         import random
         import string
-        from django.utils import timezone
         prefix = 'ORD'
         timestamp = timezone.now().strftime('%Y%m%d')
         random_part = ''.join(random.choices(string.digits, k=6))
@@ -843,6 +1052,13 @@ class OrderItem(models.Model):
         blank=True,
         null=True,
         verbose_name='ID товара'
+    )
+    consultation_booking = models.OneToOneField(
+        'mentored.ConsultationBooking',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='order_item_link',
+        verbose_name='Бронь консультации',
     )
     # === ЗАМОРОЖЕННЫЕ ДАННЫЕ ===
     product_name = models.CharField(

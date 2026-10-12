@@ -220,6 +220,7 @@ CONTACT_NOTIFICATION_EMAIL = config('CONTACT_NOTIFICATION_EMAIL', default=EMAIL_
 # ============================================================
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://redis:6379/0')
 CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://redis:6379/1')
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
 # Формат сериализации — JSON (безопасно)
 CELERY_ACCEPT_CONTENT = ['json']

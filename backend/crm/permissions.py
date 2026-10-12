@@ -1,16 +1,16 @@
 from rest_framework.permissions import BasePermission
 
 
-class IsSuperuser(BasePermission):
+class IsCrmUser(BasePermission):
     """
-    Доступ только суперюзерам. Используется для всех эндпоинтов CRM.
-    По ТЗ 'руководитель проекта' решено принимать is_superuser, без отдельной роли.
+    Доступ к CRM: суперюзер ИЛИ пользователь с флагом crm_access.
+    Раньше был только is_superuser — теперь можно дать доступ
+    руководителю без прав Django-админа.
     """
-    message = 'CRM доступна только руководителю проекта.'
+    message = 'Acceso solo para el equipo de MENTORED.'
 
     def has_permission(self, request, view):
-        return bool(
-            request.user
-            and request.user.is_authenticated
-            and request.user.is_superuser
-        )
+        user = request.user
+        if not (user and user.is_authenticated):
+            return False
+        return bool(user.is_superuser or getattr(user, 'crm_access', False))

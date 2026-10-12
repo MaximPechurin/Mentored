@@ -67,13 +67,13 @@
         </router-link>
         <!-- Вход в /admin/ - только суперюзерам. Обычная <a>, не router-link:
              /admin/ - серверная страница Django, а не маршрут SPA. -->
-        <a v-if="isSuperuser" href="/admin/" class="icon-btn" aria-label="Admin">
+        <a v-if="hasCrmAccess" href="/admin/" class="icon-btn" aria-label="Admin">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <path d="M12 2 4 5.5V11c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V5.5L12 2z"/>
             <path d="m9.5 12 1.8 1.8L15 10"/>
           </svg>
         </a>
-        <router-link v-if="isSuperuser" to="/crm" class="icon-btn" aria-label="CRM">
+        <router-link v-if="hasCrmAccess" to="/crm" class="icon-btn" aria-label="CRM">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <rect x="3" y="3" width="7" height="9" rx="1"/>
             <rect x="14" y="3" width="7" height="5" rx="1"/>
@@ -108,7 +108,9 @@ const { settings } = useSiteSettings()
 // обновления профиля на любой другой странице) - здесь сознательно не
 // дёргаем API при каждой отрисовке хедера.
 const { user } = useAuth()
-const isSuperuser = computed(() => !!user.value?.is_superuser)
+const hasCrmAccess = computed(() =>
+  !!user.value?.is_superuser || !!user.value?.crm_access
+)
 const isStudent = computed(() => !!user.value?.roles?.includes('student'))
 const isTeacher = computed(() => !!user.value?.roles?.includes('teacher'))
 // Доступ к школе: роль студента или преподавателя (сама роль student

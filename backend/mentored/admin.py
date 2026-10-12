@@ -5,7 +5,7 @@ from django.shortcuts import redirect
 from django.utils.html import format_html
 
 from .models import User, Role, BlogCategory, BlogPost, FAQ, Testimonial, Book, Course, Consultation, Membership, \
-    Cart, CartItem, ContactMessage, Order, OrderItem, SiteSettings
+    Cart, CartItem, ContactMessage, Order, OrderItem, SiteSettings, ConsultationSlot, ConsultationBooking
 
 @admin.register(Role)
 class RoleAdmin(admin.ModelAdmin):
@@ -26,6 +26,8 @@ class UserAdmin(BaseUserAdmin):
         'is_active',
         'is_dev',
         'is_staff',
+        'country',
+        'crm_access',
         'date_joined'
     )
     list_editable = ('is_dev',)
@@ -40,13 +42,13 @@ class UserAdmin(BaseUserAdmin):
             'fields': ('email', 'username', 'password')
         }),
         ('Персональные данные', {
-            'fields': ('first_name', 'last_name', 'phone', 'avatar', 'avatar_preview')
+            'fields': ('first_name', 'last_name', 'phone', 'avatar', 'avatar_preview', 'country')
         }),
         ('Роли', {
             'fields': ('roles',)
         }),
         ('Права доступа', {
-            'fields': ('is_active', 'is_dev', 'is_staff', 'is_superuser', 'groups', 'user_permissions')
+            'fields': ('is_active', 'is_dev', 'is_staff', 'is_superuser', 'groups', 'user_permissions', 'crm_access')
         }),
         ('Даты', {
             'fields': ('created_at', 'updated_at', 'last_login', 'date_joined'),
@@ -322,9 +324,10 @@ class ConsultationAdmin(BaseProductAdmin):
         'price',
         'old_price',
         'duration_minutes',
-        'expert',
         'image_preview',
         'is_active',
+        'mentor',
+        'instruction',
         'is_featured',
         'created_at'
     )
@@ -345,7 +348,7 @@ class ConsultationAdmin(BaseProductAdmin):
             'fields': ('image', 'image_preview')
         }),
         ('Характеристики консультации', {
-            'fields': ('duration_minutes', 'expert', 'platform', 'languages')
+            'fields': ('duration_minutes', 'mentor', 'platform', 'languages')
         }),
         ('Что входит', {
             'fields': ('includes',)
@@ -358,6 +361,89 @@ class ConsultationAdmin(BaseProductAdmin):
             'classes': ('collapse',)
         }),
     )
+
+
+@admin.register(ConsultationSlot)
+class ConsultationSlotAdmin(admin.ModelAdmin):
+    list_display = (
+        'mentor', 'starts_at', 'duration_minutes',
+        'is_booked', 'reserved_until', 'booking_status',
+    )
+    list_filter = ('mentor', 'is_booked', 'starts_at')
+    search_fields = ('mentor__email', 'mentor__username')
+    date_hierarchy = 'starts_at'
+    readonly_fields = ('is_booked', 'reserved_until', 'created_at')
+    fields = (
+        'mentor', 'starts_at', 'duration_minutes',
+        'is_booked', 'reserved_until', 'created_at',
+    )
+
+    def booking_status(self, obj):
+        if not obj.is_booked:
+            return 'Свободен'
+        booking = getattr(obj, 'booking', None)
+        if booking:
+            return booking.get_status_display()
+        return 'Зарезервирован'
+    booking_status.short_description = 'Статус'
+
+
+@admin.register(ConsultationBooking)
+class ConsultationBookingAdmin(admin.ModelAdmin):
+    list_display = (
+        'id', 'client_name', 'consultation', 'mentor',
+        'scheduled_at', 'status', 'amount_usd', 'created_at',
+    )
+    list_filter = ('status', 'mentor', 'created_at', 'consultation')
+    search_fields = (
+        'client_name', 'client_email', 'client_whatsapp',
+        'user__email', 'user__username', 'consultation__name',
+    )
+    date_hierarchy = 'created_at'
+    readonly_fields = (
+        'user', 'consultation', 'mentor', 'slot', 'created_at', 'updated_at',
+        'paid_at', 'confirmed_at', 'completed_at', 'reminder_sent_at',
+    )
+    fieldsets = (
+        ('Кто', {
+            'fields': ('user', 'consultation', 'mentor', 'slot', 'amount_usd', 'payment_system'),
+        }),
+        ('Данные клиента', {
+            'fields': ('client_name', 'client_email', 'client_whatsapp', 'client_country', 'topic'),
+        }),
+        ('Сессия', {
+            'fields': ('scheduled_at', 'timezone', 'meeting_url', 'status'),
+        }),
+        ('Служебное', {
+            'fields': ('admin_notes', 'created_at', 'updated_at',
+                       'paid_at', 'confirmed_at', 'completed_at', 'reminder_sent_at'),
+            'classes': ('collapse',),
+        }),
+    )
+    actions = ['action_mark_confirmed', 'action_mark_completed', 'action_mark_cancelled']
+
+    @admin.action(description='Отметить как «Запланировано»')
+    def action_mark_confirmed(self, request, queryset):
+        from django.utils import timezone
+        for booking in queryset:
+            if not booking.scheduled_at:
+                self.message_user(request, f'Бронь #{booking.id}: не указано время. Пропущено.', level='warning')
+                continue
+            booking.status = 'scheduled'
+            booking.confirmed_at = timezone.now()
+            booking.save(update_fields=['status', 'confirmed_at'])
+        self.message_user(request, f'Обработано: {queryset.count()}')
+
+    @admin.action(description='Отметить как «Проведено»')
+    def action_mark_completed(self, request, queryset):
+        from django.utils import timezone
+        queryset.update(status='completed', completed_at=timezone.now())
+        self.message_user(request, f'Обработано: {queryset.count()}')
+
+    @admin.action(description='Отметить как «Отменено»')
+    def action_mark_cancelled(self, request, queryset):
+        queryset.update(status='cancelled')
+        self.message_user(request, f'Обработано: {queryset.count()}')
 
 
 @admin.register(Membership)

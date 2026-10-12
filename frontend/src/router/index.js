@@ -188,7 +188,7 @@ const routes = [
     // ЦРМ система
     path: '/crm',
     component: CrmLayout,
-    meta: { requiresAuth: true, requiresSuperuser: true },
+    meta: { requiresAuth: true, requiresCrmAccess: true },
     children: [
       {
         path: '',

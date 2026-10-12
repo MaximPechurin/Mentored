@@ -72,7 +72,10 @@ class ProfileSerializer(serializers.ModelSerializer):
         # is_dev / is_superuser - read-only: фронт по ним решает, что
         # показывать (закрытые разделы школы / обзорную аналитику
         # платформы). Через PUT /profile/ выставить себе нельзя.
-        fields = ['id', 'username', 'email', 'phone', 'avatar', 'roles', 'is_dev', 'is_superuser', 'created_at', 'updated_at']
+        fields = [
+            'id', 'username', 'email', 'phone', 'avatar', 'roles', 'is_dev', 'is_superuser',
+            'country', 'crm_access', 'created_at', 'updated_at'
+        ]
         read_only_fields = ['id', 'is_dev', 'is_superuser', 'created_at', 'updated_at']
 
 
