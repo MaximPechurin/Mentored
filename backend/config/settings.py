@@ -28,7 +28,9 @@ INSTALLED_APPS = [
     'payments',
     'school',
     'notifications',
-    'crm'
+    'crm',
+    'django_celery_beat',
+    'django_celery_results',
 ]
 
 MIDDLEWARE = [
@@ -211,3 +213,30 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER)
 # Куда падают уведомления о новых заявках с формы контактов.
 CONTACT_NOTIFICATION_EMAIL = config('CONTACT_NOTIFICATION_EMAIL', default=EMAIL_HOST_USER)
+
+
+# ============================================================
+# CELERY
+# ============================================================
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://redis:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://redis:6379/1')
+
+# Формат сериализации — JSON (безопасно)
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'America/Lima'   # или TIME_ZONE проекта
+CELERY_ENABLE_UTC = True
+
+# Ограничения
+CELERY_TASK_TIME_LIMIT = 300          # 5 минут — жёсткий лимит
+CELERY_TASK_SOFT_TIME_LIMIT = 240     # 4 минуты — мягкий (до exception)
+CELERY_TASK_TRACK_STARTED = True
+CELERY_RESULT_EXTENDED = True
+
+# Планировщик периодических задач — в БД (через django-celery-beat)
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+# Результаты храним в БД (django-celery-results)
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_CACHE_BACKEND = 'django-cache'
